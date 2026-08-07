@@ -13,7 +13,7 @@ export default function Login() {
         <img src="/assets/logo.png" alt="Glow Make" />
 
         <div className="field">
-          <label htmlFor="senha">Senha do administrador</label>
+          <label htmlFor="senha">Sua senha de acesso</label>
           <input
             id="senha"
             name="senha"
@@ -32,8 +32,9 @@ export default function Login() {
         </button>
 
         <div className="note" style={{ marginTop: 16 }}>
-          A senha fica na variável <b>ADMIN_PASSWORD</b>, no servidor. Ela nunca é enviada para o
-          navegador e não aparece no código do site.
+          A senha do administrador abre o painel completo. A senha da equipe abre só o{' '}
+          <b>catálogo da loja</b>, com o estoque ao vivo. As duas ficam no servidor e nunca são
+          enviadas para o navegador.
         </div>
       </form>
     </div>

@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import { abrirSessao, conferirSenha, estaLogado, fecharSessao, senhaConfigurada } from '@/lib/auth';
+import { abrirSessao, ehAdmin, fecharSessao, papelDaSenha, senhaAdminConfigurada, senhaEquipeConfigurada } from '@/lib/auth';
 import { devolverEstoque } from '@/lib/estoque';
 import { cancelarAssinatura as cancelarNoAsaas, asaasConfigurado } from '@/lib/asaas';
 
@@ -14,7 +14,7 @@ import { cancelarAssinatura as cancelarNoAsaas, asaasConfigurado } from '@/lib/a
  * dá para chamar direto, sem passar por página nenhuma.
  */
 async function exigirLogin() {
-  if (!(await estaLogado())) throw new Error('Sessão expirada. Entre novamente.');
+  if (!(await ehAdmin())) throw new Error('Sessão expirada ou sem permissão. Entre novamente.');
 }
 
 function texto(fd: FormData, campo: string, max = 500): string {
@@ -37,18 +37,24 @@ function voltar(rota: string, msg: string, tipo: 'ok' | 'erro' = 'ok'): never {
    Sessão
    ============================================================ */
 
+/**
+ * Um formulário só para os dois papéis: a senha digitada é que decide se a
+ * pessoa cai no painel completo ou no catálogo da loja.
+ */
 export async function entrar(_estado: unknown, fd: FormData) {
-  if (!senhaConfigurada()) {
-    return { erro: 'ADMIN_PASSWORD não está configurada no servidor (mínimo 8 caracteres).' };
+  if (!senhaAdminConfigurada() && !senhaEquipeConfigurada()) {
+    return { erro: 'Nenhuma senha configurada no servidor (ADMIN_PASSWORD ou EQUIPE_PASSWORD).' };
   }
-  const senha = String(fd.get('senha') ?? '');
-  if (!conferirSenha(senha)) {
+
+  const papel = papelDaSenha(String(fd.get('senha') ?? ''));
+  if (!papel) {
     // Espera curta para desestimular tentativa em massa por força bruta.
     await new Promise((r) => setTimeout(r, 600));
     return { erro: 'Senha incorreta.' };
   }
-  await abrirSessao();
-  redirect('/admin');
+
+  await abrirSessao(papel);
+  redirect(papel === 'admin' ? '/admin' : '/catalogo');
 }
 
 export async function sair() {

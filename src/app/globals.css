@@ -410,3 +410,88 @@ th.num{text-align:right}
   *,*::after,*::before{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
   .rv{opacity:1;transform:none}
 }
+
+/* ============================================================
+   CATÁLOGO DA LOJA — usado no celular pelas vendedoras.
+   Alvos de toque grandes, números legíveis de longe.
+   ============================================================ */
+.cat{min-height:100vh;background:#FDF8FA}
+.cat-topo{position:sticky;top:0;z-index:40;background:rgba(255,255,255,.94);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.cat-topo-in{max-width:1100px;margin:0 auto;padding:12px 18px;display:flex;align-items:center;gap:12px}
+.cat-topo img{height:30px;width:auto}
+.cat-tag{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted);font-weight:700}
+.cat-topo-acoes{margin-left:auto;display:flex;gap:8px}
+.cat-main{max-width:1100px;margin:0 auto;padding:22px 18px 90px}
+.cat-cabecalho{margin-bottom:18px}
+.cat-cabecalho h1{font-family:var(--serif);font-size:27px;line-height:1.15}
+.cat-cabecalho p{color:var(--muted);font-size:14px;margin-top:4px}
+
+.cat-resumo{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.cat-kpi{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+.cat-kpi b{display:block;font-family:var(--serif);font-size:26px;line-height:1}
+.cat-kpi span{font-size:12px;color:var(--muted)}
+.cat-kpi.alerta{background:#FFF6E9;border-color:#F3DFC0} .cat-kpi.alerta b{color:var(--warn)}
+.cat-kpi.ruim{background:#FDF1EF;border-color:#F0C6C0} .cat-kpi.ruim b{color:#C0392B}
+
+.cat-barra{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.cat-barra .search{background:#fff}
+
+.cat-status{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);margin-bottom:16px;flex-wrap:wrap}
+.cat-status.offline{color:#C0392B}
+.cat-status .ponto{width:8px;height:8px;border-radius:50%;background:var(--ok);flex-shrink:0}
+.cat-status.offline .ponto{background:#C0392B}
+.cat-status .ponto.ativo{animation:pulsa 1s ease-in-out infinite}
+@keyframes pulsa{0%,100%{opacity:1}50%{opacity:.25}}
+.cat-refresh{margin-left:auto;font-size:12.5px;color:var(--rose);font-weight:600;text-decoration:underline}
+
+.cat-grade{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.cat-card{display:flex;gap:12px;align-items:center;text-align:left;background:#fff;border:1px solid var(--line);border-radius:15px;padding:11px;transition:transform .2s,box-shadow .2s,border-color .5s,background .5s}
+.cat-card:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
+.cat-card.mudou{border-color:var(--rose);background:#FFF7FA;animation:destaca 2.2s ease-out}
+@keyframes destaca{0%{box-shadow:0 0 0 0 rgba(245,50,96,.45)}100%{box-shadow:0 0 0 14px rgba(245,50,96,0)}}
+.cat-foto{position:relative;width:78px;height:78px;flex-shrink:0;border-radius:12px;overflow:hidden;background:var(--rose-100)}
+.cat-foto img{width:100%;height:100%;object-fit:cover}
+.cat-foto .pill{position:absolute;left:4px;bottom:4px;font-size:9.5px;padding:2px 7px}
+.cat-info{min-width:0;flex:1}
+.cat-info>b{display:block;font-size:14.5px;line-height:1.25}
+.cat-sku{display:block;font-size:11.5px;color:var(--muted);letter-spacing:.4px;margin-top:2px}
+.cat-numeros{display:flex;gap:16px;margin-top:8px}
+.cat-numeros strong{display:block;font-family:var(--serif);font-size:19px;line-height:1}
+.cat-numeros strong.baixo{color:var(--warn)}
+.cat-numeros strong.zero{color:var(--off)}
+.cat-numeros small{font-size:11px;color:var(--muted)}
+
+/* Ficha: sobe de baixo no celular, vira caixa centrada no desktop */
+.cat-ficha{position:fixed;left:0;right:0;bottom:0;z-index:120;background:#fff;border-radius:22px 22px 0 0;box-shadow:var(--shadow-lg);max-height:92vh;display:flex;flex-direction:column;animation:sobe .3s cubic-bezier(.2,.9,.3,1)}
+@keyframes sobe{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.cat-ficha-topo{padding:10px 0 2px;display:grid;place-items:center}
+.cat-puxador{width:46px;height:5px;border-radius:999px;background:var(--line)}
+.cat-ficha-corpo{padding:14px 20px 26px;overflow-y:auto}
+.cat-ficha-prod{display:flex;gap:14px;align-items:center;margin-bottom:16px}
+.cat-ficha-prod img{width:76px;height:76px;border-radius:14px;object-fit:cover;background:var(--rose-100);flex-shrink:0}
+.cat-ficha-prod b{font-family:var(--serif);font-size:19px;line-height:1.2;display:block}
+.cat-ficha-nums{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;background:var(--rose-50);border-radius:14px;padding:14px;text-align:center}
+.cat-ficha-nums strong{display:block;font-family:var(--serif);font-size:22px;line-height:1}
+.cat-ficha-nums strong.baixo{color:var(--warn)}
+.cat-ficha-nums strong.zero{color:var(--off)}
+.cat-ficha-nums small{font-size:11.5px;color:var(--muted)}
+.cat-hr{border:none;border-top:1px solid var(--line);margin:18px 0}
+.cat-titulo{font-family:var(--serif);font-size:18px}
+.cat-ajuda{font-size:13px;color:var(--muted);margin:4px 0 14px}
+.cat-linha{display:flex;gap:10px;align-items:center}
+.cat-linha .stepper button{width:44px;height:46px}
+.cat-linha .stepper span{width:36px;font-size:16px}
+.cat-linha .btn{height:46px}
+
+@media(min-width:760px){
+  .cat-ficha{left:50%;top:50%;right:auto;bottom:auto;transform:translate(-50%,-50%);width:min(520px,92vw);border-radius:22px;animation:zoom .3s cubic-bezier(.2,.9,.3,1)}
+  .cat-ficha-topo{display:none}
+  .cat-ficha-corpo{padding:26px}
+}
+@media(max-width:520px){
+  .cat-grade{grid-template-columns:1fr}
+  .cat-resumo{gap:8px}
+  .cat-kpi{padding:11px}
+  .cat-kpi b{font-size:22px}
+  .cat-cabecalho h1{font-size:23px}
+}

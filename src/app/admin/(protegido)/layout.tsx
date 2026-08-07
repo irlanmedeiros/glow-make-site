@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { estaLogado } from '@/lib/auth';
+import { ehAdmin } from '@/lib/auth';
 import { sair } from '../actions';
 import {
   IcPainel,
@@ -13,6 +13,7 @@ import {
   IcConfig,
   IcSair,
   IcSite,
+  IcCatalogo,
 } from '@/components/Icones';
 
 export const dynamic = 'force-dynamic';
@@ -20,6 +21,7 @@ export const dynamic = 'force-dynamic';
 const MENU = [
   { href: '/admin', rotulo: 'Painel', Icone: IcPainel },
   { href: '/admin/estoque', rotulo: 'Estoque', Icone: IcEstoque },
+  { href: '/catalogo', rotulo: 'Catálogo da loja', Icone: IcCatalogo },
   { href: '/admin/kits', rotulo: 'Kits e produtos', Icone: IcKits },
   { href: '/admin/pedidos', rotulo: 'Pedidos', Icone: IcPedidos },
   { href: '/admin/assinantes', rotulo: 'Assinantes', Icone: IcAssinantes },
@@ -32,9 +34,10 @@ const MENU = [
    A tela de login mora fora do grupo, em /admin/login, e por isso não passa
    pela verificação abaixo — senão ninguém conseguiria chegar nela. */
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  // Aqui é a checagem que vale: valida assinatura e validade do token em Node.
-  // O middleware só faz o redirecionamento rápido de quem nem cookie tem.
-  if (!(await estaLogado())) redirect('/admin/login');
+  // Aqui é a checagem que vale: valida assinatura, validade e PAPEL do token
+  // em Node. O middleware só faz o redirecionamento rápido de quem nem cookie
+  // tem — e não sabe distinguir admin de vendedora, porque roda no Edge.
+  if (!(await ehAdmin())) redirect('/admin/login');
 
   return (
     <div className="adm">
