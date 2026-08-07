@@ -5,7 +5,10 @@ import { prisma } from '@/lib/prisma';
 import { podeVerCatalogo, sessao } from '@/lib/auth';
 import { baixarEstoque, devolverEstoque, EstoqueInsuficiente } from '@/lib/estoque';
 
-export type Resultado = { ok?: string; erro?: string };
+/** `id` e `qtd` voltam preenchidos numa venda bem-sucedida: é com eles que a
+ *  tela monta o "desfazer". Quem sabe o que foi baixado é o servidor — deixar
+ *  a tela lembrar disso por conta própria já deu bug uma vez. */
+export type Resultado = { ok?: string; erro?: string; id?: string; qtd?: number };
 
 /**
  * Venda feita no balcão da loja.
@@ -59,6 +62,8 @@ export async function registrarVendaLoja(
     ok: `${qtd}× ${kit?.nome ?? 'produto'} baixado. Restam ${
       kit ? kit.entradas - kit.saidas : 0
     }.`,
+    id,
+    qtd,
   };
 }
 

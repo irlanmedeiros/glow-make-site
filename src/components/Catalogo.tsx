@@ -243,7 +243,6 @@ function FichaProduto({
 }) {
   const [qtd, setQtd] = useState(1);
   const [vendedora, setVendedora] = useState('');
-  const [ultima, setUltima] = useState<{ id: string; qtd: number } | null>(null);
 
   const [venda, venderAcao, vendendo] = useActionState(registrarVendaLoja, null as Resultado | null);
   const [desfazer, desfazerAcao, desfazendo] = useActionState(
@@ -260,19 +259,17 @@ function FichaProduto({
     if (vendedora) localStorage.setItem('glowmake_vendedora', vendedora);
   }, [vendedora]);
 
+  // Só depende de `venda`: se `qtd` entrasse aqui, o setQtd(1) abaixo
+  // dispararia o efeito de novo e a quantidade a desfazer sairia errada.
   useEffect(() => {
     if (venda?.ok) {
-      setUltima({ id: produto.id, qtd });
       setQtd(1);
       aoMudarEstoque();
     }
-  }, [venda, produto.id, qtd, aoMudarEstoque]);
+  }, [venda, aoMudarEstoque]);
 
   useEffect(() => {
-    if (desfazer?.ok) {
-      setUltima(null);
-      aoMudarEstoque();
-    }
+    if (desfazer?.ok) aoMudarEstoque();
   }, [desfazer, aoMudarEstoque]);
 
   const s = situacao(produto);
@@ -364,10 +361,10 @@ function FichaProduto({
           {venda?.ok && (
             <div className="note ok" style={{ marginTop: 12 }}>
               {venda.ok}
-              {ultima && (
+              {venda.id && venda.qtd && !desfazer?.ok && (
                 <form action={desfazerAcao} style={{ marginTop: 10 }}>
-                  <input type="hidden" name="id" value={ultima.id} />
-                  <input type="hidden" name="qtd" value={ultima.qtd} />
+                  <input type="hidden" name="id" value={venda.id} />
+                  <input type="hidden" name="qtd" value={venda.qtd} />
                   <button className="btn btn-ghost btn-sm" disabled={desfazendo}>
                     {desfazendo ? 'Desfazendo...' : 'Lancei errado, desfazer'}
                   </button>
