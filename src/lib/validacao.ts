@@ -4,8 +4,16 @@ export type DadosCliente = {
   documento: string;
   telefone: string;
   cep: string;
+  endereco: string;
+  numero: string;
+  complemento: string;
+  bairro: string;
+  cidade: string;
+  uf: string;
   pagamento: string;
 };
+
+const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
 
 const PAGAMENTOS = ['UNDEFINED', 'PIX', 'BOLETO', 'CREDIT_CARD'];
 
@@ -64,8 +72,31 @@ export function validarCliente(bruto: unknown): DadosCliente | { erro: string } 
   const cep = texto(c.cep, 12);
   if (cep.replace(/\D/g, '').length !== 8) return { erro: 'CEP inválido.' };
 
+  // Endereço completo é obrigatório: sem ele o pedido entra e ninguém
+  // consegue entregar. Melhor barrar aqui do que descobrir na expedição.
+  const endereco = texto(c.endereco, 160);
+  if (endereco.length < 3) return { erro: 'Informe a rua ou avenida.' };
+
+  const numero = texto(c.numero, 20);
+  if (!numero) return { erro: 'Informe o número. Use "s/n" se não houver.' };
+
+  const bairro = texto(c.bairro, 80);
+  if (bairro.length < 2) return { erro: 'Informe o bairro.' };
+
+  const cidade = texto(c.cidade, 80);
+  if (cidade.length < 2) return { erro: 'Informe a cidade.' };
+
+  const uf = texto(c.uf, 2).toUpperCase();
+  if (!UFS.includes(uf)) return { erro: 'Estado inválido. Use a sigla, como SP.' };
+
+  const complemento = texto(c.complemento, 80);
+
   const pagamentoBruto = texto(c.pagamento, 20);
   const pagamento = PAGAMENTOS.includes(pagamentoBruto) ? pagamentoBruto : 'UNDEFINED';
 
-  return { nome, email, documento, telefone, cep, pagamento };
+  return {
+    nome, email, documento, telefone,
+    cep, endereco, numero, complemento, bairro, cidade, uf,
+    pagamento,
+  };
 }

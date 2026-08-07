@@ -14,6 +14,8 @@ import {
   IcSair,
   IcSite,
   IcCatalogo,
+  IcEntregas,
+  IcImportar,
 } from '@/components/Icones';
 
 export const dynamic = 'force-dynamic';
@@ -24,9 +26,11 @@ const MENU = [
   { href: '/catalogo', rotulo: 'Catálogo da loja', Icone: IcCatalogo },
   { href: '/admin/kits', rotulo: 'Kits e produtos', Icone: IcKits },
   { href: '/admin/pedidos', rotulo: 'Pedidos', Icone: IcPedidos },
+  { href: '/admin/entregas', rotulo: 'Entregas', Icone: IcEntregas },
   { href: '/admin/assinantes', rotulo: 'Assinantes', Icone: IcAssinantes },
   { href: '/admin/banners', rotulo: 'Banners', Icone: IcBanners },
   { href: '/admin/depoimentos', rotulo: 'Depoimentos', Icone: IcDepoimentos },
+  { href: '/admin/importar', rotulo: 'Importar planilha', Icone: IcImportar },
   { href: '/admin/config', rotulo: 'Configurações', Icone: IcConfig },
 ];
 

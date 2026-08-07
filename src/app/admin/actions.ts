@@ -443,3 +443,84 @@ export async function salvarConfig(fd: FormData) {
   revalidatePath('/');
   voltar('/admin/config', 'Configurações salvas.');
 }
+
+/* ============================================================
+   Entregas
+   ============================================================ */
+
+/**
+ * A fila de entrega começa em PAGO, nunca em AGUARDANDO_PAGAMENTO.
+ * Separar e despachar antes de o dinheiro entrar é como a loja perde
+ * mercadoria — a regra fica no código, não na memória de quem opera.
+ */
+export async function marcarSeparado(fd: FormData) {
+  await exigirLogin();
+  const id = texto(fd, 'id');
+  const pedido = await prisma.pedido.findUnique({ where: { id } });
+  if (!pedido) voltar('/admin/entregas', 'Pedido não encontrado.', 'erro');
+  if (pedido.status === 'AGUARDANDO_PAGAMENTO') {
+    voltar('/admin/entregas', `O pedido #${pedido.numero} ainda não foi pago.`, 'erro');
+  }
+  if (pedido.status === 'CANCELADO') {
+    voltar('/admin/entregas', `O pedido #${pedido.numero} está cancelado.`, 'erro');
+  }
+
+  await prisma.pedido.update({
+    where: { id },
+    data: { status: 'EM_SEPARACAO', separadoEm: new Date() },
+  });
+  voltar('/admin/entregas', `Pedido #${pedido.numero} em separação.`);
+}
+
+export async function marcarEnviado(fd: FormData) {
+  await exigirLogin();
+  const id = texto(fd, 'id');
+  const transportadora = texto(fd, 'transportadora', 60);
+  const codigoRastreio = texto(fd, 'codigoRastreio', 60);
+
+  const pedido = await prisma.pedido.findUnique({ where: { id } });
+  if (!pedido) voltar('/admin/entregas', 'Pedido não encontrado.', 'erro');
+  if (pedido.status === 'AGUARDANDO_PAGAMENTO' || pedido.status === 'CANCELADO') {
+    voltar('/admin/entregas', `O pedido #${pedido.numero} não pode ser enviado agora.`, 'erro');
+  }
+  if (!codigoRastreio) {
+    voltar('/admin/entregas', 'Informe o código de rastreio antes de marcar como enviado.', 'erro');
+  }
+
+  await prisma.pedido.update({
+    where: { id },
+    data: {
+      status: 'ENVIADO',
+      enviadoEm: new Date(),
+      transportadora: transportadora || null,
+      codigoRastreio,
+    },
+  });
+  voltar('/admin/entregas', `Pedido #${pedido.numero} marcado como enviado.`);
+}
+
+export async function marcarEntregue(fd: FormData) {
+  await exigirLogin();
+  const id = texto(fd, 'id');
+  const pedido = await prisma.pedido.findUnique({ where: { id } });
+  if (!pedido) voltar('/admin/entregas', 'Pedido não encontrado.', 'erro');
+
+  await prisma.pedido.update({
+    where: { id },
+    data: { status: 'ENTREGUE', entregueEm: new Date() },
+  });
+  voltar('/admin/entregas', `Pedido #${pedido.numero} entregue.`);
+}
+
+export async function salvarRastreio(fd: FormData) {
+  await exigirLogin();
+  const id = texto(fd, 'id');
+  await prisma.pedido.update({
+    where: { id },
+    data: {
+      transportadora: texto(fd, 'transportadora', 60) || null,
+      codigoRastreio: texto(fd, 'codigoRastreio', 60) || null,
+    },
+  });
+  voltar('/admin/entregas', 'Rastreio atualizado.');
+}

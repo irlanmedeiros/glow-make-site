@@ -84,7 +84,17 @@ model Pedido {
   email    String
   documento String
   telefone String
-  cep      String
+
+  // Endereço de entrega. Antes só existia o CEP, e não se entrega em um CEP.
+  // Campos com default "" para a migração não quebrar pedidos antigos.
+  cep         String
+  endereco    String  @default("")
+  numero      String  @default("")
+  complemento String  @default("")
+  bairro      String  @default("")
+  cidade      String  @default("")
+  uf          String  @default("")
+
   subtotal Decimal      @db.Decimal(10, 2)
   frete    Decimal      @db.Decimal(10, 2)
   total    Decimal      @db.Decimal(10, 2)
@@ -94,6 +104,14 @@ model Pedido {
   invoiceUrl     String?
   observacao     String?
   estoqueDevolvido Boolean @default(false)
+
+  // Logística
+  transportadora String?
+  codigoRastreio String?
+  separadoEm     DateTime?
+  enviadoEm      DateTime?
+  entregueEm     DateTime?
+
   criadoEm DateTime     @default(now())
   atualizadoEm DateTime  @updatedAt
 

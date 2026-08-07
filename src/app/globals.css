@@ -505,3 +505,16 @@ th.num{text-align:right}
   .cat-kpi b{font-size:22px}
   .cat-cabecalho h1{font-size:23px}
 }
+
+/* ---------- importação de planilha ---------- */
+.dropzone{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:32px 20px;border:2px dashed var(--rose-300);border-radius:16px;background:var(--rose-50);cursor:pointer;text-align:center;transition:.2s}
+.dropzone:hover{border-color:var(--rose);background:#fff}
+.dropzone input{display:none}
+.dropzone b{font-size:15px;color:var(--rose-dark);word-break:break-all}
+.dropzone span{font-size:13px;color:var(--muted)}
+/* valor antigo numa comparação "de → para" */
+.de{color:var(--muted);text-decoration:line-through;font-size:13px}
+
+/* ---------- linha de endereço no checkout ---------- */
+.row-end{display:grid;grid-template-columns:1fr 110px;gap:12px}
+@media(max-width:640px){.row-end{grid-template-columns:1fr}}

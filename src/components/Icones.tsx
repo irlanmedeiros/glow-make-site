@@ -176,3 +176,18 @@ export const IcCatalogo = ({ size = 17 }: P) => (
     <rect x="13" y="13" width="8" height="7" rx="1.5" />
   </svg>
 );
+
+export const IcEntregas = ({ size = 17 }: P) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" {...adm}>
+    <path d="M2 7h11v10H2zM13 10h4l3 3v4h-7z" />
+    <circle cx="6.5" cy="18.5" r="1.8" />
+    <circle cx="17" cy="18.5" r="1.8" />
+  </svg>
+);
+
+export const IcImportar = ({ size = 17 }: P) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" {...adm}>
+    <path d="M12 3v11M8 10.5l4 4 4-4" />
+    <path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
+  </svg>
+);

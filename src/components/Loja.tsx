@@ -522,6 +522,33 @@ function Checkout({ modo, aoLimpar }: { modo: Modo | null; aoLimpar: () => void 
   const { itens, kitPorId, subtotal, frete, total, box, fechar, avisar } = useLoja();
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState('');
+  const [cep, setCep] = useState('');
+  const [buscandoCep, setBuscandoCep] = useState(false);
+  const [end, setEnd] = useState({ endereco: '', bairro: '', cidade: '', uf: '' });
+
+  /* Busca o endereço pelo CEP no ViaCEP.
+     Digitar rua, bairro e cidade à mão é onde nascem os endereços errados —
+     e endereço errado só aparece quando a encomenda volta. */
+  async function buscarCep(valor: string) {
+    const limpo = valor.replace(/\D/g, '');
+    if (limpo.length !== 8) return;
+    setBuscandoCep(true);
+    try {
+      const r = await fetch(`https://viacep.com.br/ws/${limpo}/json/`);
+      const d = await r.json();
+      if (!d.erro) {
+        setEnd({
+          endereco: d.logradouro ?? '',
+          bairro: d.bairro ?? '',
+          cidade: d.localidade ?? '',
+          uf: d.uf ?? '',
+        });
+      }
+    } catch {
+      // CEP não encontrado ou ViaCEP fora do ar: a pessoa preenche à mão.
+    }
+    setBuscandoCep(false);
+  }
 
   const assinatura = modo === 'assinatura';
   if (!modo) return null;
@@ -649,20 +676,90 @@ function Checkout({ modo, aoLimpar }: { modo: Modo | null; aoLimpar: () => void 
                   <input id="ck-fone" name="telefone" required placeholder="(00) 00000-0000" />
                 </div>
               </div>
+              <div className="field">
+                <label htmlFor="ck-cep">CEP</label>
+                <input
+                  id="ck-cep"
+                  name="cep"
+                  required
+                  placeholder="00000-000"
+                  inputMode="numeric"
+                  value={cep}
+                  onChange={(e) => {
+                    setCep(e.target.value);
+                    buscarCep(e.target.value);
+                  }}
+                />
+                <small>{buscandoCep ? 'Buscando endereço...' : 'O endereço é preenchido sozinho.'}</small>
+              </div>
+
+              <div className="row-end">
+                <div className="field">
+                  <label htmlFor="ck-rua">Rua ou avenida</label>
+                  <input
+                    id="ck-rua"
+                    name="endereco"
+                    required
+                    value={end.endereco}
+                    onChange={(e) => setEnd({ ...end, endereco: e.target.value })}
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="ck-num">Número</label>
+                  <input id="ck-num" name="numero" required placeholder="123" />
+                </div>
+              </div>
+
               <div className="row2">
                 <div className="field">
-                  <label htmlFor="ck-cep">CEP</label>
-                  <input id="ck-cep" name="cep" required placeholder="00000-000" />
+                  <label htmlFor="ck-compl">Complemento</label>
+                  <input id="ck-compl" name="complemento" placeholder="Apto, bloco (opcional)" />
                 </div>
                 <div className="field">
-                  <label htmlFor="ck-pag">Forma de pagamento</label>
-                  <select id="ck-pag" name="pagamento" defaultValue="UNDEFINED">
-                    <option value="UNDEFINED">Escolher na hora de pagar</option>
-                    <option value="PIX">PIX</option>
-                    <option value="BOLETO">Boleto</option>
-                    <option value="CREDIT_CARD">Cartão de crédito</option>
-                  </select>
+                  <label htmlFor="ck-bairro">Bairro</label>
+                  <input
+                    id="ck-bairro"
+                    name="bairro"
+                    required
+                    value={end.bairro}
+                    onChange={(e) => setEnd({ ...end, bairro: e.target.value })}
+                  />
                 </div>
+              </div>
+
+              <div className="row-end">
+                <div className="field">
+                  <label htmlFor="ck-cidade">Cidade</label>
+                  <input
+                    id="ck-cidade"
+                    name="cidade"
+                    required
+                    value={end.cidade}
+                    onChange={(e) => setEnd({ ...end, cidade: e.target.value })}
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="ck-uf">UF</label>
+                  <input
+                    id="ck-uf"
+                    name="uf"
+                    required
+                    maxLength={2}
+                    placeholder="SP"
+                    value={end.uf}
+                    onChange={(e) => setEnd({ ...end, uf: e.target.value.toUpperCase() })}
+                  />
+                </div>
+              </div>
+
+              <div className="field">
+                <label htmlFor="ck-pag">Forma de pagamento</label>
+                <select id="ck-pag" name="pagamento" defaultValue="UNDEFINED">
+                  <option value="UNDEFINED">Escolher na hora de pagar</option>
+                  <option value="PIX">PIX</option>
+                  <option value="BOLETO">Boleto</option>
+                  <option value="CREDIT_CARD">Cartão de crédito</option>
+                </select>
               </div>
 
               {erro && <div className="note erro">{erro}</div>}
