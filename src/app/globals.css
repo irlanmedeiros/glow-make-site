@@ -201,10 +201,14 @@ section{padding:78px 0}
 #depo{background:var(--rose-50);overflow:hidden}
 /* O overflow:hidden é o que faz o loop funcionar, mas ele cortava a sombra
    dos cards pelo topo e pela base — por isso a sombra parecia chapada.
-   O padding abre espaço para a sombra existir dentro da área visível e a
-   margem negativa devolve o espaçamento original entre as faixas. */
-.mq{overflow:hidden;padding:20px 0 32px;margin-block:-20px -32px;-webkit-mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent);mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent)}
-.mq+.mq{margin-top:12px}
+   O padding abre espaço para ela existir e a margem negativa devolve o
+   espaçamento original entre as faixas.
+
+   A conta do padding de baixo: no hover a sombra é 0 18px 40px, ou seja
+   alcança 58px para baixo; o card sobe 6px, então precisa de 52px. Uso 58
+   para sobrar folga. Em cima basta 22px (10 + 28 da sombra em repouso). */
+.mq{overflow:hidden;padding:22px 0 58px;margin-block:-22px -58px;-webkit-mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent);mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent)}
+.mq+.mq{margin-top:10px}
 .mq-track{display:flex;gap:20px;width:max-content;animation:mq 62s linear infinite}
 .mq.rev .mq-track{animation-direction:reverse;animation-duration:74s}
 .mq:hover .mq-track{animation-play-state:paused}
