@@ -59,6 +59,17 @@ const KITS: Prisma.KitCreateInput[] = [
     ordem: 5,
   },
   {
+    sku: 'GM-PIN',
+    nome: 'Kit Pincéis Essenciais',
+    slug: 'kit-pinceis-essenciais',
+    descricao: 'Os pincéis que faltavam para o resultado ficar profissional.',
+    itens: ['Pincel de base', 'Pincel de pó', 'Pincel de blush', 'Pincel chanfrado', 'Duo para sombra', 'Porta-pincéis'],
+    preco: new Prisma.Decimal('119.90'),
+    imagem: '/assets/kits/kit-6.jpg',
+    entradas: 22,
+    ordem: 6,
+  },
+  {
     sku: 'GM-BOX',
     nome: 'Glow Box Mensal',
     slug: 'glow-box-mensal',
@@ -199,20 +210,23 @@ async function main() {
   });
   console.log('  configurações da loja');
 
-  const movimentacoes = await prisma.movimentacao.count();
-  if (movimentacoes === 0) {
-    const kits = await prisma.kit.findMany();
-    await prisma.movimentacao.createMany({
-      data: kits.map((k) => ({
+  // Checa produto a produto, e não a tabela inteira: assim um kit criado
+  // depois também ganha a linha de entrada inicial no histórico.
+  const kits = await prisma.kit.findMany();
+  for (const k of kits) {
+    const jaTem = await prisma.movimentacao.count({ where: { sku: k.sku } });
+    if (jaTem > 0) continue;
+    await prisma.movimentacao.create({
+      data: {
         sku: k.sku,
         nome: k.nome,
-        tipo: 'ENTRADA' as const,
+        tipo: 'ENTRADA',
         qtd: k.entradas,
         origem: 'Estoque inicial (seed)',
         saldoApos: k.entradas - k.saidas,
-      })),
+      },
     });
-    console.log('  histórico inicial de estoque');
+    console.log(`  histórico inicial de ${k.sku}`);
   }
 
   console.log('Pronto.');

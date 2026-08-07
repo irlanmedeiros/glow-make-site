@@ -199,14 +199,20 @@ section{padding:78px 0}
 
 /* ---------- depoimentos ---------- */
 #depo{background:var(--rose-50);overflow:hidden}
-.mq{overflow:hidden;padding:6px 0;-webkit-mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent);mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent)}
-.mq+.mq{margin-top:20px}
+/* O overflow:hidden é o que faz o loop funcionar, mas ele cortava a sombra
+   dos cards pelo topo e pela base — por isso a sombra parecia chapada.
+   O padding abre espaço para a sombra existir dentro da área visível e a
+   margem negativa devolve o espaçamento original entre as faixas. */
+.mq{overflow:hidden;padding:20px 0 32px;margin-block:-20px -32px;-webkit-mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent);mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent)}
+.mq+.mq{margin-top:12px}
 .mq-track{display:flex;gap:20px;width:max-content;animation:mq 62s linear infinite}
 .mq.rev .mq-track{animation-direction:reverse;animation-duration:74s}
 .mq:hover .mq-track{animation-play-state:paused}
 @keyframes mq{from{transform:translateX(0)}to{transform:translateX(calc(-50% - 10px))}}
-.dep{width:340px;flex-shrink:0;background:#fff;padding:24px;border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid #fff;transition:transform .25s,border-color .25s}
-.dep:hover{transform:translateY(-5px);border-color:var(--rose-100)}
+/* Sombra em duas camadas: uma curta que assenta o card na superfície e uma
+   longa e difusa que dá a profundidade. Uma camada só achata. */
+.dep{width:340px;flex-shrink:0;background:#fff;padding:24px;border-radius:var(--radius);box-shadow:0 1px 2px rgba(140,52,78,.07), 0 10px 28px rgba(140,52,78,.10);border:1px solid #fff;transition:transform .28s cubic-bezier(.2,.7,.3,1),box-shadow .28s,border-color .25s}
+.dep:hover{transform:translateY(-6px);border-color:var(--rose-100);box-shadow:0 2px 4px rgba(140,52,78,.08), 0 18px 40px rgba(140,52,78,.16)}
 .stars{display:flex;gap:3px;margin-bottom:11px}
 .dep p{font-size:14.5px;margin-bottom:16px;min-height:88px}
 .dep-who{display:flex;align-items:center;gap:11px}
