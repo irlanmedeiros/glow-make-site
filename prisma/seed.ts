@@ -1,0 +1,226 @@
+import { PrismaClient, Prisma } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+const KITS: Prisma.KitCreateInput[] = [
+  {
+    sku: 'GM-ESS',
+    nome: 'Kit Essencial Glow',
+    slug: 'kit-essencial-glow',
+    descricao: 'O básico bem feito para o dia a dia.',
+    itens: ['Base líquida 30ml', 'Pó compacto matte', 'Máscara de cílios', 'Batom rosé', 'Necessaire'],
+    preco: new Prisma.Decimal('89.90'),
+    imagem: '/assets/kits/kit-1.jpg',
+    entradas: 40,
+    ordem: 1,
+  },
+  {
+    sku: 'GM-OLH',
+    nome: 'Kit Olhar Marcante',
+    slug: 'kit-olhar-marcante',
+    descricao: 'Tudo para o olhar, do neutro ao noite.',
+    itens: ['Paleta 12 cores', 'Delineador em caneta', 'Máscara alongamento', 'Lápis marrom', 'Dois pincéis'],
+    preco: new Prisma.Decimal('129.90'),
+    imagem: '/assets/kits/kit-2.jpg',
+    entradas: 25,
+    ordem: 2,
+  },
+  {
+    sku: 'GM-PEL',
+    nome: 'Kit Pele Perfeita',
+    slug: 'kit-pele-perfeita',
+    descricao: 'Do preparo ao acabamento da pele.',
+    itens: ['Primer hidratante', 'Base 12 tons', 'Corretivo líquido', 'Pó solto', 'Blush', 'Spray fixador'],
+    preco: new Prisma.Decimal('159.90'),
+    imagem: '/assets/kits/kit-3.jpg',
+    entradas: 18,
+    ordem: 3,
+  },
+  {
+    sku: 'GM-LAB',
+    nome: 'Kit Lábios Glow',
+    slug: 'kit-labios-glow',
+    descricao: 'Cinco acabamentos de boca em um kit.',
+    itens: ['Batom matte', 'Batom cremoso', 'Gloss volume', 'Lápis contorno', 'Bálsamo'],
+    preco: new Prisma.Decimal('99.90'),
+    imagem: '/assets/kits/kit-4.jpg',
+    entradas: 32,
+    ordem: 4,
+  },
+  {
+    sku: 'GM-DLX',
+    nome: 'Kit Completo Deluxe',
+    slug: 'kit-completo-deluxe',
+    descricao: 'Rosto inteiro, com estojo rígido.',
+    itens: ['Paleta 18 cores', 'Base, corretivo e pó', 'Contorno e iluminador', 'Blush duo', 'Trio de batons', 'Oito pincéis'],
+    preco: new Prisma.Decimal('249.90'),
+    imagem: '/assets/kits/kit-5.jpg',
+    entradas: 8,
+    ordem: 5,
+  },
+  {
+    sku: 'GM-BOX',
+    nome: 'Glow Box Mensal',
+    slug: 'glow-box-mensal',
+    descricao: 'De quatro a seis produtos selecionados, entregues todo mês.',
+    itens: [
+      'Curadoria nova a cada mês, nunca repetida',
+      'Frete incluso para todo o Brasil',
+      'Dez por cento de desconto em qualquer kit avulso',
+      'Acesso antecipado aos lançamentos',
+      'Cancele a qualquer momento, sem multa',
+    ],
+    preco: new Prisma.Decimal('99.90'),
+    imagem: '/assets/kits/glowbox.jpg',
+    tipo: 'BOX',
+    entradas: 120,
+    estoqueBaixo: 20,
+    ordem: 99,
+  },
+];
+
+const BANNERS: Prisma.BannerCreateInput[] = [
+  {
+    tag: 'Edição de agosto',
+    titulo: 'A caixa que todo mundo está esperando',
+    subtitulo: 'A Glow Box de agosto já está sendo montada. Assine até dia 10 e garanta a sua.',
+    imagem: '/assets/banners/banner-1.jpg',
+    ctaTexto: 'Ver a assinatura',
+    ctaLink: '#assinatura',
+    ordem: 1,
+  },
+  {
+    tag: 'Assinatura',
+    titulo: 'R$ 99,90 por mês, sem fidelidade',
+    subtitulo: 'De quatro a seis produtos selecionados, com valor de varejo acima de R$ 250.',
+    imagem: '/assets/banners/banner-2.jpg',
+    ctaTexto: 'Assinar agora',
+    ctaLink: '#assinatura',
+    ordem: 2,
+  },
+  {
+    tag: 'Mais vendido',
+    titulo: 'Kit Completo Deluxe',
+    subtitulo: 'Rosto inteiro em um estojo rígido. O presente que nunca erra.',
+    imagem: '/assets/banners/banner-3.jpg',
+    ctaTexto: 'Ver os kits',
+    ctaLink: '#kits',
+    ordem: 3,
+  },
+  {
+    tag: 'Lançamento',
+    titulo: 'Kit Lábios Glow',
+    subtitulo: 'Cinco acabamentos de boca em um kit só, do matte ao gloss.',
+    imagem: '/assets/banners/banner-4.jpg',
+    ctaTexto: 'Comprar kit',
+    ctaLink: '#kits',
+    ordem: 4,
+  },
+  {
+    tag: 'Frete grátis',
+    titulo: 'Acima de R$ 199 a gente entrega',
+    subtitulo: 'Para todo o Brasil, com código de rastreio em todos os pedidos.',
+    imagem: '/assets/banners/banner-5.jpg',
+    ctaTexto: 'Escolher meu kit',
+    ctaLink: '#kits',
+    ordem: 5,
+  },
+];
+
+const DEPOIMENTOS: Omit<Prisma.DepoimentoCreateInput, 'avatar' | 'ordem'>[] = [
+  { nome: 'Mariana Alves', cidade: 'São Paulo, SP', tempo: 'Assinante há 8 meses', texto: 'A caixa de julho veio com uma paleta que eu queria comprar havia meses. Vale muito mais do que eu pago.' },
+  { nome: 'Camila Souza', cidade: 'Belo Horizonte, MG', tempo: 'Cliente desde 2025', texto: 'Comprei o Kit Pele Perfeita para testar e acabei assinando. Entrega rápida e embalagem impecável.' },
+  { nome: 'Juliana Pires', cidade: 'Curitiba, PR', tempo: 'Assinante há 1 ano', texto: 'Dei o Kit Completo Deluxe de presente para minha irmã. Ela achou que era de marca importada.' },
+  { nome: 'Larissa Rocha', cidade: 'Recife, PE', tempo: 'Assinante há 5 meses', texto: 'O que mais gosto é não saber o que vem. Toda vez descubro uma marca nova que não conhecia.' },
+  { nome: 'Beatriz Fontes', cidade: 'Porto Alegre, RS', tempo: 'Cliente desde 2024', texto: 'Chegou em quatro dias aqui no Sul, com rastreio funcionando direitinho. Nada quebrado.' },
+  { nome: 'Tatiane Nunes', cidade: 'Salvador, BA', tempo: 'Assinante há 3 meses', texto: 'A base do Kit Essencial acertou meu tom de primeira, coisa que nunca acontece comigo.' },
+  { nome: 'Amanda Vieira', cidade: 'Fortaleza, CE', tempo: 'Assinante há 7 meses', texto: 'Cancelei um mês porque estava apertada e voltei no seguinte, sem multa e sem drama nenhum.' },
+  { nome: 'Renata Dias', cidade: 'Campinas, SP', tempo: 'Cliente desde 2025', texto: 'O Kit Olhar Marcante virou meu padrão para trabalhar. A paleta rende muito mais do que eu esperava.' },
+  { nome: 'Patrícia Campos', cidade: 'Goiânia, GO', tempo: 'Assinante há 10 meses', texto: 'Já indiquei para cinco amigas. Três assinaram no mesmo mês e ninguém se arrependeu.' },
+  { nome: 'Gabriela Martins', cidade: 'Florianópolis, SC', tempo: 'Assinante há 2 meses', texto: 'O atendimento no WhatsApp respondeu em minutos quando errei o endereço. Resolveram na hora.' },
+  { nome: 'Sabrina Lima', cidade: 'Manaus, AM', tempo: 'Cliente desde 2025', texto: 'Moro longe e sempre pago caro no frete. Aqui veio grátis e chegou antes do prazo previsto.' },
+  { nome: 'Vanessa Cardoso', cidade: 'Brasília, DF', tempo: 'Assinante há 6 meses', texto: 'Uso o desconto de assinante para comprar refil dos kits. No fim das contas, a assinatura se paga.' },
+  { nome: 'Daniela Araújo', cidade: 'Natal, RN', tempo: 'Assinante há 4 meses', texto: 'A curadoria é honesta. Nunca recebi aquele produto de encher caixa que ninguém usa.' },
+  { nome: 'Karina Mendes', cidade: 'Vitória, ES', tempo: 'Cliente desde 2024', texto: 'Comprei o Kit Lábios Glow no lançamento. O gloss é o melhor que já usei nessa faixa de preço.' },
+  { nome: 'Nathália Barbosa', cidade: 'Belém, PA', tempo: 'Assinante há 9 meses', texto: 'Abrir a caixa virou meu programa do mês. Minha filha já espera junto comigo.' },
+];
+
+async function main() {
+  console.log('Semeando o banco da Glow Make...');
+
+  for (const kit of KITS) {
+    await prisma.kit.upsert({
+      where: { sku: kit.sku },
+      // update deliberadamente vazio: rodar o seed de novo não pode zerar
+      // estoque nem sobrescrever preço que já foi ajustado no admin.
+      update: {},
+      create: kit,
+    });
+  }
+  console.log(`  ${KITS.length} produtos`);
+
+  if ((await prisma.banner.count()) === 0) {
+    await prisma.banner.createMany({ data: BANNERS });
+    console.log(`  ${BANNERS.length} banners`);
+  }
+
+  if ((await prisma.depoimento.count()) === 0) {
+    await prisma.depoimento.createMany({
+      data: DEPOIMENTOS.map((d, i) => ({
+        ...d,
+        avatar: `/assets/avatares/avatar-${i + 1}.jpg`,
+        ordem: i + 1,
+      })),
+    });
+    console.log(`  ${DEPOIMENTOS.length} depoimentos`);
+  }
+
+  if ((await prisma.foto.count()) === 0) {
+    await prisma.foto.createMany({
+      data: Array.from({ length: 8 }, (_, i) => ({
+        url: `/assets/galeria/g-${i + 1}.jpg`,
+        ordem: i + 1,
+      })),
+    });
+    console.log('  8 fotos da galeria');
+  }
+
+  await prisma.config.upsert({
+    where: { id: 'config' },
+    update: {},
+    create: {
+      id: 'config',
+      avisos: [
+        'Frete grátis nas compras acima de R$ 199',
+        'Parcele em até 6x sem juros no cartão',
+        'Assine a Glow Box até dia 10 e receba a edição deste mês',
+      ],
+    },
+  });
+  console.log('  configurações da loja');
+
+  const movimentacoes = await prisma.movimentacao.count();
+  if (movimentacoes === 0) {
+    const kits = await prisma.kit.findMany();
+    await prisma.movimentacao.createMany({
+      data: kits.map((k) => ({
+        sku: k.sku,
+        nome: k.nome,
+        tipo: 'ENTRADA' as const,
+        qtd: k.entradas,
+        origem: 'Estoque inicial (seed)',
+        saldoApos: k.entradas - k.saidas,
+      })),
+    });
+    console.log('  histórico inicial de estoque');
+  }
+
+  console.log('Pronto.');
+}
+
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(() => prisma.$disconnect());

@@ -1,0 +1,188 @@
+// Glow Make — modelo de dados
+// O estoque é a parte crítica: entradas e saidas são contadores acumulados e
+// o saldo é sempre (entradas - saidas). A baixa acontece em SQL condicional
+// dentro de transação, então dois pedidos simultâneos nunca vendem a mesma
+// última unidade. Ver src/lib/estoque.ts.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TipoProduto {
+  KIT
+  BOX
+}
+
+enum TipoMovimentacao {
+  ENTRADA
+  SAIDA
+  AJUSTE
+}
+
+enum StatusPedido {
+  AGUARDANDO_PAGAMENTO
+  PAGO
+  EM_SEPARACAO
+  ENVIADO
+  ENTREGUE
+  CANCELADO
+}
+
+enum StatusAssinante {
+  AGUARDANDO_PAGAMENTO
+  ATIVA
+  ATRASADA
+  CANCELADA
+}
+
+model Kit {
+  id          String      @id @default(cuid())
+  sku         String      @unique
+  nome        String
+  slug        String      @unique
+  descricao   String
+  itens       String[]
+  preco       Decimal     @db.Decimal(10, 2)
+  imagem      String
+  tipo        TipoProduto @default(KIT)
+  entradas    Int         @default(0)
+  saidas      Int         @default(0)
+  estoqueBaixo Int        @default(10)
+  ativo       Boolean     @default(true)
+  ordem       Int         @default(0)
+  criadoEm    DateTime    @default(now())
+  atualizadoEm DateTime   @updatedAt
+
+  itensPedido PedidoItem[]
+
+  @@index([ativo, ordem])
+}
+
+model Movimentacao {
+  id       String           @id @default(cuid())
+  sku      String
+  nome     String
+  tipo     TipoMovimentacao
+  qtd      Int
+  origem   String
+  saldoApos Int
+  criadoEm DateTime         @default(now())
+
+  @@index([criadoEm])
+  @@index([sku])
+}
+
+model Pedido {
+  id       String       @id @default(cuid())
+  numero   Int          @unique @default(autoincrement())
+  nome     String
+  email    String
+  documento String
+  telefone String
+  cep      String
+  subtotal Decimal      @db.Decimal(10, 2)
+  frete    Decimal      @db.Decimal(10, 2)
+  total    Decimal      @db.Decimal(10, 2)
+  pagamento String
+  status   StatusPedido @default(AGUARDANDO_PAGAMENTO)
+  asaasPaymentId String?
+  invoiceUrl     String?
+  observacao     String?
+  estoqueDevolvido Boolean @default(false)
+  criadoEm DateTime     @default(now())
+  atualizadoEm DateTime  @updatedAt
+
+  itens PedidoItem[]
+
+  @@index([criadoEm])
+  @@index([status])
+}
+
+model PedidoItem {
+  id       String  @id @default(cuid())
+  pedidoId String
+  pedido   Pedido  @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  kitId    String?
+  kit      Kit?    @relation(fields: [kitId], references: [id], onDelete: SetNull)
+  sku      String
+  nome     String
+  preco    Decimal @db.Decimal(10, 2)
+  qtd      Int
+
+  @@index([pedidoId])
+}
+
+model Assinante {
+  id        String          @id @default(cuid())
+  nome      String
+  email     String
+  documento String
+  telefone  String
+  cep       String
+  valor     Decimal         @db.Decimal(10, 2)
+  status    StatusAssinante @default(AGUARDANDO_PAGAMENTO)
+  asaasCustomerId     String?
+  asaasSubscriptionId String?
+  invoiceUrl          String?
+  canceladaEm DateTime?
+  criadoEm  DateTime        @default(now())
+  atualizadoEm DateTime     @updatedAt
+
+  @@index([status])
+  @@index([criadoEm])
+}
+
+model Banner {
+  id        String  @id @default(cuid())
+  tag       String
+  titulo    String
+  subtitulo String
+  imagem    String
+  ctaTexto  String
+  ctaLink   String
+  ordem     Int     @default(0)
+  ativo     Boolean @default(true)
+
+  @@index([ativo, ordem])
+}
+
+model Depoimento {
+  id     String  @id @default(cuid())
+  nome   String
+  cidade String
+  tempo  String
+  texto  String
+  avatar String
+  nota   Int     @default(5)
+  ordem  Int     @default(0)
+  ativo  Boolean @default(true)
+
+  @@index([ativo, ordem])
+}
+
+model Foto {
+  id     String  @id @default(cuid())
+  url    String
+  ordem  Int     @default(0)
+  ativo  Boolean @default(true)
+
+  @@index([ativo, ordem])
+}
+
+// Linha única (id = "config") com os ajustes gerais da loja.
+model Config {
+  id               String  @id @default("config")
+  freteValor       Decimal @db.Decimal(10, 2) @default(24.90)
+  freteGratisAcima Decimal @db.Decimal(10, 2) @default(199.00)
+  avisos           String[]
+  whatsapp         String  @default("(00) 00000-0000")
+  email            String  @default("contato@glowmake.com.br")
+  instagram        String  @default("@glowmake")
+  cnpj             String  @default("00.000.000/0001-00")
+  atualizadoEm     DateTime @updatedAt
+}
