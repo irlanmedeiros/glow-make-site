@@ -250,6 +250,15 @@ function FichaProduto({
     null as Resultado | null
   );
 
+  /* Qual venda já foi desfeita.
+     Guardamos a própria referência do objeto devolvido pela action: cada nova
+     venda gera um objeto novo, então o botão reaparece sozinho na venda
+     seguinte. Um simples `desfazer?.ok` não serve — esse estado fica preso no
+     último resultado e esconderia o botão para sempre. */
+  const [vendaDesfeita, setVendaDesfeita] = useState<Resultado | null>(null);
+  const vendaAtual = useRef<Resultado | null>(null);
+  vendaAtual.current = venda;
+
   // O nome fica salvo no aparelho: cada vendedora digita uma vez só, e o
   // histórico do estoque passa a dizer quem deu a baixa.
   useEffect(() => {
@@ -269,7 +278,10 @@ function FichaProduto({
   }, [venda, aoMudarEstoque]);
 
   useEffect(() => {
-    if (desfazer?.ok) aoMudarEstoque();
+    if (desfazer?.ok) {
+      setVendaDesfeita(vendaAtual.current);
+      aoMudarEstoque();
+    }
   }, [desfazer, aoMudarEstoque]);
 
   const s = situacao(produto);
@@ -361,7 +373,7 @@ function FichaProduto({
           {venda?.ok && (
             <div className="note ok" style={{ marginTop: 12 }}>
               {venda.ok}
-              {venda.id && venda.qtd && !desfazer?.ok && (
+              {venda.id && venda.qtd && vendaDesfeita !== venda && (
                 <form action={desfazerAcao} style={{ marginTop: 10 }}>
                   <input type="hidden" name="id" value={venda.id} />
                   <input type="hidden" name="qtd" value={venda.qtd} />
