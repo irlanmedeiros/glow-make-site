@@ -706,7 +706,7 @@ function Checkout({ modo, aoLimpar }: { modo: Modo | null; aoLimpar: () => void 
                 </div>
                 <div className="field">
                   <label htmlFor="ck-num">Número</label>
-                  <input id="ck-num" name="numero" required placeholder="123" />
+                  <input id="ck-num" name="enderecoNumero" required placeholder="123" />
                 </div>
               </div>
 

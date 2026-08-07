@@ -75,7 +75,7 @@ export async function POST(req: Request) {
           telefone: cliente.telefone,
           cep: cliente.cep,
           endereco: cliente.endereco,
-          numero: cliente.numero,
+          enderecoNumero: cliente.enderecoNumero,
           complemento: cliente.complemento,
           bairro: cliente.bairro,
           cidade: cliente.cidade,

@@ -87,9 +87,9 @@ model Pedido {
 
   // Endereço de entrega. Antes só existia o CEP, e não se entrega em um CEP.
   // Campos com default "" para a migração não quebrar pedidos antigos.
-  cep         String
-  endereco    String  @default("")
-  numero      String  @default("")
+  cep            String
+  endereco       String  @default("")
+  enderecoNumero String  @default("")   // numero da casa; "numero" ja e o numero do pedido
   complemento String  @default("")
   bairro      String  @default("")
   cidade      String  @default("")

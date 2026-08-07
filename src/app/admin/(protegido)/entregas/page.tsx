@@ -21,10 +21,10 @@ const ABAS = [
 ] as const;
 
 function enderecoCompleto(p: {
-  endereco: string; numero: string; complemento: string;
+  endereco: string; enderecoNumero: string; complemento: string;
   bairro: string; cidade: string; uf: string; cep: string;
 }) {
-  const linha1 = [p.endereco, p.numero].filter(Boolean).join(', ');
+  const linha1 = [p.endereco, p.enderecoNumero].filter(Boolean).join(', ');
   const linha2 = [p.complemento, p.bairro].filter(Boolean).join(' · ');
   const linha3 = [p.cidade && p.uf ? `${p.cidade} - ${p.uf}` : p.cidade || p.uf, p.cep]
     .filter(Boolean)

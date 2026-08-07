@@ -5,7 +5,7 @@ export type DadosCliente = {
   telefone: string;
   cep: string;
   endereco: string;
-  numero: string;
+  enderecoNumero: string;
   complemento: string;
   bairro: string;
   cidade: string;
@@ -77,8 +77,8 @@ export function validarCliente(bruto: unknown): DadosCliente | { erro: string } 
   const endereco = texto(c.endereco, 160);
   if (endereco.length < 3) return { erro: 'Informe a rua ou avenida.' };
 
-  const numero = texto(c.numero, 20);
-  if (!numero) return { erro: 'Informe o número. Use "s/n" se não houver.' };
+  const enderecoNumero = texto(c.enderecoNumero, 20);
+  if (!enderecoNumero) return { erro: 'Informe o número. Use "s/n" se não houver.' };
 
   const bairro = texto(c.bairro, 80);
   if (bairro.length < 2) return { erro: 'Informe o bairro.' };
@@ -96,7 +96,7 @@ export function validarCliente(bruto: unknown): DadosCliente | { erro: string } 
 
   return {
     nome, email, documento, telefone,
-    cep, endereco, numero, complemento, bairro, cidade, uf,
+    cep, endereco, enderecoNumero, complemento, bairro, cidade, uf,
     pagamento,
   };
 }
