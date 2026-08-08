@@ -394,7 +394,7 @@ export default async function Home() {
           <div className="foot-bottom">
             <span>© {new Date().getFullYear()} Glow Make · CNPJ {config.cnpj}</span>
             <span>
-              <a href="#">Privacidade</a> · <a href="#">Termos</a> · <a href="/admin">Admin</a>
+              <a href="/privacidade">Privacidade</a> · <a href="/privacidade">Termos</a> · <a href="/admin">Admin</a>
             </span>
           </div>
         </div>

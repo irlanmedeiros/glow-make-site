@@ -9,8 +9,14 @@ import { useEffect, useState } from 'react';
  * antes de a pessoa autorizar é justamente o que a LGPD trata como uso
  * indevido — e um banner que rastreia enquanto pergunta não serve de nada.
  *
- * A escolha fica no localStorage. Quem recusa navega e compra normalmente:
- * o consentimento é para publicidade, não para vender.
+ * O texto é curto de propósito: a lei pede consentimento INFORMADO, não um
+ * paredão de texto na primeira visita. O detalhe (o que é coletado, para quê,
+ * com quem é compartilhado) fica em /privacidade, a um clique daqui. Encurtar
+ * o banner é legítimo; esconder a finalidade não seria — consentimento obtido
+ * às escuras não vale, e o risco volta para a loja.
+ *
+ * A escolha fica no localStorage e pode ser revogada em /privacidade, como
+ * exige o art. 8º, §5º. Quem recusa navega e compra normalmente.
  */
 
 const CHAVE = 'glowmake_consentimento';
@@ -69,10 +75,11 @@ export default function Consentimento({ pixelId }: { pixelId: string }) {
   return (
     <div className="lgpd" role="dialog" aria-label="Consentimento de cookies">
       <div className="lgpd-txt">
-        <b>A gente usa cookies para entender o que funciona.</b>
+        <b>Este site usa cookies</b>
         <span>
-          Servem para medir de onde vêm as visitas e mostrar nossos anúncios a quem já se
-          interessou. Recusar não atrapalha em nada a sua compra.
+          Usamos cookies para melhorar sua experiência de navegação e personalizar conteúdo. Você
+          decide, e pode mudar de ideia quando quiser. Veja os detalhes na{' '}
+          <a href="/privacidade">Política de Privacidade</a>.
         </span>
       </div>
       <div className="lgpd-btns">

@@ -551,3 +551,18 @@ th.num{text-align:right}
 .lgpd-txt span{font-size:12.5px;color:var(--muted);line-height:1.5}
 .lgpd-btns{display:flex;gap:8px;flex-shrink:0}
 @media(max-width:520px){.lgpd{padding:16px}.lgpd-btns{width:100%}.lgpd-btns .btn{flex:1}}
+
+/* ---------- páginas legais ---------- */
+.legal{min-height:100vh;background:var(--rose-50)}
+.legal-topo{max-width:820px;margin:0 auto;padding:20px;display:flex;align-items:center;justify-content:space-between;gap:14px}
+.legal-topo img{height:34px;width:auto}
+.legal-corpo{max-width:820px;margin:0 auto;padding:34px 24px 80px;background:#fff;border-radius:22px;box-shadow:var(--shadow)}
+.legal-corpo h1{font-family:var(--serif);font-size:clamp(26px,4vw,36px);line-height:1.15}
+.legal-corpo h2{font-family:var(--serif);font-size:19px;margin:28px 0 8px}
+.legal-corpo p{font-size:14.5px;color:#4A3640;margin-bottom:12px;line-height:1.75}
+.legal-corpo ul{margin:0 0 14px 20px;font-size:14.5px;color:#4A3640;line-height:1.8}
+.legal-corpo a{color:var(--rose);text-decoration:underline}
+.legal-data{font-size:13px;color:var(--muted);margin-bottom:20px}
+.legal-rodape{margin-top:36px;padding-top:22px;border-top:1px solid var(--line)}
+.lgpd-txt a{color:var(--rose);text-decoration:underline}
+@media(max-width:640px){.legal-corpo{border-radius:0;padding:26px 18px 60px}}
