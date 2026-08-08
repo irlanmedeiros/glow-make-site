@@ -11,6 +11,13 @@ import {
 } from 'react';
 import type { ConfigPublica, KitPublico } from './tipos';
 import { Busca, Carrinho, Check, Menu, Seta } from './Icones';
+import { evento } from './Consentimento';
+
+/** Lê o código do afiliado que o middleware guardou no cookie. */
+function refDoCookie(): string {
+  if (typeof document === 'undefined') return '';
+  return document.cookie.match(/(?:^|;\s*)glowmake_ref=([^;]*)/)?.[1] ?? '';
+}
 
 /* ============================================================
    Contexto do carrinho
@@ -147,7 +154,11 @@ export function Loja({
     () => itens.reduce((s, i) => s + (kitPorId(i.id)?.preco ?? 0) * i.qtd, 0),
     [itens, kitPorId]
   );
-  const frete = itens.length === 0 || subtotal >= config.freteGratisAcima ? 0 : config.freteValor;
+  /* O frete deixou de ser calculado aqui: agora vem cotado do servidor no
+     checkout, porque depende do CEP e da transportadora. Na gaveta do
+     carrinho mostramos "calculado no checkout" em vez de um número que
+     poderia mudar no passo seguinte. */
+  const frete = 0;
   const qtdTotal = itens.reduce((s, i) => s + i.qtd, 0);
 
   const valor: Ctx = {
@@ -236,9 +247,10 @@ export function Cabecalho() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/assets/logo.png" alt="Glow Make" />
         </a>
+        {/* Assinatura saiu do menu de propósito: ela é apresentada pelos
+            banners do topo, não como mais um item de navegação. */}
         <nav className="main">
           <a href="#kits">Kits</a>
-          <a href="#assinatura">Assinatura</a>
           <a href="#como">Como funciona</a>
           <a href="#depo">Avaliações</a>
         </nav>
@@ -425,7 +437,6 @@ export function ListaBeneficios({ itens }: { itens: string[] }) {
 function Gaveta({ aberta }: { aberta: boolean }) {
   const { itens, kitPorId, mudarQtd, remover, subtotal, frete, total, fechar, abrirCheckout, config } =
     useLoja();
-  const falta = config.freteGratisAcima - subtotal;
 
   return (
     <>
@@ -486,22 +497,21 @@ function Gaveta({ aberta }: { aberta: boolean }) {
             </button>
           ) : (
             <>
-              {falta > 0 && (
-                <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 10 }}>
-                  Faltam <b style={{ color: 'var(--rose)' }}>{real(falta)}</b> para o frete grátis
-                </div>
-              )}
+              <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 10 }}>
+                Entrega <b style={{ color: 'var(--rose) '}}>grátis em João Pessoa</b>. Para outras
+                cidades, o valor é calculado pelo CEP no próximo passo.
+              </div>
               <div className="tot">
                 <span>Subtotal</span>
                 <span>{real(subtotal)}</span>
               </div>
               <div className="tot">
                 <span>Frete</span>
-                <span>{frete === 0 ? 'Grátis' : real(frete)}</span>
+                <span style={{ color: 'var(--muted)' }}>calculado no checkout</span>
               </div>
               <div className="tot big">
-                <span>Total</span>
-                <span>{real(total)}</span>
+                <span>Subtotal</span>
+                <span>{real(subtotal)}</span>
               </div>
               <button className="btn btn-primary btn-block" onClick={() => abrirCheckout('carrinho')}>
                 Finalizar compra
@@ -518,20 +528,74 @@ function Gaveta({ aberta }: { aberta: boolean }) {
    Checkout
    ============================================================ */
 
+type OpcaoFrete = {
+  servico: string;
+  transportadora: string;
+  valor: number;
+  prazoDias: number | null;
+  gratis: boolean;
+};
+
+/* ============================================================
+   Checkout
+
+   Compra avulsa: dados → pagamento.
+   Assinatura:    dados → contrato → pagamento.
+
+   O contrato é uma etapa própria de propósito. Enfiar "li e aceito" no meio
+   de um formulário longo é como o aceite perde valor: ninguém lê, e depois
+   ninguém sustenta que leu.
+   ============================================================ */
+
 function Checkout({ modo, aoLimpar }: { modo: Modo | null; aoLimpar: () => void }) {
-  const { itens, kitPorId, subtotal, frete, total, box, fechar, avisar } = useLoja();
+  const { itens, kitPorId, subtotal, box, fechar, avisar, config } = useLoja();
+
+  const [etapa, setEtapa] = useState<'dados' | 'contrato'>('dados');
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState('');
+  const [dados, setDados] = useState<Record<string, string>>({});
+
   const [cep, setCep] = useState('');
   const [buscandoCep, setBuscandoCep] = useState(false);
   const [end, setEnd] = useState({ endereco: '', bairro: '', cidade: '', uf: '' });
 
-  /* Busca o endereço pelo CEP no ViaCEP.
-     Digitar rua, bairro e cidade à mão é onde nascem os endereços errados —
-     e endereço errado só aparece quando a encomenda volta. */
-  async function buscarCep(valor: string) {
+  const [fretes, setFretes] = useState<OpcaoFrete[]>([]);
+  const [freteEscolhido, setFreteEscolhido] = useState('');
+  const [avisoFrete, setAvisoFrete] = useState('');
+  const [cotando, setCotando] = useState(false);
+
+  const [aceitouContrato, setAceitouContrato] = useState(false);
+  const assinatura = modo === 'assinatura';
+
+  useEffect(() => {
+    if (modo) {
+      setEtapa('dados');
+      setErro('');
+      setAceitouContrato(false);
+      evento(assinatura ? 'InitiateCheckout' : 'InitiateCheckout', {
+        value: assinatura ? (box?.preco ?? 0) : subtotal,
+        currency: 'BRL',
+      });
+    }
+  }, [modo, assinatura, box, subtotal]);
+
+  if (!modo) return null;
+
+  const opcaoAtual = fretes.find((f) => f.servico === freteEscolhido) ?? fretes[0];
+  const valorFrete = opcaoAtual?.valor ?? 0;
+  const totalFinal = (assinatura ? (box?.preco ?? 0) : subtotal) + valorFrete;
+
+  /* Busca endereço e cotação de uma vez: os dois dependem do mesmo CEP, e
+     pedir para a pessoa clicar em "calcular frete" só adiciona um passo. */
+  async function aoDigitarCep(valor: string) {
+    setCep(valor);
     const limpo = valor.replace(/\D/g, '');
-    if (limpo.length !== 8) return;
+    if (limpo.length !== 8) {
+      setFretes([]);
+      setAvisoFrete('');
+      return;
+    }
+
     setBuscandoCep(true);
     try {
       const r = await fetch(`https://viacep.com.br/ws/${limpo}/json/`);
@@ -545,24 +609,88 @@ function Checkout({ modo, aoLimpar }: { modo: Modo | null; aoLimpar: () => void 
         });
       }
     } catch {
-      // CEP não encontrado ou ViaCEP fora do ar: a pessoa preenche à mão.
+      /* sem ViaCEP a pessoa preenche à mão */
     }
     setBuscandoCep(false);
+
+    setCotando(true);
+    try {
+      const r = await fetch('/api/frete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cep: limpo,
+          itens: assinatura ? [] : itens.map((i) => ({ kitId: i.id, qtd: i.qtd })),
+        }),
+      });
+      const d = await r.json();
+      setFretes(d.opcoes ?? []);
+      setFreteEscolhido(d.opcoes?.[0]?.servico ?? '');
+      setAvisoFrete(d.aviso ?? '');
+    } catch {
+      setFretes([]);
+      setAvisoFrete('Não consegui calcular o frete agora. Seguimos e confirmamos com você.');
+    }
+    setCotando(false);
   }
 
-  const assinatura = modo === 'assinatura';
-  if (!modo) return null;
+  /* Guarda o lead assim que houver um e-mail válido. É o que permite falar
+     depois com quem chegou até aqui e desistiu — sem isso, a pessoa some. */
+  async function guardarLead(campos: Record<string, string>, consentiu: boolean) {
+    if (!campos.email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(campos.email)) return;
+    try {
+      await fetch('/api/lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: campos.email,
+          nome: campos.nome,
+          telefone: campos.telefone,
+          cep: campos.cep,
+          consentiuContato: consentiu,
+          queriaAssinar: assinatura,
+          ref: refDoCookie(),
+          valorEstimado: assinatura ? (box?.preco ?? 0) : subtotal,
+          itens: assinatura
+            ? [{ sku: 'GM-BOX', nome: box?.nome ?? 'Glow Box', qtd: 1, preco: box?.preco ?? 0 }]
+            : itens.map((i) => {
+                const k = kitPorId(i.id);
+                return { sku: k?.sku ?? '', nome: k?.nome ?? '', qtd: i.qtd, preco: k?.preco ?? 0 };
+              }),
+        }),
+      });
+    } catch {
+      /* o lead é um bônus: se falhar, a compra não pode parar por isso */
+    }
+  }
 
-  async function enviar(e: React.FormEvent<HTMLFormElement>) {
+  function aoSubmeterDados(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    const campos = Object.fromEntries(new FormData(e.currentTarget)) as Record<string, string>;
+    const consentiu = campos.consentiuContato === 'on';
+    setDados({ ...campos, consentiuContato: consentiu ? 'sim' : 'nao' });
+    guardarLead(campos, consentiu);
+
+    if (assinatura) {
+      setEtapa('contrato');
+      return;
+    }
+    concluir({ ...campos });
+  }
+
+  async function concluir(campos: Record<string, string>) {
     setErro('');
     setEnviando(true);
 
-    const dados = Object.fromEntries(new FormData(e.currentTarget)) as Record<string, string>;
     const rota = assinatura ? '/api/assinatura' : '/api/checkout';
     const corpo = assinatura
-      ? { cliente: dados }
-      : { cliente: dados, itens: itens.map((i) => ({ kitId: i.id, qtd: i.qtd })) };
+      ? { cliente: campos, aceitouContrato: true, ref: refDoCookie() }
+      : {
+          cliente: campos,
+          itens: itens.map((i) => ({ kitId: i.id, qtd: i.qtd })),
+          freteServico: opcaoAtual?.servico,
+          ref: refDoCookie(),
+        };
 
     try {
       const r = await fetch(rota, {
@@ -575,9 +703,11 @@ function Checkout({ modo, aoLimpar }: { modo: Modo | null; aoLimpar: () => void 
       if (!r.ok) {
         setErro(resposta.erro ?? 'Não consegui concluir. Tente novamente.');
         setEnviando(false);
+        if (assinatura) setEtapa('dados');
         return;
       }
 
+      evento('Purchase', { value: totalFinal, currency: 'BRL' });
       if (!assinatura) aoLimpar();
 
       if (resposta.invoiceUrl) {
@@ -603,182 +733,263 @@ function Checkout({ modo, aoLimpar }: { modo: Modo | null; aoLimpar: () => void 
       <div className="modal on" role="dialog" aria-modal="true">
         <div className="modal-card">
           <div className="modal-hd">
-            <h3>{assinatura ? 'Assinar a Glow Box' : 'Finalizar compra'}</h3>
+            <h3>
+              {assinatura
+                ? etapa === 'contrato'
+                  ? 'Contrato da assinatura'
+                  : 'Assinar a Glow Box'
+                : 'Finalizar compra'}
+            </h3>
             <button className="close" onClick={fechar} aria-label="Fechar">
               ×
             </button>
           </div>
 
           <div className="modal-body">
-            <div style={{ marginBottom: 18 }}>
-              {assinatura && box ? (
-                <div
-                  style={{
-                    background: 'var(--rose-50)',
-                    borderRadius: 14,
-                    padding: 16,
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    gap: 12,
-                  }}
-                >
-                  <div>
-                    <b>{box.nome}</b>
-                    <br />
-                    <small style={{ color: 'var(--muted)' }}>Renova todo mês, sem fidelidade</small>
-                  </div>
-                  <b style={{ color: 'var(--rose)', fontSize: 20, whiteSpace: 'nowrap' }}>
-                    {real(box.preco)}
-                  </b>
+            {assinatura && (
+              <div className="passos">
+                <span className={etapa === 'dados' ? 'on' : 'feito'}>1. Seus dados</span>
+                <span className={etapa === 'contrato' ? 'on' : ''}>2. Contrato</span>
+                <span>3. Pagamento</span>
+              </div>
+            )}
+
+            {etapa === 'contrato' ? (
+              <>
+                <div className="contrato" tabIndex={0}>
+                  {config.contratoTexto || 'O contrato ainda não foi cadastrado.'}
                 </div>
-              ) : (
-                <div style={{ background: 'var(--rose-50)', borderRadius: 14, padding: 16 }}>
-                  {itens.map((i) => {
-                    const k = kitPorId(i.id);
-                    return k ? (
-                      <div className="tot" key={i.id}>
-                        <span>
-                          {i.qtd}× {k.nome}
-                        </span>
-                        <span>{real(k.preco * i.qtd)}</span>
+
+                <label className="aceite">
+                  <input
+                    type="checkbox"
+                    checked={aceitouContrato}
+                    onChange={(e) => setAceitouContrato(e.target.checked)}
+                  />
+                  <span>
+                    Li e aceito o contrato de assinatura {config.contratoVersao}. Entendo que a
+                    cobrança se repete todo mês até eu cancelar.
+                  </span>
+                </label>
+
+                {erro && <div className="note erro">{erro}</div>}
+
+                <div className="row2" style={{ marginTop: 14 }}>
+                  <button className="btn btn-ghost" onClick={() => setEtapa('dados')} type="button">
+                    Voltar
+                  </button>
+                  <button
+                    className="btn btn-primary"
+                    disabled={!aceitouContrato || enviando}
+                    onClick={() => concluir(dados)}
+                  >
+                    {enviando ? 'Processando...' : 'Aceitar e ir para o pagamento'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ marginBottom: 18 }}>
+                  {assinatura && box ? (
+                    <div className="resumo-box">
+                      <div>
+                        <b>{box.nome}</b>
+                        <br />
+                        <small style={{ color: 'var(--muted)' }}>Renova todo mês, sem fidelidade</small>
                       </div>
-                    ) : null;
-                  })}
-                  <div className="tot">
-                    <span>Frete</span>
-                    <span>{frete === 0 ? 'Grátis' : real(frete)}</span>
+                      <b style={{ color: 'var(--rose)', fontSize: 20, whiteSpace: 'nowrap' }}>
+                        {real(box.preco)}
+                      </b>
+                    </div>
+                  ) : (
+                    <div className="resumo-box" style={{ display: 'block' }}>
+                      {itens.map((i) => {
+                        const k = kitPorId(i.id);
+                        return k ? (
+                          <div className="tot" key={i.id}>
+                            <span>
+                              {i.qtd}× {k.nome}
+                            </span>
+                            <span>{real(k.preco * i.qtd)}</span>
+                          </div>
+                        ) : null;
+                      })}
+                      <div className="tot">
+                        <span>Frete</span>
+                        <span>
+                          {cotando
+                            ? 'calculando...'
+                            : opcaoAtual
+                              ? opcaoAtual.gratis
+                                ? 'Grátis'
+                                : real(opcaoAtual.valor)
+                              : 'informe o CEP'}
+                        </span>
+                      </div>
+                      <div className="tot big" style={{ marginBottom: 0 }}>
+                        <span>Total</span>
+                        <span>{real(totalFinal)}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <form onSubmit={aoSubmeterDados}>
+                  <div className="field">
+                    <label htmlFor="ck-nome">Nome completo</label>
+                    <input id="ck-nome" name="nome" required placeholder="Como no documento" />
                   </div>
-                  <div className="tot big" style={{ marginBottom: 0 }}>
-                    <span>Total</span>
-                    <span>{real(subtotal + frete)}</span>
+                  <div className="field">
+                    <label htmlFor="ck-email">E-mail</label>
+                    <input id="ck-email" type="email" name="email" required placeholder="seu@email.com" />
                   </div>
-                </div>
-              )}
-            </div>
+                  <div className="row2">
+                    <div className="field">
+                      <label htmlFor="ck-doc">CPF ou CNPJ</label>
+                      <input id="ck-doc" name="documento" required placeholder="000.000.000-00" />
+                    </div>
+                    <div className="field">
+                      <label htmlFor="ck-fone">Celular</label>
+                      <input id="ck-fone" name="telefone" required placeholder="(00) 00000-0000" />
+                    </div>
+                  </div>
 
-            <form onSubmit={enviar}>
-              <div className="field">
-                <label htmlFor="ck-nome">Nome completo</label>
-                <input id="ck-nome" name="nome" required placeholder="Como no documento" />
-              </div>
-              <div className="field">
-                <label htmlFor="ck-email">E-mail</label>
-                <input id="ck-email" type="email" name="email" required placeholder="seu@email.com" />
-              </div>
-              <div className="row2">
-                <div className="field">
-                  <label htmlFor="ck-doc">CPF ou CNPJ</label>
-                  <input id="ck-doc" name="documento" required placeholder="000.000.000-00" />
-                </div>
-                <div className="field">
-                  <label htmlFor="ck-fone">Celular</label>
-                  <input id="ck-fone" name="telefone" required placeholder="(00) 00000-0000" />
-                </div>
-              </div>
-              <div className="field">
-                <label htmlFor="ck-cep">CEP</label>
-                <input
-                  id="ck-cep"
-                  name="cep"
-                  required
-                  placeholder="00000-000"
-                  inputMode="numeric"
-                  value={cep}
-                  onChange={(e) => {
-                    setCep(e.target.value);
-                    buscarCep(e.target.value);
-                  }}
-                />
-                <small>{buscandoCep ? 'Buscando endereço...' : 'O endereço é preenchido sozinho.'}</small>
-              </div>
+                  <div className="field">
+                    <label htmlFor="ck-cep">CEP</label>
+                    <input
+                      id="ck-cep"
+                      name="cep"
+                      required
+                      placeholder="00000-000"
+                      inputMode="numeric"
+                      value={cep}
+                      onChange={(e) => aoDigitarCep(e.target.value)}
+                    />
+                    <small>
+                      {buscandoCep ? 'Buscando endereço...' : 'O endereço é preenchido sozinho.'}
+                    </small>
+                  </div>
 
-              <div className="row-end">
-                <div className="field">
-                  <label htmlFor="ck-rua">Rua ou avenida</label>
-                  <input
-                    id="ck-rua"
-                    name="endereco"
-                    required
-                    value={end.endereco}
-                    onChange={(e) => setEnd({ ...end, endereco: e.target.value })}
-                  />
-                </div>
-                <div className="field">
-                  <label htmlFor="ck-num">Número</label>
-                  <input id="ck-num" name="enderecoNumero" required placeholder="123" />
-                </div>
-              </div>
+                  <div className="row-end">
+                    <div className="field">
+                      <label htmlFor="ck-rua">Rua ou avenida</label>
+                      <input
+                        id="ck-rua"
+                        name="endereco"
+                        required
+                        value={end.endereco}
+                        onChange={(e) => setEnd({ ...end, endereco: e.target.value })}
+                      />
+                    </div>
+                    <div className="field">
+                      <label htmlFor="ck-num">Número</label>
+                      <input id="ck-num" name="enderecoNumero" required placeholder="123" />
+                    </div>
+                  </div>
 
-              <div className="row2">
-                <div className="field">
-                  <label htmlFor="ck-compl">Complemento</label>
-                  <input id="ck-compl" name="complemento" placeholder="Apto, bloco (opcional)" />
-                </div>
-                <div className="field">
-                  <label htmlFor="ck-bairro">Bairro</label>
-                  <input
-                    id="ck-bairro"
-                    name="bairro"
-                    required
-                    value={end.bairro}
-                    onChange={(e) => setEnd({ ...end, bairro: e.target.value })}
-                  />
-                </div>
-              </div>
+                  <div className="row2">
+                    <div className="field">
+                      <label htmlFor="ck-compl">Complemento</label>
+                      <input id="ck-compl" name="complemento" placeholder="Apto, bloco (opcional)" />
+                    </div>
+                    <div className="field">
+                      <label htmlFor="ck-bairro">Bairro</label>
+                      <input
+                        id="ck-bairro"
+                        name="bairro"
+                        required
+                        value={end.bairro}
+                        onChange={(e) => setEnd({ ...end, bairro: e.target.value })}
+                      />
+                    </div>
+                  </div>
 
-              <div className="row-end">
-                <div className="field">
-                  <label htmlFor="ck-cidade">Cidade</label>
-                  <input
-                    id="ck-cidade"
-                    name="cidade"
-                    required
-                    value={end.cidade}
-                    onChange={(e) => setEnd({ ...end, cidade: e.target.value })}
-                  />
-                </div>
-                <div className="field">
-                  <label htmlFor="ck-uf">UF</label>
-                  <input
-                    id="ck-uf"
-                    name="uf"
-                    required
-                    maxLength={2}
-                    placeholder="SP"
-                    value={end.uf}
-                    onChange={(e) => setEnd({ ...end, uf: e.target.value.toUpperCase() })}
-                  />
-                </div>
-              </div>
+                  <div className="row-end">
+                    <div className="field">
+                      <label htmlFor="ck-cidade">Cidade</label>
+                      <input
+                        id="ck-cidade"
+                        name="cidade"
+                        required
+                        value={end.cidade}
+                        onChange={(e) => setEnd({ ...end, cidade: e.target.value })}
+                      />
+                    </div>
+                    <div className="field">
+                      <label htmlFor="ck-uf">UF</label>
+                      <input
+                        id="ck-uf"
+                        name="uf"
+                        required
+                        maxLength={2}
+                        placeholder="PB"
+                        value={end.uf}
+                        onChange={(e) => setEnd({ ...end, uf: e.target.value.toUpperCase() })}
+                      />
+                    </div>
+                  </div>
 
-              <div className="field">
-                <label htmlFor="ck-pag">Forma de pagamento</label>
-                <select id="ck-pag" name="pagamento" defaultValue="UNDEFINED">
-                  <option value="UNDEFINED">Escolher na hora de pagar</option>
-                  <option value="PIX">PIX</option>
-                  <option value="BOLETO">Boleto</option>
-                  <option value="CREDIT_CARD">Cartão de crédito</option>
-                </select>
-              </div>
+                  {fretes.length > 0 && (
+                    <div className="field">
+                      <label>Entrega</label>
+                      {fretes.map((f) => (
+                        <label key={f.servico} className="opcao-frete">
+                          <input
+                            type="radio"
+                            name="freteServico"
+                            value={f.servico}
+                            checked={(opcaoAtual?.servico ?? '') === f.servico}
+                            onChange={() => setFreteEscolhido(f.servico)}
+                          />
+                          <span className="of-nome">
+                            <b>{f.servico}</b>
+                            {f.prazoDias ? <small>até {f.prazoDias} dias úteis</small> : null}
+                          </span>
+                          <b className="of-valor">{f.gratis ? 'Grátis' : real(f.valor)}</b>
+                        </label>
+                      ))}
+                    </div>
+                  )}
 
-              {erro && <div className="note erro">{erro}</div>}
+                  {avisoFrete && <div className="note alerta">{avisoFrete}</div>}
 
-              <button
-                className="btn btn-primary btn-block"
-                style={{ marginTop: 8 }}
-                disabled={enviando}
-              >
-                {enviando ? 'Processando...' : assinatura ? 'Assinar e ir para o pagamento' : 'Continuar para o pagamento'}
-                {!enviando && <Seta />}
-              </button>
+                  <div className="field">
+                    <label htmlFor="ck-pag">Forma de pagamento</label>
+                    <select id="ck-pag" name="pagamento" defaultValue="UNDEFINED">
+                      <option value="UNDEFINED">Escolher na hora de pagar</option>
+                      <option value="PIX">PIX</option>
+                      <option value="BOLETO">Boleto</option>
+                      <option value="CREDIT_CARD">Cartão de crédito</option>
+                    </select>
+                  </div>
 
-              <div className="note">
-                {assinatura
-                  ? 'Seus dados vão para o nosso servidor, que cria a assinatura mensal no Asaas e devolve o link de pagamento. A chave da API fica só no servidor, nunca no seu navegador.'
-                  : 'O estoque é reservado no momento da confirmação. Você recebe o link de pagamento em seguida.'}
-              </div>
-            </form>
+                  <label className="aceite">
+                    <input type="checkbox" name="consentiuContato" defaultChecked />
+                    <span>
+                      Aceito receber novidades e ofertas da Glow Make por e-mail e WhatsApp. Você
+                      pode sair quando quiser — desmarcar aqui não impede a compra.
+                    </span>
+                  </label>
+
+                  {erro && <div className="note erro">{erro}</div>}
+
+                  <button className="btn btn-primary btn-block" style={{ marginTop: 8 }} disabled={enviando}>
+                    {enviando
+                      ? 'Processando...'
+                      : assinatura
+                        ? 'Continuar para o contrato'
+                        : 'Continuar para o pagamento'}
+                    {!enviando && <Seta />}
+                  </button>
+
+                  <div className="note">
+                    {assinatura
+                      ? 'No próximo passo você lê o contrato completo antes de qualquer cobrança.'
+                      : 'O estoque é reservado no momento da confirmação.'}
+                  </div>
+                </form>
+              </>
+            )}
           </div>
         </div>
       </div>

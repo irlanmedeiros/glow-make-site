@@ -36,6 +36,10 @@ export type DepoimentoPublico = {
 export type ConfigPublica = {
   freteValor: number;
   freteGratisAcima: number;
+  cidadeFreteGratis: string;
+  contratoTexto: string;
+  contratoVersao: string;
+  metaPixelId: string;
   avisos: string[];
   whatsapp: string;
   email: string;

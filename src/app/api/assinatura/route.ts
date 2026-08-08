@@ -3,11 +3,13 @@ import { prisma } from '@/lib/prisma';
 import { baixarEstoque, EstoqueInsuficiente } from '@/lib/estoque';
 import { asaasConfigurado, criarOuBuscarCliente, criarAssinatura } from '@/lib/asaas';
 import { validarCliente } from '@/lib/validacao';
+import { afiliadoPorCodigo, gerarComissaoAssinatura } from '@/lib/afiliado';
+import { marcarConvertido } from '@/lib/lead';
 
 export const runtime = 'nodejs';
 
 export async function POST(req: Request) {
-  let corpo: { cliente?: unknown };
+  let corpo: { cliente?: unknown; aceitouContrato?: boolean; ref?: string };
   try {
     corpo = await req.json();
   } catch {
@@ -16,6 +18,16 @@ export async function POST(req: Request) {
 
   const cliente = validarCliente(corpo.cliente);
   if ('erro' in cliente) return NextResponse.json({ erro: cliente.erro }, { status: 400 });
+
+  /* O aceite do contrato é conferido no SERVIDOR. Se dependesse só do
+     checkbox da tela, bastaria remover o atributo no DevTools para assinar
+     sem aceitar nada — e um contrato que dá para pular não vale como prova. */
+  if (corpo.aceitouContrato !== true) {
+    return NextResponse.json(
+      { erro: 'É preciso ler e aceitar o contrato para assinar.' },
+      { status: 400 }
+    );
+  }
 
   const box = await prisma.kit.findFirst({ where: { tipo: 'BOX' } });
   if (!box) {
@@ -35,6 +47,16 @@ export async function POST(req: Request) {
     );
   }
 
+  const config = await prisma.config.findUnique({ where: { id: 'config' } });
+  const afiliado = await afiliadoPorCodigo(corpo.ref);
+
+  // Guardar de onde veio o aceite: um aceite sem data e origem não serve de
+  // prova se a assinatura for contestada depois.
+  const ip =
+    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+    req.headers.get('x-real-ip') ??
+    null;
+
   try {
     // Cada assinatura reserva uma caixa da edição do mês.
     const assinante = await prisma.$transaction(async (tx) => {
@@ -46,10 +68,23 @@ export async function POST(req: Request) {
           documento: cliente.documento,
           telefone: cliente.telefone,
           cep: cliente.cep,
+          endereco: cliente.endereco,
+          enderecoNumero: cliente.enderecoNumero,
+          complemento: cliente.complemento,
+          bairro: cliente.bairro,
+          cidade: cliente.cidade,
+          uf: cliente.uf,
+          contratoVersao: config?.contratoVersao ?? 'v1',
+          contratoAceitoEm: new Date(),
+          contratoIp: ip,
+          afiliadoId: afiliado?.id ?? null,
           valor: box.preco,
         },
       });
     });
+
+    await gerarComissaoAssinatura(assinante);
+    await marcarConvertido(cliente.email);
 
     if (!asaasConfigurado()) {
       return NextResponse.json({ ok: true, demo: true });

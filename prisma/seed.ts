@@ -156,6 +156,54 @@ const DEPOIMENTOS: Omit<Prisma.DepoimentoCreateInput, 'avatar' | 'ordem'>[] = [
   { nome: 'Nathália Barbosa', cidade: 'Belém, PA', tempo: 'Assinante há 9 meses', texto: 'Abrir a caixa virou meu programa do mês. Minha filha já espera junto comigo.' },
 ];
 
+const CONTRATO_RASCUNHO = `CONTRATO DE ASSINATURA — GLOW BOX MENSAL
+
+ATENÇÃO: este é um RASCUNHO gerado automaticamente para o site funcionar.
+Ele NÃO foi redigido nem revisado por advogado. Substitua pelo seu contrato
+em Admin > Configurações antes de vender para o público.
+
+1. OBJETO
+A Glow Make entrega, mensalmente, uma caixa com produtos de maquiagem
+selecionados pela equipe, cujo conteúdo varia a cada edição e não é escolhido
+pelo assinante.
+
+2. VALOR E COBRANÇA
+A assinatura custa o valor informado no site no momento da contratação,
+cobrado automaticamente a cada mês pela plataforma de pagamentos Asaas, na
+forma escolhida pelo assinante. O valor pode ser reajustado mediante aviso
+prévio de 30 dias.
+
+3. ENTREGA
+O envio ocorre após a confirmação do pagamento de cada mês, para o endereço
+informado no cadastro. É responsabilidade do assinante manter o endereço
+atualizado. Entregas devolvidas por endereço incorreto podem ser reenviadas
+mediante novo pagamento de frete.
+
+4. CANCELAMENTO
+O assinante pode cancelar a qualquer momento, sem multa, pelos canais de
+atendimento. O cancelamento vale para as cobranças seguintes; o mês já pago
+é entregue normalmente.
+
+5. DIREITO DE ARREPENDIMENTO
+Nos termos do art. 49 do Código de Defesa do Consumidor, o assinante pode
+desistir em até 7 dias corridos contados do recebimento da primeira caixa,
+com devolução do valor pago, desde que os produtos sejam devolvidos lacrados
+e sem uso.
+
+6. TROCAS
+Produtos avariados no transporte são substituídos mediante comunicação em até
+7 dias do recebimento, com foto do item e da embalagem. Por se tratar de
+cosméticos, não há troca por preferência pessoal após a abertura.
+
+7. DADOS PESSOAIS
+Os dados são usados para processar pagamento, entregar as caixas e, havendo
+consentimento específico, para comunicações comerciais. O assinante pode
+solicitar acesso, correção ou exclusão a qualquer momento, conforme a Lei
+13.709/2018 (LGPD).
+
+8. FORO
+Fica eleito o foro da comarca de João Pessoa/PB para dirimir controvérsias.`;
+
 async function main() {
   console.log('Semeando o banco da Glow Make...');
 
@@ -201,6 +249,7 @@ async function main() {
     update: {},
     create: {
       id: 'config',
+      contratoTexto: CONTRATO_RASCUNHO,
       avisos: [
         'Frete grátis nas compras acima de R$ 199',
         'Parcele em até 6x sem juros no cartão',

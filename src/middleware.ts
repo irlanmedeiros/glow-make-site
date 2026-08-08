@@ -1,25 +1,54 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
+const COOKIE_AFILIADO = 'glowmake_ref';
+const DIAS_ATRIBUICAO = 30;
+
 /**
- * O middleware roda no Edge, onde não existe o `crypto` do Node — então aqui
- * ele só confere se EXISTE um cookie, para já mandar para o login quem
- * claramente não entrou. Ele NÃO sabe distinguir admin de vendedora.
+ * Duas coisas acontecem aqui.
  *
- * A validação de verdade (assinatura, validade e papel) acontece no layout de
- * cada área e em cada server action, que rodam em Node. Um cookie falso ou de
- * papel errado passa por aqui e é barrado lá.
+ * 1. Link de afiliado (?ref=CODIGO): o código vai para um cookie de 30 dias.
+ *    Quem chega pelo link do influencer e compra duas semanas depois continua
+ *    contando para ele — sem isso, só a compra no mesmo minuto seria atribuída
+ *    e o programa não pagaria quase ninguém.
+ *
+ *    O middleware só GUARDA o código; quem confere se ele existe e está ativo
+ *    é o servidor, na hora do pedido. Um cookie inventado não vira comissão.
+ *
+ * 2. Áreas internas: redireciona para o login quem nem cookie de sessão tem.
+ *    Isso roda no Edge, sem o `crypto` do Node, então não sabe distinguir
+ *    admin de vendedora — a validação de verdade está no layout de cada área
+ *    e em cada server action.
  */
 export function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl;
-  if (pathname.startsWith('/admin/login')) return NextResponse.next();
+  const { pathname, searchParams } = req.nextUrl;
 
-  if (!req.cookies.get('glowmake_sessao')) {
+  const protegida = pathname.startsWith('/admin') || pathname.startsWith('/catalogo');
+  const ehLogin = pathname.startsWith('/admin/login');
+
+  let resposta: NextResponse;
+  if (protegida && !ehLogin && !req.cookies.get('glowmake_sessao')) {
     const url = req.nextUrl.clone();
     url.pathname = '/admin/login';
     url.search = '';
-    return NextResponse.redirect(url);
+    resposta = NextResponse.redirect(url);
+  } else {
+    resposta = NextResponse.next();
   }
-  return NextResponse.next();
+
+  const ref = searchParams.get('ref');
+  if (ref) {
+    resposta.cookies.set(COOKIE_AFILIADO, ref.trim().toUpperCase().slice(0, 40), {
+      maxAge: DIAS_ATRIBUICAO * 24 * 60 * 60,
+      sameSite: 'lax',
+      path: '/',
+      httpOnly: false, // o Pixel e o front precisam ler para marcar a origem
+    });
+  }
+
+  return resposta;
 }
 
-export const config = { matcher: ['/admin/:path*', '/catalogo/:path*'] };
+export const config = {
+  // Passa por tudo que é página, menos arquivos estáticos e imagens.
+  matcher: ['/((?!_next/static|_next/image|assets|favicon.ico).*)'],
+};

@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma';
 import { abrirSessao, ehAdmin, fecharSessao, papelDaSenha, senhaAdminConfigurada, senhaEquipeConfigurada } from '@/lib/auth';
 import { devolverEstoque } from '@/lib/estoque';
 import { cancelarAssinatura as cancelarNoAsaas, asaasConfigurado } from '@/lib/asaas';
+import { cancelarComissaoDoPedido } from '@/lib/afiliado';
 
 /**
  * Toda ação confere o login por conta própria. O layout do admin já barra a
@@ -268,8 +269,11 @@ export async function mudarStatusPedido(fd: FormData) {
         data: { status: novo, estoqueDevolvido: true },
       });
     });
+    // Pedido cancelado não gera comissão: senão o afiliado receberia por
+    // venda que não existiu.
+    await cancelarComissaoDoPedido(id);
     revalidatePath('/');
-    voltar('/admin/pedidos', `Pedido #${pedido.numero} cancelado e estoque devolvido.`);
+    voltar('/admin/pedidos', `Pedido #${pedido.numero} cancelado, estoque devolvido e comissão cancelada.`);
   }
 
   await prisma.pedido.update({ where: { id }, data: { status: novo } });
@@ -431,6 +435,13 @@ export async function salvarConfig(fd: FormData) {
       email: texto(fd, 'email', 120),
       instagram: texto(fd, 'instagram', 60),
       cnpj: texto(fd, 'cnpj', 30),
+      cidadeFreteGratis: texto(fd, 'cidadeFreteGratis', 80) || 'João Pessoa',
+      ufFreteGratis: texto(fd, 'ufFreteGratis', 2).toUpperCase() || 'PB',
+      cepOrigem: texto(fd, 'cepOrigem', 12),
+      pesoPadraoKit: new Prisma.Decimal((decimal(fd, 'pesoPadraoKit') || 0.7).toFixed(3)),
+      metaPixelId: texto(fd, 'metaPixelId', 40).replace(/\D/g, ''),
+      contratoVersao: texto(fd, 'contratoVersao', 20) || 'v1',
+      contratoTexto: texto(fd, 'contratoTexto', 20000),
     },
     create: {
       id: 'config',
@@ -523,4 +534,85 @@ export async function salvarRastreio(fd: FormData) {
     },
   });
   voltar('/admin/entregas', 'Rastreio atualizado.');
+}
+
+/* ============================================================
+   Afiliados
+   ============================================================ */
+
+export async function salvarAfiliado(fd: FormData) {
+  await exigirLogin();
+  const id = texto(fd, 'id');
+  const nome = texto(fd, 'nome', 120);
+  const codigoBruto = texto(fd, 'codigo', 40).toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const percentual = decimal(fd, 'percentual');
+
+  if (!nome) voltar('/admin/afiliados', 'Informe o nome do afiliado.', 'erro');
+  if (!codigoBruto) voltar('/admin/afiliados', 'Informe um código com letras e números.', 'erro');
+  if (!Number.isFinite(percentual) || percentual < 0 || percentual > 100) {
+    voltar('/admin/afiliados', 'Percentual precisa ficar entre 0 e 100.', 'erro');
+  }
+
+  const dados = {
+    nome,
+    codigo: codigoBruto,
+    email: texto(fd, 'email', 120),
+    telefone: texto(fd, 'telefone', 20),
+    instagram: texto(fd, 'instagram', 60),
+    documento: texto(fd, 'documento', 20),
+    chavePix: texto(fd, 'chavePix', 120),
+    percentual: new Prisma.Decimal(percentual.toFixed(2)),
+    recorrente: fd.get('recorrente') === 'on',
+    ativo: fd.get('ativo') === 'on',
+  };
+
+  try {
+    if (id) await prisma.afiliado.update({ where: { id }, data: dados });
+    else await prisma.afiliado.create({ data: dados });
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+      voltar('/admin/afiliados', `O código ${codigoBruto} já está em uso.`, 'erro');
+    }
+    throw e;
+  }
+
+  voltar('/admin/afiliados', id ? 'Afiliado atualizado.' : `Afiliado criado. Link: ?ref=${codigoBruto}`);
+}
+
+export async function pagarComissoes(fd: FormData) {
+  await exigirLogin();
+  const afiliadoId = texto(fd, 'afiliadoId');
+
+  // Só APROVADA vira paga. PENDENTE é venda cujo pagamento ainda não entrou —
+  // pagar comissão antes de receber é adiantar dinheiro que pode não vir.
+  const r = await prisma.comissao.updateMany({
+    where: { afiliadoId, status: 'APROVADA' },
+    data: { status: 'PAGA', pagoEm: new Date() },
+  });
+
+  voltar(
+    '/admin/afiliados',
+    r.count ? `${r.count} comissão(ões) marcada(s) como paga(s).` : 'Nenhuma comissão aprovada para pagar.',
+    r.count ? 'ok' : 'erro'
+  );
+}
+
+/* ============================================================
+   Leads — quem não finalizou a compra
+   ============================================================ */
+
+export async function marcarLeadContatado(fd: FormData) {
+  await exigirLogin();
+  const id = texto(fd, 'id');
+  await prisma.lead.update({
+    where: { id },
+    data: { contatado: true, contatadoEm: new Date(), anotacao: texto(fd, 'anotacao', 300) || null },
+  });
+  voltar('/admin/leads', 'Lead marcado como contatado.');
+}
+
+export async function excluirLead(fd: FormData) {
+  await exigirLogin();
+  await prisma.lead.delete({ where: { id: texto(fd, 'id') } });
+  voltar('/admin/leads', 'Lead excluído.');
 }

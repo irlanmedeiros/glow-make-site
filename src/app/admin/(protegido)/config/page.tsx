@@ -24,21 +24,37 @@ export default async function Configuracoes({ searchParams }: Props) {
 
       <Painel titulo="Loja">
         <form action={salvarConfig}>
-          <div className="row2">
+          <input type="hidden" name="freteValor" value={brl(num(config?.freteValor ?? 24.9))} />
+          <input
+            type="hidden"
+            name="freteGratisAcima"
+            value={brl(num(config?.freteGratisAcima ?? 199))}
+          />
+
+          <div className="row3">
             <div className="field">
-              <label>Valor do frete</label>
-              <input name="freteValor" defaultValue={brl(num(config?.freteValor ?? 24.9))} required />
-              <small>Cobrado quando o pedido não atinge o limite abaixo</small>
+              <label>Cidade com entrega grátis</label>
+              <input name="cidadeFreteGratis" defaultValue={config?.cidadeFreteGratis ?? 'João Pessoa'} />
+              <small>Comparado com a cidade real do CEP</small>
             </div>
             <div className="field">
-              <label>Frete grátis a partir de</label>
-              <input
-                name="freteGratisAcima"
-                defaultValue={brl(num(config?.freteGratisAcima ?? 199))}
-                required
-              />
-              <small>Aparece no aviso do topo e na barra de selos</small>
+              <label>UF</label>
+              <input name="ufFreteGratis" defaultValue={config?.ufFreteGratis ?? 'PB'} maxLength={2} />
             </div>
+            <div className="field">
+              <label>CEP de origem</label>
+              <input name="cepOrigem" defaultValue={config?.cepOrigem ?? ''} placeholder="58000-000" />
+              <small>De onde as encomendas saem</small>
+            </div>
+          </div>
+
+          <div className="field">
+            <label>Peso de um kit (kg)</label>
+            <input
+              name="pesoPadraoKit"
+              defaultValue={num(config?.pesoPadraoKit ?? 0.7).toFixed(3).replace('.', ',')}
+            />
+            <small>Usado na cotação do frete. Pese um kit embalado e ponha aqui.</small>
           </div>
 
           <div className="field">
@@ -68,8 +84,50 @@ export default async function Configuracoes({ searchParams }: Props) {
             </div>
           </div>
 
+          <div className="field">
+            <label>ID do Pixel do Meta</label>
+            <input name="metaPixelId" defaultValue={config?.metaPixelId ?? ''} placeholder="1234567890123456" />
+            <small>
+              Só números, do Gerenciador de Eventos do Meta. O Pixel só dispara depois que a
+              visitante aceita os cookies.
+            </small>
+          </div>
+
+          <div className="row2">
+            <div className="field">
+              <label>Versão do contrato</label>
+              <input name="contratoVersao" defaultValue={config?.contratoVersao ?? 'v1'} maxLength={20} />
+              <small>Mude ao alterar o texto: fica gravado em quem aceitou qual versão.</small>
+            </div>
+          </div>
+
+          <div className="field">
+            <label>Texto do contrato da assinatura</label>
+            <textarea name="contratoTexto" defaultValue={config?.contratoTexto ?? ''} rows={14} />
+            <small>Aparece integralmente na etapa de aceite, antes de qualquer cobrança.</small>
+          </div>
+
           <button className="btn btn-primary">Salvar configurações</button>
         </form>
+      </Painel>
+
+      <Painel titulo="Frete (Melhor Envio)" descricao="Configurado por variável de ambiente">
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
+          <Pill cor={process.env.MELHOR_ENVIO_TOKEN ? 'ok' : 'low'}>
+            {process.env.MELHOR_ENVIO_TOKEN ? 'Token configurado' : 'Sem token — frete a combinar'}
+          </Pill>
+          <Pill cor={process.env.MELHOR_ENVIO_ENV === 'producao' ? 'ok' : 'info'}>
+            {process.env.MELHOR_ENVIO_ENV === 'producao' ? 'Produção' : 'Sandbox (teste)'}
+          </Pill>
+        </div>
+        <div className="note">
+          Entrega na cidade acima sai <b>grátis</b> sempre. Fora dela, o preço vem do Melhor Envio
+          pelo peso e pelo CEP. Sem o token, o pedido entra com <b>frete a combinar</b> e uma
+          observação — perder a venda porque a API de terceiro caiu seria pior.
+          <br />
+          <br />
+          Variáveis: <code>MELHOR_ENVIO_TOKEN</code> e <code>MELHOR_ENVIO_ENV</code>.
+        </div>
       </Painel>
 
       <Painel titulo="Pagamento (Asaas)" descricao="Configurado por variáveis de ambiente, não por esta tela">

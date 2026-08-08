@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { aprovarComissaoDoPedido, gerarComissaoAssinatura } from '@/lib/afiliado';
 
 export const runtime = 'nodejs';
 
@@ -59,6 +60,11 @@ export async function POST(req: Request) {
             where: { id: assinante.id },
             data: { status, ...(status === 'CANCELADA' ? { canceladaEm: new Date() } : {}) },
           });
+
+          /* Cada mensalidade confirmada gera a comissão daquele mês. A
+             referência inclui o mês, então uma reentrega do webhook não
+             duplica o valor a pagar. */
+          if (status === 'ATIVA') await gerarComissaoAssinatura(assinante);
         }
       }
       return NextResponse.json({ ok: true });
@@ -74,6 +80,8 @@ export async function POST(req: Request) {
           where: { id: pedidoId, status: 'AGUARDANDO_PAGAMENTO' },
           data: { status },
         });
+        // Dinheiro entrou: a comissão sai de PENDENTE e vira devida.
+        await aprovarComissaoDoPedido(pedidoId);
       }
     }
 

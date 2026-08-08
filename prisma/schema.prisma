@@ -33,6 +33,19 @@ enum StatusPedido {
   CANCELADO
 }
 
+enum EtapaLead {
+  CARRINHO       // montou o carrinho e parou
+  DADOS          // começou a preencher o checkout
+  CONTRATO       // leu o contrato da assinatura e não aceitou
+}
+
+enum StatusComissao {
+  PENDENTE   // venda feita, pagamento ainda não confirmado
+  APROVADA   // pagamento confirmado, comissão devida
+  PAGA
+  CANCELADA  // pedido cancelado ou estornado
+}
+
 enum StatusAssinante {
   AGUARDANDO_PAGAMENTO
   ATIVA
@@ -105,6 +118,11 @@ model Pedido {
   observacao     String?
   estoqueDevolvido Boolean @default(false)
 
+  // Origem da venda
+  afiliadoId     String?
+  afiliado       Afiliado? @relation(fields: [afiliadoId], references: [id], onDelete: SetNull)
+  freteServico   String?   // "PAC", "SEDEX", "Grátis João Pessoa"
+
   // Logística
   transportadora String?
   codigoRastreio String?
@@ -141,7 +159,25 @@ model Assinante {
   email     String
   documento String
   telefone  String
-  cep       String
+
+  // A caixa também é entregue todo mês: precisa de endereço, não só de CEP.
+  cep            String
+  endereco       String @default("")
+  enderecoNumero String @default("")
+  complemento    String @default("")
+  bairro         String @default("")
+  cidade         String @default("")
+  uf             String @default("")
+
+  // Aceite do contrato: guarda quando, qual versão e de qual IP, porque um
+  // aceite sem prova de quando aconteceu não serve para nada numa disputa.
+  contratoVersao   String?
+  contratoAceitoEm DateTime?
+  contratoIp       String?
+
+  afiliadoId String?
+  afiliado   Afiliado? @relation(fields: [afiliadoId], references: [id], onDelete: SetNull)
+
   valor     Decimal         @db.Decimal(10, 2)
   status    StatusAssinante @default(AGUARDANDO_PAGAMENTO)
   asaasCustomerId     String?
@@ -202,5 +238,113 @@ model Config {
   email            String  @default("contato@glowmake.com.br")
   instagram        String  @default("@glowmake")
   cnpj             String  @default("00.000.000/0001-00")
+
+  // Frete
+  cidadeFreteGratis String  @default("João Pessoa")
+  ufFreteGratis     String  @default("PB")
+  cepOrigem         String  @default("58000-000")
+  pesoPadraoKit     Decimal @db.Decimal(10, 3) @default(0.700)  // kg por kit
+
+  // Marketing
+  metaPixelId String @default("")
+
+  // Contrato da assinatura
+  contratoVersao String @default("v1")
+  contratoTexto  String @default("")
+
   atualizadoEm     DateTime @updatedAt
+}
+
+
+// ============================================================
+//  Afiliados — influenciadores que vendem por link próprio
+// ============================================================
+model Afiliado {
+  id        String  @id @default(cuid())
+  nome      String
+  codigo    String  @unique   // vira glowmake.com.br/?ref=CODIGO
+  email     String
+  telefone  String  @default("")
+  instagram String  @default("")
+  documento String  @default("")
+  chavePix  String  @default("")
+
+  // Percentual por afiliado, não fixo no código: dá para negociar caso a caso
+  // e para reduzir depois sem mexer em quem já está com o combinado antigo.
+  percentual Decimal @db.Decimal(5, 2) @default(50.00)
+
+  // Comissão da assinatura em todo mês de recorrência, e não só na adesão.
+  recorrente Boolean @default(true)
+
+  ativo    Boolean  @default(true)
+  cliques  Int      @default(0)
+  criadoEm DateTime @default(now())
+
+  pedidos    Pedido[]
+  assinantes Assinante[]
+  comissoes  Comissao[]
+
+  @@index([codigo])
+}
+
+model Comissao {
+  id         String   @id @default(cuid())
+  afiliadoId String
+  afiliado   Afiliado @relation(fields: [afiliadoId], references: [id], onDelete: Cascade)
+
+  origem      String   // "Pedido #12" ou "Assinatura de Fulana — agosto/2026"
+  pedidoId    String?
+  assinanteId String?
+
+  // Guardamos a base e o percentual usados no momento da venda. Se o
+  // percentual do afiliado mudar depois, o histórico não pode mudar junto.
+  valorBase  Decimal @db.Decimal(10, 2)
+  percentual Decimal @db.Decimal(5, 2)
+  valor      Decimal @db.Decimal(10, 2)
+
+  status   StatusComissao @default(PENDENTE)
+  pagoEm   DateTime?
+  criadoEm DateTime       @default(now())
+
+  // Impede comissão duplicada: uma por pedido, e uma por assinante/mês.
+  referencia String @unique
+
+  @@index([afiliadoId, status])
+  @@index([criadoEm])
+}
+
+// ============================================================
+//  Leads — quem começou a comprar e não terminou
+// ============================================================
+model Lead {
+  id       String    @id @default(cuid())
+  etapa    EtapaLead @default(CARRINHO)
+
+  nome     String @default("")
+  email    String
+  telefone String @default("")
+  cep      String @default("")
+
+  itens          Json     // o que estava no carrinho quando parou
+  valorEstimado  Decimal  @db.Decimal(10, 2) @default(0)
+  queriaAssinar  Boolean  @default(false)
+
+  // Sem esse aceite não se manda WhatsApp nem e-mail de remarketing.
+  consentiuContato Boolean   @default(false)
+  consentidoEm     DateTime?
+
+  afiliadoCodigo String?
+
+  convertido   Boolean   @default(false)
+  convertidoEm DateTime?
+
+  contatado   Boolean   @default(false)
+  contatadoEm DateTime?
+  anotacao    String?
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@unique([email])
+  @@index([convertido, criadoEm])
 }

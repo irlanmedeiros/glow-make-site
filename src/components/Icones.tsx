@@ -191,3 +191,17 @@ export const IcImportar = ({ size = 17 }: P) => (
     <path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
   </svg>
 );
+
+export const IcAfiliados = ({ size = 17 }: P) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" {...adm}>
+    <path d="M10 13a5 5 0 007.5.5l2-2a5 5 0 00-7-7l-1 1" />
+    <path d="M14 11a5 5 0 00-7.5-.5l-2 2a5 5 0 007 7l1-1" />
+  </svg>
+);
+
+export const IcLeads = ({ size = 17 }: P) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" {...adm}>
+    <path d="M6 2l1.5 4h12L18 15H8L6 2H3" />
+    <path d="M14 8.5l-3 3-1.5-1.5" />
+  </svg>
+);

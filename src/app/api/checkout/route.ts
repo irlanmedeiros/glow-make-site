@@ -4,12 +4,18 @@ import { prisma } from '@/lib/prisma';
 import { baixarEstoque, EstoqueInsuficiente } from '@/lib/estoque';
 import { asaasConfigurado, criarOuBuscarCliente, criarCobranca } from '@/lib/asaas';
 import { validarCliente, type DadosCliente } from '@/lib/validacao';
+import { calcularFrete } from '@/lib/frete';
+import { afiliadoPorCodigo, gerarComissaoPedido } from '@/lib/afiliado';
+import { marcarConvertido } from '@/lib/lead';
+import { num } from '@/lib/format';
 
 export const runtime = 'nodejs';
 
 type Corpo = {
   cliente?: Partial<DadosCliente> & { pagamento?: string };
   itens?: { kitId?: string; qtd?: number }[];
+  freteServico?: string;
+  ref?: string;
 };
 
 export async function POST(req: Request) {
@@ -47,8 +53,6 @@ export async function POST(req: Request) {
   }
 
   const config = await prisma.config.findUnique({ where: { id: 'config' } });
-  const freteValor = new Prisma.Decimal(config?.freteValor ?? 24.9);
-  const freteGratisAcima = new Prisma.Decimal(config?.freteGratisAcima ?? 199);
 
   const linhas = pedidos.map((p) => {
     const kit = kits.find((k) => k.id === p.kitId)!;
@@ -56,8 +60,32 @@ export async function POST(req: Request) {
   });
 
   const subtotal = linhas.reduce((s, l) => s.add(l.valor), new Prisma.Decimal(0));
-  const frete = subtotal.gte(freteGratisAcima) ? new Prisma.Decimal(0) : freteValor;
+
+  /* O frete é RECALCULADO aqui, mesmo que o navegador já tenha mostrado o
+     valor. O que vem do cliente é só qual serviço ele escolheu — o preço vem
+     da cotação feita agora. Aceitar o valor enviado pelo navegador é o mesmo
+     que deixar escolher quanto pagar de frete. */
+  const totalPecas = pedidos.reduce((s, p) => s + p.qtd, 0);
+  const cotacao = await calcularFrete({
+    cepDestino: cliente.cep,
+    cepOrigem: config?.cepOrigem ?? '58000-000',
+    pesoKg: num(config?.pesoPadraoKit ?? 0.7) * totalPecas,
+    valorSegurado: Number(subtotal.toString()),
+    cidadeGratis: config?.cidadeFreteGratis ?? 'João Pessoa',
+    ufGratis: config?.ufFreteGratis ?? 'PB',
+  });
+
+  const escolhida =
+    cotacao.opcoes.find((o) => o.servico === corpo.freteServico) ?? cotacao.opcoes[0];
+
+  /* Sem cotação (transportadora fora do ar, CEP sem cobertura) o pedido entra
+     com frete zero e uma observação. Perder a venda porque a API de terceiro
+     caiu seria pior do que combinar o frete depois por WhatsApp. */
+  const frete = escolhida ? new Prisma.Decimal(escolhida.valor.toFixed(2)) : new Prisma.Decimal(0);
+  const freteServico = escolhida?.servico ?? 'A combinar';
   const total = subtotal.add(frete);
+
+  const afiliado = await afiliadoPorCodigo(corpo.ref);
 
   try {
     const pedido = await prisma.$transaction(async (tx) => {
@@ -83,6 +111,9 @@ export async function POST(req: Request) {
           subtotal,
           frete,
           total,
+          freteServico,
+          afiliadoId: afiliado?.id ?? null,
+          observacao: escolhida ? null : cotacao.aviso ?? 'Frete a combinar com o cliente.',
           pagamento: cliente.pagamento,
           itens: {
             create: linhas.map((l) => ({
@@ -97,6 +128,10 @@ export async function POST(req: Request) {
         include: { itens: true },
       });
     });
+
+    // A comissão nasce PENDENTE e só é aprovada quando o pagamento entra.
+    await gerarComissaoPedido(pedido);
+    await marcarConvertido(cliente.email);
 
     // Sem Asaas configurado o pedido existe e o estoque já baixou — só não há
     // cobrança. É o modo de demonstração.

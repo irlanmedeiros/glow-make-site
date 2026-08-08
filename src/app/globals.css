@@ -518,3 +518,36 @@ th.num{text-align:right}
 /* ---------- linha de endereço no checkout ---------- */
 .row-end{display:grid;grid-template-columns:1fr 110px;gap:12px}
 @media(max-width:640px){.row-end{grid-template-columns:1fr}}
+
+/* ---------- passos do checkout da assinatura ---------- */
+.passos{display:flex;gap:6px;margin-bottom:18px;font-size:12px;flex-wrap:wrap}
+.passos span{padding:5px 11px;border-radius:999px;background:var(--rose-50);color:var(--muted);border:1px solid var(--line)}
+.passos span.on{background:var(--rose);color:#fff;border-color:var(--rose);font-weight:600}
+.passos span.feito{background:var(--rose-100);color:var(--rose-dark);border-color:var(--rose-100)}
+
+/* Contrato num bloco com rolagem própria: a pessoa vê que é um documento,
+   e não mais um parágrafo perdido no formulário. */
+.contrato{max-height:320px;overflow-y:auto;background:var(--rose-50);border:1px solid var(--line);border-radius:14px;padding:18px;font-size:13px;line-height:1.65;white-space:pre-wrap;color:var(--ink)}
+.contrato:focus{outline:2px solid var(--rose-300);outline-offset:2px}
+
+.aceite{display:flex;gap:10px;align-items:flex-start;margin-top:14px;font-size:13px;color:var(--muted);cursor:pointer;line-height:1.5}
+.aceite input{width:18px;height:18px;flex-shrink:0;margin-top:1px;accent-color:var(--rose)}
+
+.resumo-box{background:var(--rose-50);border-radius:14px;padding:16px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+
+.opcao-frete{display:flex;align-items:center;gap:11px;padding:11px 14px;border:1px solid var(--line);border-radius:12px;margin-bottom:8px;cursor:pointer;transition:.18s;background:#fff}
+.opcao-frete:hover{border-color:var(--rose-300)}
+.opcao-frete:has(input:checked){border-color:var(--rose);background:var(--rose-50)}
+.opcao-frete input{accent-color:var(--rose);width:17px;height:17px;flex-shrink:0}
+.of-nome{flex:1;display:flex;flex-direction:column}
+.of-nome b{font-size:14px}
+.of-nome small{font-size:12px;color:var(--muted)}
+.of-valor{color:var(--rose);white-space:nowrap}
+
+/* ---------- consentimento LGPD ---------- */
+.lgpd{position:fixed;left:16px;right:16px;bottom:16px;z-index:150;background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow-lg);padding:18px 20px;display:flex;gap:18px;align-items:center;flex-wrap:wrap;max-width:760px;margin:0 auto;animation:up .4s cubic-bezier(.2,.7,.3,1) both}
+.lgpd-txt{flex:1;min-width:240px;display:flex;flex-direction:column;gap:3px}
+.lgpd-txt b{font-size:14px}
+.lgpd-txt span{font-size:12.5px;color:var(--muted);line-height:1.5}
+.lgpd-btns{display:flex;gap:8px;flex-shrink:0}
+@media(max-width:520px){.lgpd{padding:16px}.lgpd-btns{width:100%}.lgpd-btns .btn{flex:1}}

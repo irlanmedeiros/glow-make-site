@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { num } from '@/lib/format';
 import Hero from '@/components/Hero';
 import { Reveal, Contador } from '@/components/Enfeites';
+import Consentimento from '@/components/Consentimento';
 import {
   Loja,
   Topbar,
@@ -109,6 +110,10 @@ export default async function Home() {
   const config: ConfigPublica = {
     freteValor: num(configDb?.freteValor ?? 24.9),
     freteGratisAcima: num(configDb?.freteGratisAcima ?? 199),
+    cidadeFreteGratis: configDb?.cidadeFreteGratis ?? 'João Pessoa',
+    contratoTexto: configDb?.contratoTexto ?? '',
+    contratoVersao: configDb?.contratoVersao ?? 'v1',
+    metaPixelId: configDb?.metaPixelId ?? '',
     avisos: configDb?.avisos ?? [],
     whatsapp: configDb?.whatsapp ?? '',
     email: configDb?.email ?? '',
@@ -126,6 +131,7 @@ export default async function Home() {
     <Loja kits={kits} box={box} config={config}>
       <Topbar avisos={config.avisos} />
       <Cabecalho />
+      <Consentimento pixelId={config.metaPixelId} />
 
       <Hero banners={banners} />
 
@@ -135,7 +141,7 @@ export default async function Home() {
             <i><Frete /></i>
             <div>
               <b>Frete grátis</b>
-              <span>Acima de {config.freteGratisAcima.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+              <span>Em {config.cidadeFreteGratis}</span>
             </div>
           </div>
           <div className="perk">
