@@ -246,6 +246,9 @@ async function main() {
 
   await prisma.config.upsert({
     where: { id: 'config' },
+    // Só preenche o contrato se ainda estiver vazio. Assim o rascunho aparece
+    // em quem já tem config criada, sem nunca sobrescrever o contrato de
+    // verdade depois que o Irlan colar o dele.
     update: {},
     create: {
       id: 'config',
@@ -257,6 +260,14 @@ async function main() {
       ],
     },
   });
+  const cfg = await prisma.config.findUnique({ where: { id: 'config' } });
+  if (cfg && !cfg.contratoTexto.trim()) {
+    await prisma.config.update({
+      where: { id: 'config' },
+      data: { contratoTexto: CONTRATO_RASCUNHO },
+    });
+    console.log('  rascunho de contrato preenchido');
+  }
   console.log('  configurações da loja');
 
   // Checa produto a produto, e não a tabela inteira: assim um kit criado
