@@ -716,9 +716,12 @@ function Checkout({ modo, aoLimpar }: { modo: Modo | null; aoLimpar: () => void 
       }
 
       fechar();
+      /* Nunca contar problema interno para o cliente. "O Asaas não está
+         configurado" é recado para o lojista, não para quem acabou de
+         comprar — e some do site assim que a cobrança estiver ligada. */
       avisar(
         resposta.demo
-          ? 'Registrado. O Asaas ainda não está configurado, então não há cobrança.'
+          ? 'Pedido registrado! Vamos entrar em contato para combinar o pagamento e a entrega.'
           : 'Tudo certo. Enviamos o link de pagamento para o seu e-mail.'
       );
     } catch {
