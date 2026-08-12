@@ -2,10 +2,21 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { BannerPublico } from './tipos';
-import { Anterior, Proximo, Seta } from './Icones';
+import { Anterior, Proximo } from './Icones';
 
 const INTERVALO = 6000;
 
+/**
+ * Carrossel do topo.
+ *
+ * As artes oficiais já trazem título, preço e lista de itens desenhados
+ * dentro da imagem. Por isso aqui NÃO existe véu branco, texto sobreposto
+ * nem zoom: qualquer um dos três estragaria a peça que a designer entregou.
+ *
+ * O bloco mantém a proporção exata da arte (20:9) e usa `contain`, então a
+ * imagem aparece inteira em qualquer largura. Recortar cortaria justamente o
+ * selo de preço, que fica na borda.
+ */
 export default function Hero({ banners }: { banners: BannerPublico[] }) {
   const [atual, setAtual] = useState(0);
   const [pausado, setPausado] = useState(false);
@@ -49,21 +60,23 @@ export default function Hero({ banners }: { banners: BannerPublico[] }) {
     >
       <div className="slides">
         {banners.map((b, i) => (
-          <div className={`slide${i === atual ? ' on' : ''}`} key={b.id}>
+          <a
+            className={`slide${i === atual ? ' on' : ''}`}
+            key={b.id}
+            href={b.ctaLink || '#kits'}
+            aria-label={b.titulo || `Banner ${i + 1}`}
+            aria-hidden={i !== atual}
+            tabIndex={i === atual ? 0 : -1}
+          >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img className="bg" src={b.imagem} alt="" fetchPriority={i === 0 ? 'high' : 'low'} />
-            <div className="slide-in">
-              <div className="slide-txt">
-                <span className="slide-tag">{b.tag}</span>
-                <h2>{b.titulo}</h2>
-                <p>{b.subtitulo}</p>
-                <a className="btn btn-primary" href={b.ctaLink}>
-                  {b.ctaTexto}
-                  <Seta />
-                </a>
-              </div>
-            </div>
-          </div>
+            <img
+              className="bg"
+              src={b.imagem}
+              alt={b.titulo || ''}
+              fetchPriority={i === 0 ? 'high' : 'low'}
+              loading={i === 0 ? 'eager' : 'lazy'}
+            />
+          </a>
         ))}
       </div>
 
@@ -79,8 +92,6 @@ export default function Hero({ banners }: { banners: BannerPublico[] }) {
             {banners.map((b, i) => (
               <button
                 key={b.id}
-                /* a key muda junto com o slide ativo para a barra de progresso
-                   reiniciar a animação a cada troca */
                 className={`dot${i === atual ? ' on' : ''}`}
                 onClick={() => ir(i)}
                 aria-label={`Banner ${i + 1}`}

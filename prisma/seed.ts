@@ -91,48 +91,51 @@ const KITS: Prisma.KitCreateInput[] = [
 ];
 
 const BANNERS: Prisma.BannerCreateInput[] = [
+  // As artes oficiais já trazem título, preço e itens desenhados dentro da
+  // imagem. Os campos de texto aqui servem só para acessibilidade (alt) e
+  // para o admin identificar cada peça — nada disso aparece por cima.
   {
-    tag: 'Edição de agosto',
-    titulo: 'A caixa que todo mundo está esperando',
-    subtitulo: 'A Glow Box de agosto já está sendo montada. Assine até dia 10 e garanta a sua.',
+    tag: 'Kit Puro Leite',
+    titulo: 'Kit Puro Leite — cuidado completo para sua pele, por R$ 40',
+    subtitulo: 'Sabonete, hidratante e esfoliante corporal na bolsa transparente.',
     imagem: '/assets/banners/banner-1.jpg',
-    ctaTexto: 'Ver a assinatura',
-    ctaLink: '#assinatura',
+    ctaTexto: 'Ver os kits',
+    ctaLink: '#kits',
     ordem: 1,
   },
   {
-    tag: 'Assinatura',
-    titulo: 'R$ 99,90 por mês, sem fidelidade',
-    subtitulo: 'De quatro a seis produtos selecionados, com valor de varejo acima de R$ 250.',
+    tag: 'Kit Presente',
+    titulo: 'Kit Presente — pele e cabelos, por R$ 40',
+    subtitulo: 'Hidratante, esfoliante e body splash, na bolsa com presilha.',
     imagem: '/assets/banners/banner-2.jpg',
-    ctaTexto: 'Assinar agora',
-    ctaLink: '#assinatura',
+    ctaTexto: 'Ver os kits',
+    ctaLink: '#kits',
     ordem: 2,
   },
   {
-    tag: 'Mais vendido',
-    titulo: 'Kit Completo Deluxe',
-    subtitulo: 'Rosto inteiro em um estojo rígido. O presente que nunca erra.',
+    tag: 'Kit Presente',
+    titulo: 'Kit Presente — pele incrível e perfumada, por R$ 45',
+    subtitulo: 'Hidratante, esfoliante, body splash, touca de cetim e presilha.',
     imagem: '/assets/banners/banner-3.jpg',
     ctaTexto: 'Ver os kits',
     ctaLink: '#kits',
     ordem: 3,
   },
   {
-    tag: 'Lançamento',
-    titulo: 'Kit Lábios Glow',
-    subtitulo: 'Cinco acabamentos de boca em um kit só, do matte ao gloss.',
+    tag: 'Kit Presente',
+    titulo: 'Kit Presente — para encantar com carinho, por R$ 35',
+    subtitulo: 'Porta joia, presilha de cabelo, brinco e batom.',
     imagem: '/assets/banners/banner-4.jpg',
-    ctaTexto: 'Comprar kit',
+    ctaTexto: 'Ver os kits',
     ctaLink: '#kits',
     ordem: 4,
   },
   {
-    tag: 'Frete grátis',
-    titulo: 'Acima de R$ 199 a gente entrega',
-    subtitulo: 'Para todo o Brasil, com código de rastreio em todos os pedidos.',
+    tag: 'Kit Presente',
+    titulo: 'Kit Presente — o presente ideal, por R$ 35',
+    subtitulo: 'Porta joia, presilha de cabelo, brinco e batom.',
     imagem: '/assets/banners/banner-5.jpg',
-    ctaTexto: 'Escolher meu kit',
+    ctaTexto: 'Ver os kits',
     ctaLink: '#kits',
     ordem: 5,
   },
@@ -218,10 +221,14 @@ async function main() {
   }
   console.log(`  ${KITS.length} produtos`);
 
-  if ((await prisma.banner.count()) === 0) {
-    await prisma.banner.createMany({ data: BANNERS });
-    console.log(`  ${BANNERS.length} banners`);
+  // Banner é atualizado pela ORDEM, não recriado: assim as artes oficiais
+  // substituem os placeholders sem duplicar nem apagar ajuste feito no admin.
+  for (const b of BANNERS) {
+    const existente = await prisma.banner.findFirst({ where: { ordem: b.ordem } });
+    if (existente) await prisma.banner.update({ where: { id: existente.id }, data: b });
+    else await prisma.banner.create({ data: b });
   }
+  console.log(`  ${BANNERS.length} banners`);
 
   if ((await prisma.depoimento.count()) === 0) {
     await prisma.depoimento.createMany({

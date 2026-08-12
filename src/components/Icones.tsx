@@ -74,6 +74,13 @@ export const Coracao = ({ size = 21 }: P) => (
   </svg>
 );
 
+/** Coração de traço fino — o elemento gráfico que se repete nas artes. */
+export const CoracaoTraco = ({ size = 16 }: P) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+    <path d="M12 20.5S4 15.9 4 10.4A4.4 4.4 0 0112 7.9a4.4 4.4 0 018 2.5c0 5.5-8 10.1-8 10.1z" />
+  </svg>
+);
+
 export const Troca = ({ size = 21 }: P) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#F53260" strokeWidth={1.7}>
     <path d="M3 12a9 9 0 0115-6.7L21 8M21 12a9 9 0 01-15 6.7L3 16" />

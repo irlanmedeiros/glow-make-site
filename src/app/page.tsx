@@ -16,6 +16,7 @@ import {
   Frete,
   Cartao,
   Coracao,
+  CoracaoTraco,
   Troca,
   Instagram,
   Whatsapp,
@@ -54,12 +55,12 @@ const PASSOS = [
 ];
 
 const PALAVRAS = [
-  'Curadoria mensal',
-  'Cruelty free',
-  'Frete grátis',
-  'Marcas nacionais',
+  'Pronto para presentear',
+  'Embalagem inclusa',
+  'Entrega grátis em João Pessoa',
+  'Amor em cada detalhe',
   'Sem fidelidade',
-  'Entrega rastreada',
+  'Curadoria mensal',
 ];
 
 export default async function Home() {
@@ -174,11 +175,16 @@ export default async function Home() {
           <Reveal>
             <div className="sec-head">
               <div className="eyebrow">Nossos kits</div>
-              <h2>Cinco kits pensados para cada tipo de rotina</h2>
+              <h2>
+                Kits prontos para <span className="script">presentear</span>
+              </h2>
               <p>
-                Selecionados um a um pela nossa equipe. Compre avulso ou receba todo mês na Glow
-                Box.
+                Montados um a um pela nossa equipe, com embalagem pronta para entregar. Compre
+                avulso ou receba todo mês na Glow Box.
               </p>
+              <div className="div-coracao">
+                <CoracaoTraco size={18} />
+              </div>
             </div>
           </Reveal>
           <GradeKits />
@@ -202,7 +208,7 @@ export default async function Home() {
             <div className="sub">
               <div>
                 <div className="eyebrow">Assinatura mensal</div>
-                <h2>Glow Box: sua caixa de beleza todo mês</h2>
+                <h2>Glow Box: sua caixa de beleza <span className="script">todo mês</span></h2>
                 <p className="lead">
                   De quatro a seis produtos selecionados chegando na sua casa, com valor de varejo
                   acima de R$ 250. Sem fidelidade, cancele quando quiser.
@@ -250,7 +256,7 @@ export default async function Home() {
           <Reveal>
             <div className="sec-head">
               <div className="eyebrow">Como funciona</div>
-              <h2>Três passos até a sua Glow Box</h2>
+              <h2>Três passos até a <span className="script">sua Glow Box</span></h2>
               <p>Do cadastro à entrega, sem burocracia e sem contrato de fidelidade.</p>
             </div>
           </Reveal>
@@ -280,7 +286,7 @@ export default async function Home() {
           <Reveal>
             <div className="sec-head">
               <div className="eyebrow">Quem já usa</div>
-              <h2>Mais de três mil caixas entregues</h2>
+              <h2>Mais de três mil caixas <span className="script">entregues</span></h2>
               <p>Passe o mouse sobre um depoimento para pausar o carrossel.</p>
             </div>
           </Reveal>
@@ -314,7 +320,7 @@ export default async function Home() {
           <Reveal>
             <div className="sec-head">
               <div className="eyebrow">No Instagram</div>
-              <h2>As caixas na casa de quem assina</h2>
+              <h2>As caixas na casa de <span className="script">quem assina</span></h2>
               <p>Marque {config.instagram} para aparecer aqui.</p>
             </div>
           </Reveal>

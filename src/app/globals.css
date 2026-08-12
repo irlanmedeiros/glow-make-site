@@ -3,22 +3,37 @@
    Mexa nos tokens abaixo para mudar o site inteiro.
    ============================================================ */
 :root{
+  /* Paleta tirada das artes oficiais dos banners:
+     - magenta do título "PRESENTE"        #E02080
+     - roxo do selo de preço               #9030B0
+     - mauve dos kits mais sóbrios         #B05070 / #905070
+     - blush e lilás dos fundos            #F7E2E8 / #F3E0EE
+     O #F53260 do logo continua sendo a cor de ação; o magenta e o roxo
+     entram como acento e profundidade, que é como as peças usam. */
   --rose:#F53260;
   --rose-dark:#D91E4A;
   --rose-300:#FFB3C9;
-  --rose-100:#FFE4EC;
-  --rose-50:#FFF5F8;
-  --ink:#2B1B22;
-  --muted:#8A6A75;
-  --line:#F3DCE4;
+  --rose-100:#FDE2EC;
+  --rose-50:#FFF6F9;
+
+  --magenta:#E02080;
+  --roxo:#9030B0;
+  --roxo-claro:#F3E0EE;
+  --mauve:#B05070;
+  --mauve-escuro:#905070;
+
+  --ink:#3A2230;
+  --muted:#94707E;
+  --line:#F3DCE6;
   --white:#fff;
   --ok:#1F9D6B;
   --warn:#C97A15;
   --off:#9E9E9E;
   --radius:18px;
-  --shadow:0 10px 30px rgba(245,50,96,.10);
-  --shadow-lg:0 24px 60px rgba(245,50,96,.18);
+  --shadow:0 10px 30px rgba(144,80,112,.13);
+  --shadow-lg:0 24px 60px rgba(144,80,112,.20);
   --serif:'Playfair Display', Georgia, 'Times New Roman', serif;
+  --script:'Parisienne', 'Playfair Display', cursive;
   --sans:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
   --max:1200px;
 }
@@ -76,27 +91,17 @@ nav.main a:hover::after{right:0}
 .burger{display:none}
 
 /* ---------- hero ---------- */
+/* A arte do banner já tem título, preço e itens desenhados dentro.
+   Por isso: sem véu branco, sem texto por cima e sem Ken Burns — os três
+   existiam para dar legibilidade a foto crua e agora só atrapalhariam.
+   A proporção 20:9 é a da própria arte, e `contain` garante que nada seja
+   recortado: o selo de preço fica na borda e sumiria num `cover`. */
 .hero{position:relative;background:var(--rose-50);overflow:hidden}
-.slides{position:relative;height:clamp(400px,46vw,580px)}
-.slide{position:absolute;inset:0;opacity:0;visibility:hidden;transition:opacity .8s ease,visibility .8s;display:flex;align-items:center}
+.slides{position:relative;aspect-ratio:20/9;width:100%}
+.slide{position:absolute;inset:0;opacity:0;visibility:hidden;transition:opacity .7s ease,visibility .7s;display:block}
 .slide.on{opacity:1;visibility:visible;z-index:2}
-.slide .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scale(1.06)}
-.slide.on .bg{animation:ken 8s ease-out forwards}
-@keyframes ken{from{transform:scale(1.06)}to{transform:scale(1.16)}}
-/* Véu branco: garante que o título continue legível sobre QUALQUER foto */
-.slide::after{content:'';position:absolute;inset:0;z-index:1;background:linear-gradient(100deg,rgba(255,255,255,.93) 0%,rgba(255,255,255,.82) 34%,rgba(255,255,255,.25) 58%,rgba(255,255,255,0) 78%)}
-.slide-in{position:relative;z-index:3;max-width:var(--max);margin:0 auto;padding:0 20px;width:100%}
-.slide-txt{max-width:min(520px,88%)}
-.slide-txt>*{opacity:0;transform:translateY(22px)}
-.slide.on .slide-txt>*{animation:up .7s cubic-bezier(.2,.7,.3,1) forwards}
-.slide.on .slide-txt>*:nth-child(1){animation-delay:.12s}
-.slide.on .slide-txt>*:nth-child(2){animation-delay:.22s}
-.slide.on .slide-txt>*:nth-child(3){animation-delay:.32s}
-.slide.on .slide-txt>*:nth-child(4){animation-delay:.42s}
+.slide .bg{width:100%;height:100%;object-fit:contain;object-position:center}
 @keyframes up{to{opacity:1;transform:translateY(0)}}
-.slide-tag{display:inline-block;background:#fff;color:var(--rose);font-size:11.5px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;padding:7px 16px;border-radius:999px;margin-bottom:16px;box-shadow:var(--shadow)}
-.slide h2{font-family:var(--serif);font-size:clamp(28px,4.2vw,50px);line-height:1.08;margin-bottom:14px;letter-spacing:-.5px}
-.slide p{font-size:clamp(14.5px,1.5vw,17.5px);color:#6B4A56;margin-bottom:26px;max-width:400px}
 .arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:6;width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,.92);display:grid;place-items:center;box-shadow:var(--shadow);transition:.22s}
 .arrow:hover{background:#fff;transform:translateY(-50%) scale(1.1)}
 .arrow.prev{left:16px} .arrow.next{right:16px}
@@ -123,7 +128,7 @@ nav.main a:hover::after{right:0}
 /* ---------- seções ---------- */
 section{padding:78px 0}
 .sec-head{text-align:center;max-width:660px;margin:0 auto 46px}
-.eyebrow{color:var(--rose);font-size:12px;font-weight:700;letter-spacing:2.4px;text-transform:uppercase;margin-bottom:10px}
+.eyebrow{color:var(--magenta);font-size:12px;font-weight:700;letter-spacing:2.4px;text-transform:uppercase;margin-bottom:10px}
 .sec-head h2{font-family:var(--serif);font-size:clamp(27px,3.5vw,42px);line-height:1.15;margin-bottom:12px;letter-spacing:-.4px}
 .sec-head p{color:var(--muted);font-size:16px}
 
@@ -132,7 +137,7 @@ section{padding:78px 0}
 .stat b{display:block;font-family:var(--serif);font-size:clamp(30px,3.6vw,44px);color:var(--rose);line-height:1}
 .stat span{font-size:13.5px;color:var(--muted)}
 
-.strip{background:var(--rose);color:#fff;padding:15px 0;overflow:hidden}
+.strip{background:linear-gradient(90deg,var(--magenta),var(--roxo));color:#fff;padding:15px 0;overflow:hidden}
 .strip-track{display:flex;gap:44px;width:max-content;animation:slide 26s linear infinite}
 .strip:hover .strip-track{animation-play-state:paused}
 .strip span{font-family:var(--serif);font-size:20px;letter-spacing:.5px;white-space:nowrap;opacity:.95}
@@ -156,7 +161,7 @@ section{padding:78px 0}
 .card ul li{display:flex;gap:7px}
 .card ul li::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--rose-300);flex-shrink:0;margin-top:9px}
 .price{margin-top:auto;padding-top:8px}
-.price b{font-family:var(--serif);font-size:26px;color:var(--rose)}
+.price b{font-family:var(--serif);font-size:26px;color:var(--magenta)}
 .price small{display:block;font-size:12.5px;color:var(--muted)}
 .qty-line{display:flex;align-items:center;gap:10px}
 .stepper{display:flex;align-items:center;border:1px solid var(--line);border-radius:999px;overflow:hidden;flex-shrink:0}
@@ -165,7 +170,7 @@ section{padding:78px 0}
 .stepper span{width:30px;text-align:center;font-weight:600;font-size:14px}
 
 /* ---------- assinatura ---------- */
-#assinatura{background:linear-gradient(160deg,#fff 0%,var(--rose-50) 55%,var(--rose-100) 100%)}
+#assinatura{background:linear-gradient(160deg,#fff 0%,var(--rose-50) 45%,var(--roxo-claro) 100%)}
 .sub{display:grid;grid-template-columns:1.05fr 1fr;gap:50px;align-items:center;background:#fff;border-radius:28px;padding:46px;box-shadow:var(--shadow-lg)}
 .sub-img{position:relative;border-radius:20px;overflow:hidden;background:var(--rose-100)}
 .sub-img img{transition:transform .8s cubic-bezier(.2,.7,.3,1);width:100%;height:100%;object-fit:cover}
@@ -233,7 +238,7 @@ section{padding:78px 0}
 .gal a:hover::after{opacity:.16}
 
 /* ---------- newsletter ---------- */
-.news{position:relative;background:var(--rose);color:#fff;border-radius:26px;padding:50px;text-align:center;overflow:hidden}
+.news{position:relative;background:linear-gradient(135deg,var(--magenta) 0%,var(--roxo) 100%);color:#fff;border-radius:26px;padding:50px;text-align:center;overflow:hidden}
 .news::before,.news::after{content:'';position:absolute;border-radius:50%;background:rgba(255,255,255,.1)}
 .news::before{width:260px;height:260px;top:-90px;right:-60px}
 .news::after{width:180px;height:180px;bottom:-70px;left:-40px}
@@ -407,8 +412,7 @@ th.num{text-align:right}
   .grid-kits,.steps,.perks-g,.foot,.row2,.row3{grid-template-columns:1fr}
   .gal{grid-template-columns:repeat(2,1fr)}
   .kpis{grid-template-columns:1fr 1fr}
-  .slide-txt,.slide p{max-width:100%}
-  .slide::after{background:linear-gradient(180deg,rgba(255,255,255,.94) 0%,rgba(255,255,255,.86) 55%,rgba(255,255,255,.5) 100%)}
+  .slide-txt,  .slide::after{background:linear-gradient(180deg,rgba(255,255,255,.94) 0%,rgba(255,255,255,.86) 55%,rgba(255,255,255,.5) 100%)}
   .news{padding:34px 20px}
   .hd{height:66px;gap:12px}
   .arrow{width:38px;height:38px}
@@ -566,3 +570,46 @@ th.num{text-align:right}
 .legal-rodape{margin-top:36px;padding-top:22px;border-top:1px solid var(--line)}
 .lgpd-txt a{color:var(--rose);text-decoration:underline}
 @media(max-width:640px){.legal-corpo{border-radius:0;padding:26px 18px 60px}}
+
+
+/* ============================================================
+   IDENTIDADE DAS ARTES OFICIAIS
+   Elementos que as peças da designer usam e o site passa a repetir:
+   coração de traço, tipografia manuscrita nos acentos, selo de preço
+   circular e ícone redondo de benefício.
+   ============================================================ */
+
+/* Manuscrita para destaques, como o "Leite" e o "Presilha!" dos banners.
+   Só em palavra solta — em bloco de texto ela fica ilegível. */
+.script{font-family:var(--script);font-weight:400;color:var(--magenta);font-size:1.35em;line-height:1}
+
+/* Coração de traço, o elemento gráfico que se repete em todas as peças */
+.coracao{display:inline-block;vertical-align:middle;color:var(--magenta)}
+
+/* Selo circular de preço, igual ao canto direito das artes */
+.selo-preco{display:grid;place-items:center;width:104px;height:104px;border-radius:50%;background:#fff;border:2px solid var(--rose-100);box-shadow:var(--shadow);text-align:center;line-height:1.15}
+.selo-preco span{font-size:9.5px;letter-spacing:.7px;text-transform:uppercase;color:var(--muted);display:block;max-width:74px;margin:0 auto 3px}
+.selo-preco b{font-family:var(--serif);font-size:25px;color:var(--magenta);display:block}
+
+/* Ícone redondo de benefício, como a fileira HIDRATA / ESFOLIA / PERFUMA */
+.beneficios{display:flex;gap:20px;flex-wrap:wrap;justify-content:center}
+.beneficio{display:flex;flex-direction:column;align-items:center;gap:7px;width:92px;text-align:center}
+.beneficio i{width:52px;height:52px;border-radius:50%;border:1.5px solid var(--rose-300);display:grid;place-items:center;background:#fff;transition:.25s}
+.beneficio:hover i{border-color:var(--magenta);transform:translateY(-3px)}
+.beneficio b{font-size:11.5px;letter-spacing:.5px;text-transform:uppercase;color:var(--magenta)}
+.beneficio span{font-size:11px;color:var(--muted);line-height:1.35}
+
+/* Divisória com coração no meio, como as artes separam blocos */
+.div-coracao{display:flex;align-items:center;gap:12px;color:var(--rose-300);margin:26px 0}
+.div-coracao::before,.div-coracao::after{content:'';flex:1;height:1px;background:var(--line)}
+
+/* Botão secundário no roxo dos selos */
+.btn-roxo{background:var(--roxo);color:#fff;box-shadow:0 6px 18px rgba(144,48,176,.28)}
+.btn-roxo:hover{background:#7A2896;transform:translateY(-2px)}
+
+@media(max-width:640px){
+  .selo-preco{width:88px;height:88px}
+  .selo-preco b{font-size:21px}
+  .beneficio{width:78px}
+  .beneficio i{width:46px;height:46px}
+}
