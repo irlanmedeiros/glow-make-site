@@ -65,8 +65,10 @@ p{text-wrap:pretty}
 .btn:hover svg{transform:translateX(3px)}
 
 /* ---------- topo ---------- */
-.topbar{background:var(--rose);color:#fff;text-align:center;font-size:13px;padding:9px 16px;letter-spacing:.3px;height:38px;overflow:hidden;position:relative}
-.tick{position:absolute;inset:0;display:grid;place-items:center;opacity:0;transform:translateY(100%);transition:opacity .5s,transform .5s;padding:0 16px}
+/* Altura fixa cortava aviso de duas linhas no celular. Agora o bloco cresce
+   e as mensagens se sobrepõem em posição absoluta dentro dele. */
+.topbar{background:var(--rose);color:#fff;text-align:center;font-size:13px;padding:9px 16px;letter-spacing:.3px;min-height:38px;position:relative;display:grid}
+.tick{grid-area:1/1;display:grid;place-items:center;opacity:0;transform:translateY(100%);transition:opacity .5s,transform .5s;padding:0 4px;line-height:1.35}
 .tick.on{opacity:1;transform:translateY(0)}
 header.site{position:sticky;top:0;z-index:60;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);transition:box-shadow .3s}
 header.site.stuck{box-shadow:0 6px 24px rgba(245,50,96,.09)}
@@ -408,6 +410,15 @@ th.num{text-align:right}
   .adm-main{padding:22px 18px 50px}
 }
 @media(max-width:640px){
+  /* No celular a arte ocupa uma faixa estreita e os controles ficavam por
+     cima dos ícones do banner. Setas somem (arrastar funciona) e as
+     bolinhas descem para fora da imagem. */
+  .arrow{display:none}
+  .hero{padding-bottom:26px}
+  .dots{bottom:6px}
+  .dot{background:var(--rose-300);box-shadow:none}
+  .dot.on{background:var(--rose-100)}
+
   section{padding:54px 0}
   .grid-kits,.steps,.perks-g,.foot,.row2,.row3{grid-template-columns:1fr}
   .gal{grid-template-columns:repeat(2,1fr)}
