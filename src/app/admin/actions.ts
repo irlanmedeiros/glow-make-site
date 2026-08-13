@@ -169,11 +169,14 @@ export async function salvarKit(fd: FormData) {
     voltar('/admin/kits', 'Preço inválido. Use o formato 129,90.', 'erro');
   }
 
+  const codigoBarras = texto(fd, 'codigoBarras', 60) || null;
+
   const dados = {
     nome,
     sku,
     descricao,
     itens,
+    codigoBarras,
     preco: new Prisma.Decimal(preco.toFixed(2)),
     imagem: imagem || '/assets/kits/kit-1.jpg',
     estoqueBaixo: Number.isInteger(estoqueBaixo) && estoqueBaixo >= 0 ? estoqueBaixo : 10,
@@ -615,4 +618,36 @@ export async function excluirLead(fd: FormData) {
   await exigirLogin();
   await prisma.lead.delete({ where: { id: texto(fd, 'id') } });
   voltar('/admin/leads', 'Lead excluído.');
+}
+
+/* ============================================================
+   Vendas da loja (PDV)
+   ============================================================ */
+
+export async function cancelarVendaAdmin(fd: FormData) {
+  await exigirLogin();
+  const id = texto(fd, 'id');
+  const venda = await prisma.vendaLoja.findUnique({ where: { id }, include: { itens: true } });
+  if (!venda) voltar('/admin/vendas', 'Venda não encontrada.', 'erro');
+  if (venda.cancelada) voltar('/admin/vendas', 'Essa venda já estava cancelada.', 'erro');
+
+  await prisma.$transaction(async (tx) => {
+    await devolverEstoque(
+      tx,
+      venda.itens.filter((i) => i.kitId).map((i) => ({ kitId: i.kitId!, qtd: i.qtd })),
+      `Cancelamento da venda #${venda.numero}`
+    );
+    await tx.vendaLoja.update({
+      where: { id },
+      data: {
+        cancelada: true,
+        canceladaEm: new Date(),
+        motivoCancelamento: texto(fd, 'motivo', 200) || 'Cancelada pelo admin',
+      },
+    });
+  });
+
+  revalidatePath('/');
+  revalidatePath('/catalogo');
+  voltar('/admin/vendas', `Venda #${venda.numero} cancelada e estoque devolvido.`);
 }

@@ -624,3 +624,43 @@ th.num{text-align:right}
   .beneficio{width:78px}
   .beneficio i{width:46px;height:46px}
 }
+
+/* ============================================================
+   PDV — venda no balcão
+   Duas colunas no desktop (produtos | carrinho) e empilhado no celular.
+   Alvos grandes: quem opera está de pé, com cliente esperando.
+   ============================================================ */
+.pdv-abas{display:flex;gap:6px;margin-bottom:14px;background:var(--rose-50);padding:5px;border-radius:14px;border:1px solid var(--line)}
+.pdv-abas button{flex:1;padding:11px 14px;border-radius:10px;font-size:14.5px;font-weight:600;color:var(--muted);transition:.18s}
+.pdv-abas button.on{background:#fff;color:var(--magenta);box-shadow:var(--shadow)}
+
+.pdv{display:grid;grid-template-columns:1fr 380px;gap:18px;align-items:start}
+.pdv-produtos{min-width:0}
+.pdv-grade{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.pdv-item{display:flex;flex-direction:column;gap:4px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px;text-align:left;transition:.18s}
+.pdv-item:hover{border-color:var(--magenta);transform:translateY(-2px);box-shadow:var(--shadow)}
+.pdv-item img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:10px;background:var(--rose-100)}
+.pdv-item-nome{font-size:13px;font-weight:600;line-height:1.25}
+.pdv-item-preco{font-family:var(--serif);font-size:17px;color:var(--magenta)}
+.pdv-item-saldo{font-size:11.5px;color:var(--muted)}
+
+.pdv-carrinho{position:sticky;top:88px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--shadow)}
+.pdv-linhas{display:flex;flex-direction:column;gap:10px;max-height:300px;overflow-y:auto;margin-top:10px}
+.pdv-linha{display:flex;align-items:center;gap:10px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.pdv-linha-info{flex:1;min-width:0}
+.pdv-linha-info b{display:block;font-size:13.5px;line-height:1.25}
+.pdv-linha-info span{font-size:11.5px;color:var(--muted)}
+.pdv-linha .stepper button{width:30px;height:34px}
+.pdv-linha .stepper span{width:26px;font-size:13px}
+.pdv-linha-total{font-size:14px;white-space:nowrap;color:var(--magenta)}
+
+.pdv-formas{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.pdv-forma{display:flex;align-items:center;gap:7px;padding:10px 11px;border:1px solid var(--line);border-radius:11px;font-size:13.5px;cursor:pointer;transition:.18s;background:#fff}
+.pdv-forma:has(input:checked){border-color:var(--magenta);background:var(--rose-50);font-weight:600;color:var(--magenta)}
+.pdv-forma input{accent-color:var(--magenta);width:16px;height:16px}
+
+@media(max-width:900px){
+  .pdv{grid-template-columns:1fr}
+  .pdv-carrinho{position:static}
+  .pdv-grade{grid-template-columns:repeat(auto-fill,minmax(120px,1fr))}
+}

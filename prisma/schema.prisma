@@ -33,6 +33,13 @@ enum StatusPedido {
   CANCELADO
 }
 
+enum FormaPagamentoLoja {
+  DINHEIRO
+  PIX
+  DEBITO
+  CREDITO
+}
+
 enum EtapaLead {
   CARRINHO       // montou o carrinho e parou
   DADOS          // começou a preencher o checkout
@@ -66,12 +73,14 @@ model Kit {
   entradas    Int         @default(0)
   saidas      Int         @default(0)
   estoqueBaixo Int        @default(10)
+  codigoBarras String?    @unique   // EAN da embalagem, para o leitor do balcão
   ativo       Boolean     @default(true)
   ordem       Int         @default(0)
   criadoEm    DateTime    @default(now())
   atualizadoEm DateTime   @updatedAt
 
   itensPedido PedidoItem[]
+  itensVenda  VendaLojaItem[]
 
   @@index([ativo, ordem])
 }
@@ -347,4 +356,82 @@ model Lead {
 
   @@unique([email])
   @@index([convertido, criadoEm])
+}
+
+
+// ============================================================
+//  PDV — vendas feitas no balcão da loja física
+// ============================================================
+
+/**
+ * Antes, vender no balcão só baixava o estoque. O dinheiro não era gravado em
+ * lugar nenhum, então o faturamento da loja física era invisível no painel.
+ * Esta tabela existe para a venda física ser uma VENDA, com valor e forma de
+ * pagamento, e não apenas um movimento de estoque.
+ */
+model VendaLoja {
+  id     String @id @default(cuid())
+  numero Int    @unique @default(autoincrement())
+
+  vendedora      String
+  formaPagamento FormaPagamentoLoja
+
+  subtotal Decimal @db.Decimal(10, 2)
+  desconto Decimal @db.Decimal(10, 2) @default(0)
+  total    Decimal @db.Decimal(10, 2)
+
+  observacao  String?
+  cancelada   Boolean   @default(false)
+  canceladaEm DateTime?
+  motivoCancelamento String?
+
+  // A venda nasce ligada ao caixa aberto no momento. É isso que permite
+  // fechar o dia e conferir o que entrou por forma de pagamento.
+  caixaId String?
+  caixa   Caixa?  @relation(fields: [caixaId], references: [id], onDelete: SetNull)
+
+  criadoEm DateTime @default(now())
+
+  itens VendaLojaItem[]
+
+  @@index([criadoEm])
+  @@index([caixaId])
+}
+
+model VendaLojaItem {
+  id      String    @id @default(cuid())
+  vendaId String
+  venda   VendaLoja @relation(fields: [vendaId], references: [id], onDelete: Cascade)
+
+  kitId String?
+  kit   Kit?    @relation(fields: [kitId], references: [id], onDelete: SetNull)
+
+  // Nome e preço são copiados no momento da venda: se o produto mudar de
+  // preço amanhã, a venda de hoje não pode mudar junto.
+  sku   String
+  nome  String
+  preco Decimal @db.Decimal(10, 2)
+  qtd   Int
+
+  @@index([vendaId])
+}
+
+/** Sessão de caixa: da abertura ao fechamento do dia. */
+model Caixa {
+  id         String    @id @default(cuid())
+  abertoEm   DateTime  @default(now())
+  abertoPor  String
+  trocoInicial Decimal @db.Decimal(10, 2) @default(0)
+
+  fechadoEm  DateTime?
+  fechadoPor String?
+
+  // Quanto a pessoa CONTOU na gaveta ao fechar. A diferença para o esperado
+  // é o que revela erro de troco ou venda não registrada.
+  contadoDinheiro Decimal? @db.Decimal(10, 2)
+  observacao      String?
+
+  vendas VendaLoja[]
+
+  @@index([abertoEm])
 }

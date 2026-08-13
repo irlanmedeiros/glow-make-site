@@ -22,6 +22,7 @@ export type LinhaPlanilha = {
   estoqueBaixo: number | null;
   ordem: number | null;
   ativo: boolean | null;
+  codigoBarras: string;
   erros: string[];
 };
 
@@ -37,6 +38,7 @@ const COLUNAS: Record<string, string[]> = {
   estoqueBaixo: ['estoque minimo', 'estoque baixo', 'minimo', 'alerta'],
   ordem: ['ordem', 'posicao'],
   ativo: ['ativo', 'publicado', 'visivel', 'no site'],
+  codigoBarras: ['codigo de barras', 'ean', 'codigo barras', 'barras'],
 };
 
 function normalizar(s: string): string {
@@ -177,6 +179,7 @@ export async function lerPlanilha(buffer: ArrayBuffer, nomeArquivo: string): Pro
       estoqueBaixo: lerNumero(pega('estoqueBaixo')),
       ordem: lerNumero(pega('ordem')),
       ativo: lerBooleano(pega('ativo')),
+      codigoBarras: pega('codigoBarras'),
       erros,
     });
   }
@@ -210,6 +213,7 @@ export async function gerarModelo(): Promise<Buffer> {
     { header: 'estoque minimo', key: 'estoqueBaixo', width: 15 },
     { header: 'ordem', key: 'ordem', width: 8 },
     { header: 'ativo', key: 'ativo', width: 8 },
+    { header: 'codigo de barras', key: 'codigoBarras', width: 18 },
   ];
   ws.getRow(1).font = { bold: true };
   ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE4EC' } };
@@ -225,6 +229,7 @@ export async function gerarModelo(): Promise<Buffer> {
     estoqueBaixo: 5,
     ordem: 1,
     ativo: 'sim',
+    codigoBarras: '7891234567890',
   });
 
   const ajuda = wb.addWorksheet('Como preencher');
@@ -245,6 +250,7 @@ export async function gerarModelo(): Promise<Buffer> {
     ['estoque minimo', 'não', 'A partir de quanto o sistema avisa que está acabando. Padrão 10.'],
     ['ordem', 'não', 'Posição na vitrine. Menor aparece primeiro.'],
     ['ativo', 'não', 'sim ou nao. Em branco mantém como está.'],
+    ['codigo de barras', 'não', 'EAN da embalagem. É o que o leitor do balcão lê para achar o produto na hora da venda.'],
   ].forEach(([c, o, d]) => ajuda.addRow({ c, o, d }));
 
   const buf = await wb.xlsx.writeBuffer();

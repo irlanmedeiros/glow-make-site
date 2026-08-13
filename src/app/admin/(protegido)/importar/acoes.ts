@@ -151,6 +151,7 @@ export async function aplicarPlanilha(
           estoqueBaixo: l.estoqueBaixo ?? 10,
           ordem: l.ordem ?? 0,
           ativo: l.ativo ?? true,
+          codigoBarras: l.codigoBarras || null,
           entradas: l.estoque ?? 0,
         },
       });
@@ -183,6 +184,7 @@ export async function aplicarPlanilha(
       if (l.estoqueBaixo !== null) dados.estoqueBaixo = l.estoqueBaixo;
       if (l.ordem !== null) dados.ordem = l.ordem;
       if (l.ativo !== null) dados.ativo = l.ativo;
+      if (l.codigoBarras) dados.codigoBarras = l.codigoBarras;
 
       await prisma.kit.update({ where: { sku: l.sku }, data: dados });
       atualizados++;

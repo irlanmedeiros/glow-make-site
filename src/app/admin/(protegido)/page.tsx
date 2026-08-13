@@ -32,7 +32,16 @@ export default async function PainelAdmin() {
     prisma.movimentacao.findMany({ orderBy: { criadoEm: 'desc' }, take: 8 }),
   ]);
 
-  const faturamentoMes = pedidosMes.reduce((s, p) => s + num(p.total), 0);
+  // Faturamento do mês soma os dois canais. Antes contava só o site, e a
+  // loja física vendia sem aparecer em lugar nenhum.
+  const vendasLojaMes = await prisma.vendaLoja.findMany({
+    where: { criadoEm: { gte: inicioMes }, cancelada: false },
+    select: { total: true },
+  });
+
+  const faturamentoSite = pedidosMes.reduce((s, p) => s + num(p.total), 0);
+  const faturamentoLoja = vendasLojaMes.reduce((s, v) => s + num(v.total), 0);
+  const faturamentoMes = faturamentoSite + faturamentoLoja;
   const comSaldo = produtos.map((p) => ({ ...p, saldo: p.entradas - p.saidas }));
   const baixos = comSaldo.filter((p) => p.saldo > 0 && p.saldo <= p.estoqueBaixo);
   const esgotados = comSaldo.filter((p) => p.saldo <= 0);
@@ -60,7 +69,9 @@ export default async function PainelAdmin() {
         <div className="kpi">
           <span>Faturamento do mês</span>
           <b>{real(faturamentoMes)}</b>
-          <small>{pedidosMes.length} pedido(s), sem os cancelados</small>
+          <small>
+            site {real(faturamentoSite)} · loja {real(faturamentoLoja)}
+          </small>
         </div>
         <div className="kpi good">
           <span>Receita recorrente</span>

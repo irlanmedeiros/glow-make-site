@@ -19,6 +19,7 @@ type Campos = {
   ordem?: number;
   ativo?: boolean;
   tipo?: string;
+  codigoBarras?: string | null;
 };
 
 function Formulario({ k, novo = false }: { k: Campos; novo?: boolean }) {
@@ -63,6 +64,12 @@ function Formulario({ k, novo = false }: { k: Campos; novo?: boolean }) {
           <label>Ordem no site</label>
           <input type="number" name="ordem" defaultValue={k.ordem ?? 0} />
         </div>
+      </div>
+
+      <div className="field">
+        <label>Código de barras</label>
+        <input name="codigoBarras" defaultValue={k.codigoBarras ?? ''} maxLength={60} placeholder="EAN da embalagem" />
+        <small>Usado pelo leitor no balcão. Em branco, a vendedora busca pelo nome ou SKU.</small>
       </div>
 
       <div className="field">
@@ -158,6 +165,7 @@ export default async function Kits({ searchParams }: Props) {
                     estoqueBaixo: p.estoqueBaixo,
                     ordem: p.ordem,
                     ativo: p.ativo,
+                    codigoBarras: p.codigoBarras,
                   }}
                 />
                 {p._count.itensPedido > 0 && p.tipo !== 'BOX' && (

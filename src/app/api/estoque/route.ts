@@ -33,6 +33,7 @@ export async function GET() {
       entradas: true,
       saidas: true,
       estoqueBaixo: true,
+      codigoBarras: true,
       ativo: true,
     },
   });
@@ -50,6 +51,7 @@ export async function GET() {
         saldo: p.entradas - p.saidas,
         vendidos: p.saidas,
         estoqueBaixo: p.estoqueBaixo,
+        codigoBarras: p.codigoBarras,
         ativo: p.ativo,
       })),
     },
