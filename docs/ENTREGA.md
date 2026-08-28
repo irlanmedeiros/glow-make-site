@@ -83,6 +83,35 @@ endosso que não existe.
 
 ---
 
+## Depois que as chaves entrarem, ainda falta
+
+As duas chaves sozinhas **não concluem a integração**.
+
+1. **Cadastrar o webhook no painel do Asaas.** A variável
+   `ASAAS_WEBHOOK_TOKEN` está na Vercel, mas o webhook nunca foi cadastrado do
+   lado do Asaas. Sem isso a cobrança é criada, o cliente paga, e o site nunca
+   fica sabendo: o pedido fica "aguardando pagamento" para sempre e a comissão
+   do afiliado não é gerada. É a falha mais silenciosa do projeto.
+   URL: `https://SEU-DOMINIO/api/asaas/webhook`, com o **mesmo** token.
+2. **`ASAAS_ENV` ainda está `sandbox`.** Precisa virar `producao`, com chave de
+   produção. Chave de produção em ambiente sandbox dá 401.
+3. **Comprar etiqueta é manual.** `src/lib/frete.ts` chama só
+   `shipment/calculate` — isso cota. Comprar etiqueta e gerar rastreio é feito
+   à mão no site do Melhor Envio e digitado em `/admin/entregas`. Automatizar é
+   desenvolvimento novo.
+4. **O site não envia e-mail nenhum.** Sem confirmação de pedido, sem aviso de
+   pagamento, sem aviso de envio. Carrinho abandonado é capturado, mas o contato
+   é manual. Automatizar exige Resend (ou similar) e domínio verificado.
+5. **Configurações com valor de exemplo:** CEP de origem `58000-000`, peso do
+   kit estimado em 0,700 kg, CNPJ e WhatsApp placeholder, Meta Pixel vazio, e a
+   regra morta "frete grátis acima de R$ 199" ainda aparecendo nos avisos.
+   As **dimensões da caixa (11 × 20 × 25 cm) estão fixas no código**, em
+   `frete.ts`, apesar do comentário mandar ajustar em Configurações.
+6. **Domínio próprio.** Hoje é `glow-make-site.vercel.app`. Resolver **antes**
+   de cadastrar o webhook, senão a URL terá que ser refeita.
+
+---
+
 ## Acessos que o desenvolvedor precisa
 
 | O quê | Como |
@@ -100,7 +129,9 @@ mexeria em pedido, estoque e caixa reais.
 ## Onde está o resto do contexto
 
 O "porquê" das decisões técnicas está em [`DECISOES.md`](DECISOES.md) — leia
-antes de mexer no código.
+antes de mexer no código. O contexto do negócio está em
+[`CONTEXTO.md`](CONTEXTO.md), e as instruções para um agente que for trabalhar
+neste repositório estão em [`CLAUDE.md`](../CLAUDE.md).
 
 A documentação de negócio (produtos, identidade visual, integrações, passo a
 passo do Asaas, LGPD) vive num cofre Obsidian com o dono do projeto, fora
