@@ -261,7 +261,9 @@ async function main() {
       id: 'config',
       contratoTexto: CONTRATO_RASCUNHO,
       avisos: [
-        'Frete grátis nas compras acima de R$ 199',
+        // Frete grátis é por cidade (cidadeFreteGratis), não por valor de
+        // compra. O antigo "acima de R$ 199" descrevia uma regra que não existe.
+        'Frete grátis para João Pessoa',
         'Parcele em até 6x sem juros no cartão',
         'Assine a Glow Box até dia 10 e receba a edição deste mês',
       ],
