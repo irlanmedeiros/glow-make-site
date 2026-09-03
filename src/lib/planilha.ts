@@ -69,6 +69,12 @@ export function lerNumero(v: unknown): number | null {
   }
   t = t.replace(/[^\d.-]/g, '');
 
+  // Texto sem dígito nenhum ("esgotado", "a combinar") sobra vazio depois da
+  // limpeza, e `Number('')` é 0 — não NaN. Sem esta guarda, uma célula assim
+  // na coluna de estoque virava "saldo 0" e a importação zerava o produto sem
+  // apontar erro nenhum. Vazio de verdade já saiu antes, no começo da função.
+  if (!/\d/.test(t)) return null;
+
   const n = Number(t);
   return Number.isFinite(n) ? n : null;
 }
