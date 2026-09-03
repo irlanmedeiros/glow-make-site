@@ -61,7 +61,12 @@ async function cobrarPixNoBalcao(
   numero: number,
   valor: number
 ): Promise<{ qr: QrVenda } | null> {
-  if (!asaasConfigurado()) return null;
+  // Nunca sair daqui em silêncio: o sintoma é "o QR não aparece" e a causa
+  // costuma ser ambiente, não código. Sem o log, a busca começa do zero.
+  if (!asaasConfigurado()) {
+    console.error('[pdv] ASAAS_API_KEY ausente — QR do balcão indisponível.');
+    return null;
+  }
 
   const config = await prisma.config.findUnique({ where: { id: 'config' } });
   const cnpj = (config?.cnpj ?? '').replace(/\D/g, '');
@@ -90,7 +95,10 @@ async function cobrarPixNoBalcao(
     });
 
     const qr = await buscarQrCodePix(cobranca.id);
-    if (!qr) return null;
+    if (!qr) {
+      console.error('[pdv] cobrança criada mas o Asaas não devolveu o QR:', cobranca.id);
+      return null;
+    }
 
     await prisma.vendaLoja.update({
       where: { id: vendaId },
