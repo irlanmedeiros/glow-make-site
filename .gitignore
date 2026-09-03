@@ -8,6 +8,7 @@ build
 *.pem
 npm-debug.log*
 .vercel
+.neon
 next-env.d.ts
 tsconfig.tsbuildinfo
 .env*
