@@ -73,6 +73,11 @@ export async function POST(req: Request) {
     valorSegurado: Number(subtotal.toString()),
     cidadeGratis: config?.cidadeFreteGratis ?? 'João Pessoa',
     ufGratis: config?.ufFreteGratis ?? 'PB',
+    caixa: {
+      alturaCm: config?.caixaAlturaCm ?? 11,
+      larguraCm: config?.caixaLarguraCm ?? 20,
+      comprimentoCm: config?.caixaComprimentoCm ?? 25,
+    },
   });
 
   const escolhida =

@@ -253,6 +253,11 @@ model Config {
   ufFreteGratis     String  @default("PB")
   cepOrigem         String  @default("58000-000")
   pesoPadraoKit     Decimal @db.Decimal(10, 3) @default(0.700)  // kg por kit
+  // Dimensões da caixa padrão em cm, usadas na cotação do Melhor Envio.
+  // Antes ficavam fixas em frete.ts, apesar do comentário mandar ajustar aqui.
+  caixaAlturaCm      Int @default(11)
+  caixaLarguraCm     Int @default(20)
+  caixaComprimentoCm Int @default(25)
 
   // Marketing
   metaPixelId String @default("")

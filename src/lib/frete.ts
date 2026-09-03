@@ -81,24 +81,33 @@ type RespostaMelhorEnvio = {
   error?: string;
 }[];
 
+export type Caixa = { alturaCm: number; larguraCm: number; comprimentoCm: number };
+
+// Fallback só para o caso de a Config não trazer as medidas (banco antigo,
+// coluna nula). O valor real vem de Configurações; ver model Config.
+const CAIXA_PADRAO: Caixa = { alturaCm: 11, larguraCm: 20, comprimentoCm: 25 };
+
 /** Cotação real no Melhor Envio. Lança se não estiver configurado. */
 export async function cotarMelhorEnvio(params: {
   cepOrigem: string;
   cepDestino: string;
   pesoKg: number;
   valorSegurado: number;
+  caixa?: Caixa;
 }): Promise<OpcaoFrete[]> {
   const token = process.env.MELHOR_ENVIO_TOKEN;
   if (!token) throw new Error('MELHOR_ENVIO_TOKEN não configurado.');
 
+  const caixa = params.caixa ?? CAIXA_PADRAO;
   const corpo = {
     from: { postal_code: soDigitos(params.cepOrigem) },
     to: { postal_code: soDigitos(params.cepDestino) },
     package: {
-      // Caixa padrão da Glow Box. Ajuste em Configurações se a embalagem mudar.
-      height: 11,
-      width: 20,
-      length: 25,
+      // Medidas da embalagem, vindas de Configurações (model Config).
+      // Guarda contra 0/negativo: o Melhor Envio recusa dimensão < 1 cm.
+      height: Math.max(caixa.alturaCm, 1),
+      width: Math.max(caixa.larguraCm, 1),
+      length: Math.max(caixa.comprimentoCm, 1),
       weight: Math.max(params.pesoKg, 0.3),
     },
     options: { insurance_value: params.valorSegurado, receipt: false, own_hand: false },
@@ -150,6 +159,7 @@ export async function calcularFrete(params: {
   valorSegurado: number;
   cidadeGratis: string;
   ufGratis: string;
+  caixa?: Caixa;
 }): Promise<ResultadoFrete> {
   const destino = await consultarCep(params.cepDestino);
 
@@ -187,6 +197,7 @@ export async function calcularFrete(params: {
       cepDestino: destino.cep,
       pesoKg: params.pesoKg,
       valorSegurado: params.valorSegurado,
+      caixa: params.caixa,
     });
 
     if (!opcoes.length) {

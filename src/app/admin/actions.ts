@@ -428,6 +428,16 @@ export async function salvarConfig(fd: FormData) {
     voltar('/admin/config', 'Limite do frete grátis inválido.', 'erro');
   }
 
+  // Dimensões da caixa: o Melhor Envio recusa qualquer lado menor que 1 cm.
+  const caixaAlturaCm = inteiro(fd, 'caixaAlturaCm');
+  const caixaLarguraCm = inteiro(fd, 'caixaLarguraCm');
+  const caixaComprimentoCm = inteiro(fd, 'caixaComprimentoCm');
+  if (
+    [caixaAlturaCm, caixaLarguraCm, caixaComprimentoCm].some((v) => !Number.isFinite(v) || v < 1)
+  ) {
+    voltar('/admin/config', 'Medidas da caixa inválidas (mínimo 1 cm por lado).', 'erro');
+  }
+
   await prisma.config.upsert({
     where: { id: 'config' },
     update: {
@@ -442,6 +452,9 @@ export async function salvarConfig(fd: FormData) {
       ufFreteGratis: texto(fd, 'ufFreteGratis', 2).toUpperCase() || 'PB',
       cepOrigem: texto(fd, 'cepOrigem', 12),
       pesoPadraoKit: new Prisma.Decimal((decimal(fd, 'pesoPadraoKit') || 0.7).toFixed(3)),
+      caixaAlturaCm,
+      caixaLarguraCm,
+      caixaComprimentoCm,
       metaPixelId: texto(fd, 'metaPixelId', 40).replace(/\D/g, ''),
       contratoVersao: texto(fd, 'contratoVersao', 20) || 'v1',
       contratoTexto: texto(fd, 'contratoTexto', 20000),

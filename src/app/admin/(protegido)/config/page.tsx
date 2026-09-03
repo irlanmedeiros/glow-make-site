@@ -57,6 +57,22 @@ export default async function Configuracoes({ searchParams }: Props) {
             <small>Usado na cotação do frete. Pese um kit embalado e ponha aqui.</small>
           </div>
 
+          <div className="row3">
+            <div className="field">
+              <label>Altura da caixa (cm)</label>
+              <input name="caixaAlturaCm" defaultValue={config?.caixaAlturaCm ?? 11} />
+            </div>
+            <div className="field">
+              <label>Largura da caixa (cm)</label>
+              <input name="caixaLarguraCm" defaultValue={config?.caixaLarguraCm ?? 20} />
+            </div>
+            <div className="field">
+              <label>Comprimento da caixa (cm)</label>
+              <input name="caixaComprimentoCm" defaultValue={config?.caixaComprimentoCm ?? 25} />
+            </div>
+          </div>
+          <small>Medidas da embalagem padrão. Vão na cotação do Melhor Envio.</small>
+
           <div className="field">
             <label>Avisos da barra do topo</label>
             <textarea name="avisos" defaultValue={(config?.avisos ?? []).join('\n')} rows={4} />
