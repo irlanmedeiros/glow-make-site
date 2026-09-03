@@ -536,6 +536,19 @@ type OpcaoFrete = {
   gratis: boolean;
 };
 
+type DadosPagamento = {
+  pedido?: number;
+  pedidoId?: string;
+  total?: number;
+  invoiceUrl?: string;
+  pix?: { payload: string; imagemBase64: string; expiraEm: string | null } | null;
+};
+
+/* De quanto em quanto tempo a tela pergunta se o PIX caiu. Três segundos é
+   rápido o bastante para parecer instantâneo e devagar o bastante para não
+   martelar a API enquanto a pessoa procura o celular. */
+const INTERVALO_CONFERE_PIX = 3000;
+
 /* ============================================================
    Checkout
 
@@ -550,7 +563,10 @@ type OpcaoFrete = {
 function Checkout({ modo, aoLimpar }: { modo: Modo | null; aoLimpar: () => void }) {
   const { itens, kitPorId, subtotal, box, fechar, avisar, config } = useLoja();
 
-  const [etapa, setEtapa] = useState<'dados' | 'contrato'>('dados');
+  const [etapa, setEtapa] = useState<'dados' | 'contrato' | 'pagamento'>('dados');
+  const [pagamento, setPagamento] = useState<DadosPagamento | null>(null);
+  const [copiado, setCopiado] = useState(false);
+  const [pago, setPago] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState('');
   const [dados, setDados] = useState<Record<string, string>>({});
@@ -567,17 +583,67 @@ function Checkout({ modo, aoLimpar }: { modo: Modo | null; aoLimpar: () => void 
   const [aceitouContrato, setAceitouContrato] = useState(false);
   const assinatura = modo === 'assinatura';
 
+  /* Só quando o checkout ABRE.
+     `subtotal` não pode entrar nas dependências: ao concluir a compra o
+     carrinho é esvaziado, o subtotal muda, e o efeito rodaria de novo jogando
+     a cliente de volta para o formulário — apagando o QR do PIX que ela está
+     olhando. O valor lido aqui é o do momento da abertura, que é justamente o
+     que o evento de analytics quer. */
   useEffect(() => {
-    if (modo) {
-      setEtapa('dados');
-      setErro('');
-      setAceitouContrato(false);
-      evento(assinatura ? 'InitiateCheckout' : 'InitiateCheckout', {
-        value: assinatura ? (box?.preco ?? 0) : subtotal,
-        currency: 'BRL',
-      });
+    if (!modo) return;
+    setEtapa('dados');
+    setErro('');
+    setAceitouContrato(false);
+    setPagamento(null);
+    setPago(false);
+    setCopiado(false);
+    evento('InitiateCheckout', {
+      value: assinatura ? (box?.preco ?? 0) : subtotal,
+      currency: 'BRL',
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modo]);
+
+  /* Enquanto o QR está na tela, pergunta ao servidor se o PIX caiu. Sem isto a
+     pessoa paga e fica olhando para um código, sem saber se deu certo — e é aí
+     que ela paga de novo ou liga para a loja. */
+  const pedidoEmAberto = etapa === 'pagamento' && !pago ? pagamento?.pedidoId : undefined;
+  useEffect(() => {
+    if (!pedidoEmAberto) return;
+    let vivo = true;
+
+    async function conferir() {
+      try {
+        const r = await fetch(`/api/pedido/${pedidoEmAberto}/pagamento`, { cache: 'no-store' });
+        if (!r.ok) return;
+        const j = await r.json();
+        if (vivo && j.pago) setPago(true);
+      } catch {
+        /* Sem rede a gente só tenta de novo no próximo ciclo. */
+      }
     }
-  }, [modo, assinatura, box, subtotal]);
+
+    const t = setInterval(conferir, INTERVALO_CONFERE_PIX);
+    // Voltar para a aba é o momento mais provável de já ter pago.
+    const aoVoltar = () => !document.hidden && conferir();
+    document.addEventListener('visibilitychange', aoVoltar);
+    return () => {
+      vivo = false;
+      clearInterval(t);
+      document.removeEventListener('visibilitychange', aoVoltar);
+    };
+  }, [pedidoEmAberto]);
+
+  async function copiarPix() {
+    if (!pagamento?.pix) return;
+    try {
+      await navigator.clipboard.writeText(pagamento.pix.payload);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2500);
+    } catch {
+      setErro('Não consegui copiar. Selecione o código e copie à mão.');
+    }
+  }
 
   if (!modo) return null;
 
@@ -710,6 +776,18 @@ function Checkout({ modo, aoLimpar }: { modo: Modo | null; aoLimpar: () => void 
       evento('Purchase', { value: totalFinal, currency: 'BRL' });
       if (!assinatura) aoLimpar();
 
+      /* PIX termina AQUI DENTRO: o QR vai na própria tela. Mandar a cliente
+         para a página do Asaas no último passo é onde se perde venda — ela sai
+         do site, estranha o domínio e desiste. Para boleto e cartão o link do
+         Asaas continua sendo o caminho, porque ali a página dele faz mais do
+         que a nossa faria. */
+      if (resposta.pix?.payload) {
+        setPagamento(resposta);
+        setEtapa('pagamento');
+        setEnviando(false);
+        return;
+      }
+
       if (resposta.invoiceUrl) {
         window.location.href = resposta.invoiceUrl;
         return;
@@ -737,11 +815,15 @@ function Checkout({ modo, aoLimpar }: { modo: Modo | null; aoLimpar: () => void 
         <div className="modal-card">
           <div className="modal-hd">
             <h3>
-              {assinatura
-                ? etapa === 'contrato'
-                  ? 'Contrato da assinatura'
-                  : 'Assinar a Glow Box'
-                : 'Finalizar compra'}
+              {etapa === 'pagamento'
+                ? pago
+                  ? 'Pagamento confirmado'
+                  : 'Pague com PIX'
+                : assinatura
+                  ? etapa === 'contrato'
+                    ? 'Contrato da assinatura'
+                    : 'Assinar a Glow Box'
+                  : 'Finalizar compra'}
             </h3>
             <button className="close" onClick={fechar} aria-label="Fechar">
               ×
@@ -757,7 +839,72 @@ function Checkout({ modo, aoLimpar }: { modo: Modo | null; aoLimpar: () => void 
               </div>
             )}
 
-            {etapa === 'contrato' ? (
+            {etapa === 'pagamento' ? (
+              <div className="pix">
+                {pago ? (
+                  <div className="pix-ok">
+                    <div className="pix-ok-marca" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M20 6 9 17l-5-5" />
+                      </svg>
+                    </div>
+                    <h4>Pagamento confirmado</h4>
+                    <p>
+                      Recebemos o seu PIX do pedido <b>#{pagamento?.pedido}</b>. Já estamos
+                      separando tudo para enviar.
+                    </p>
+                    <button className="btn btn-primary" onClick={fechar}>
+                      Fechar
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <p className="pix-valor">
+                      <span>Pedido #{pagamento?.pedido}</span>
+                      <b>{real(pagamento?.total ?? 0)}</b>
+                    </p>
+
+                    {pagamento?.pix?.imagemBase64 && (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        className="pix-qr"
+                        src={`data:image/png;base64,${pagamento.pix.imagemBase64}`}
+                        alt="QR Code para pagar com PIX"
+                        width={220}
+                        height={220}
+                      />
+                    )}
+
+                    <p className="pix-instrucao">
+                      Abra o app do seu banco, escolha <b>PIX</b> e aponte a câmera para o código.
+                      No celular, use o botão abaixo.
+                    </p>
+
+                    <button className="btn btn-primary pix-copiar" onClick={copiarPix} type="button">
+                      {copiado ? 'Código copiado' : 'Copiar código PIX'}
+                    </button>
+
+                    <code className="pix-codigo">{pagamento?.pix?.payload}</code>
+
+                    <p className="pix-esperando" role="status">
+                      <span className="pix-ponto" aria-hidden="true" />
+                      Aguardando o pagamento. A tela avisa sozinha quando cair.
+                    </p>
+
+                    {erro && <div className="note erro">{erro}</div>}
+
+                    {pagamento?.invoiceUrl && (
+                      <p className="pix-alternativa">
+                        Prefere boleto ou cartão?{' '}
+                        <a href={pagamento.invoiceUrl} target="_blank" rel="noopener noreferrer">
+                          Abrir outras formas de pagamento
+                        </a>
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+            ) : etapa === 'contrato' ? (
               <>
                 <div className="contrato" tabIndex={0}>
                   {config.contratoTexto || 'O contrato ainda não foi cadastrado.'}

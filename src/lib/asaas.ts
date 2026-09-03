@@ -110,6 +110,48 @@ export async function criarCobranca(params: {
   });
 }
 
+export type QrCodePix = { payload: string; imagemBase64: string; expiraEm: string | null };
+
+/**
+ * QR Code de uma cobrança PIX.
+ *
+ * O Asaas já devolve a imagem pronta em base64 — não precisa de biblioteca de
+ * QR code no projeto. `payload` é o copia-e-cola, que em celular costuma ser
+ * mais prático do que apontar a câmera para a própria tela.
+ *
+ * Devolve null em vez de lançar: a cobrança já existe e o pedido está
+ * gravado. Perder o QR é contornável (o cliente ainda tem o link do Asaas);
+ * derrubar a compra por causa disso não é.
+ */
+export async function buscarQrCodePix(pagamentoId: string): Promise<QrCodePix | null> {
+  try {
+    const r = await chamar<{ success?: boolean; payload?: string; encodedImage?: string; expirationDate?: string }>(
+      `/payments/${pagamentoId}/pixQrCode`,
+      { method: 'GET' }
+    );
+    if (!r.payload || !r.encodedImage) return null;
+    return { payload: r.payload, imagemBase64: r.encodedImage, expiraEm: r.expirationDate ?? null };
+  } catch (e) {
+    console.error('[asaas] QR do PIX falhou:', e);
+    return null;
+  }
+}
+
+/** Status de uma cobrança, para a tela perguntar "já caiu?". */
+export async function consultarPagamento(
+  pagamentoId: string
+): Promise<{ status: string; pago: boolean } | null> {
+  try {
+    const r = await chamar<{ status?: string }>(`/payments/${pagamentoId}`, { method: 'GET' });
+    const status = r.status ?? 'UNKNOWN';
+    // RECEIVED e CONFIRMED são os dois estados em que o dinheiro entrou.
+    return { status, pago: status === 'RECEIVED' || status === 'CONFIRMED' };
+  } catch (e) {
+    console.error('[asaas] consulta de pagamento falhou:', e);
+    return null;
+  }
+}
+
 export type Assinatura = { id: string };
 
 /** Assinatura mensal recorrente — usada na Glow Box. */

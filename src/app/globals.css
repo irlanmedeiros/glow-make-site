@@ -664,3 +664,34 @@ th.num{text-align:right}
   .pdv-carrinho{position:static}
   .pdv-grade{grid-template-columns:repeat(auto-fill,minmax(120px,1fr))}
 }
+
+/* ------------------------------------------------------------
+   Pagamento com PIX dentro do site
+
+   O QR fica grande de propósito: a cliente costuma escanear com a
+   câmera do próprio celular apontada para outra tela, e código
+   pequeno não lê. O copia-e-cola vem logo abaixo porque, no
+   celular, ninguém aponta a câmera para a própria tela.
+   ------------------------------------------------------------ */
+.pix{display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center}
+.pix-valor{display:flex;flex-direction:column;gap:2px;margin:0}
+.pix-valor span{font-size:12.5px;color:var(--muted)}
+.pix-valor b{font-size:28px;color:var(--ink);letter-spacing:-.02em}
+.pix-qr{border:1px solid var(--line);border-radius:14px;padding:10px;background:#fff;width:220px;height:220px}
+.pix-instrucao{margin:0;font-size:13.5px;color:var(--muted);max-width:34ch}
+.pix-copiar{width:100%}
+.pix-codigo{display:block;width:100%;max-height:64px;overflow-y:auto;overflow-wrap:anywhere;
+  background:var(--rose-50);border:1px solid var(--line);border-radius:10px;padding:9px 11px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:var(--muted);text-align:left}
+.pix-esperando{display:flex;align-items:center;gap:8px;margin:0;font-size:13px;color:var(--muted)}
+.pix-ponto{width:8px;height:8px;border-radius:50%;background:var(--rose);flex:none;animation:pix-pulso 1.4s ease-in-out infinite}
+@keyframes pix-pulso{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.8)}}
+@media (prefers-reduced-motion:reduce){.pix-ponto{animation:none}}
+.pix-alternativa{margin:0;font-size:12.5px;color:var(--muted)}
+.pix-alternativa a{color:var(--rose);font-weight:600;text-decoration:underline}
+
+.pix-ok{display:flex;flex-direction:column;align-items:center;gap:12px;padding:12px 0}
+.pix-ok-marca{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;
+  background:#E8F7F0;color:var(--ok)}
+.pix-ok h4{margin:0;font-size:20px;color:var(--ink)}
+.pix-ok p{margin:0;font-size:14px;color:var(--muted);max-width:36ch}

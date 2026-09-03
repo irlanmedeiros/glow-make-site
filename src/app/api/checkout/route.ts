@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { baixarEstoque, EstoqueInsuficiente } from '@/lib/estoque';
-import { asaasConfigurado, criarOuBuscarCliente, criarCobranca } from '@/lib/asaas';
+import { asaasConfigurado, criarOuBuscarCliente, criarCobranca, buscarQrCodePix } from '@/lib/asaas';
 import { validarCliente, type DadosCliente } from '@/lib/validacao';
 import { calcularFrete } from '@/lib/frete';
 import { afiliadoPorCodigo, gerarComissaoPedido } from '@/lib/afiliado';
@@ -157,7 +157,21 @@ export async function POST(req: Request) {
         where: { id: pedido.id },
         data: { asaasPaymentId: cobranca.id, invoiceUrl: cobranca.invoiceUrl },
       });
-      return NextResponse.json({ ok: true, invoiceUrl: cobranca.invoiceUrl, pedido: pedido.numero });
+
+      /* No PIX o QR vai junto na resposta, para a compra terminar DENTRO do
+         site. Mandar a cliente para a página do Asaas no último passo é onde
+         se perde venda. Se o QR falhar, o link continua ali como saída. */
+      const pix =
+        cliente.pagamento === 'PIX' ? await buscarQrCodePix(cobranca.id) : null;
+
+      return NextResponse.json({
+        ok: true,
+        invoiceUrl: cobranca.invoiceUrl,
+        pedido: pedido.numero,
+        pedidoId: pedido.id,
+        total: Number(total.toString()),
+        pix,
+      });
     } catch (e) {
       // O pedido ficou registrado com o estoque reservado; só a cobrança falhou.
       // Deixamos o rastro no pedido para o admin resolver em vez de sumir com ele.
