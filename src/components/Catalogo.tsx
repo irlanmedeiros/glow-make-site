@@ -80,7 +80,9 @@ export default function Catalogo({
 }) {
   const [aba, setAba] = useState<'vender' | 'estoque' | 'caixa'>('vender');
   const [produtos, setProdutos] = useState(inicial);
-  const [atualizadoEm, setAtualizadoEm] = useState<Date>(new Date());
+  // Começa nulo: `new Date()` no servidor e no cliente dá horas diferentes e
+  // quebrava a hidratação. O relógio só aparece depois que o componente monta.
+  const [atualizadoEm, setAtualizadoEm] = useState<Date | null>(null);
   const [offline, setOffline] = useState(false);
   const [piscando, setPiscando] = useState<Set<string>>(new Set());
 
@@ -118,6 +120,8 @@ export default function Catalogo({
   }, []);
 
   useEffect(() => {
+    // Marca a primeira leitura assim que monta, no relógio do próprio balcão.
+    setAtualizadoEm(new Date());
     let timer: ReturnType<typeof setInterval> | null = null;
     const ligar = () => {
       if (!timer) timer = setInterval(buscarEstoque, INTERVALO_MS);
@@ -165,12 +169,17 @@ export default function Catalogo({
           <>Sem conexão. Os números podem estar desatualizados.</>
         ) : (
           <>
-            Estoque ao vivo · última leitura às{' '}
-            {atualizadoEm.toLocaleTimeString('pt-BR', {
-              hour: '2-digit',
-              minute: '2-digit',
-              second: '2-digit',
-            })}
+            Estoque ao vivo
+            {atualizadoEm && (
+              <>
+                {' · última leitura às '}
+                {atualizadoEm.toLocaleTimeString('pt-BR', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit',
+                })}
+              </>
+            )}
           </>
         )}
         <button className="cat-refresh" onClick={buscarEstoque}>
