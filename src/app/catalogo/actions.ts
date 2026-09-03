@@ -9,10 +9,23 @@ import {
   cancelarVenda as cancelar,
   caixaAberto,
   resumoDoCaixa,
+  confirmarPagamentoVenda,
   type FormaPagamento,
 } from '@/lib/pdv';
 
-export type Resultado = { ok?: string; erro?: string; id?: string; qtd?: number; numero?: number };
+export type QrPix = { payload: string; imagemBase64: string };
+
+export type Resultado = {
+  ok?: string;
+  erro?: string;
+  id?: string;
+  qtd?: number;
+  numero?: number;
+  total?: number;
+  pix?: QrPix | null;
+  aviso?: string;
+  pago?: boolean;
+};
 
 async function exigirSessao() {
   if (!(await podeVerCatalogo())) return false;
@@ -52,6 +65,9 @@ export async function fecharVenda(
     formaPagamento: String(fd.get('formaPagamento') ?? 'DINHEIRO') as FormaPagamento,
     desconto,
     observacao: String(fd.get('observacao') ?? ''),
+    // A tela pede o QR marcando este campo. Sem ele o PIX continua sendo só
+    // rótulo, cobrado pela chave da loja como sempre foi.
+    gerarQrPix: fd.get('gerarQrPix') === 'sim',
   });
 
   if (!r.ok) return { erro: r.erro };
@@ -60,14 +76,37 @@ export async function fecharVenda(
   revalidatePath('/catalogo');
   revalidatePath('/admin');
 
+  const valor = r.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
   return {
-    ok: `Venda #${r.numero} registrada — ${r.total.toLocaleString('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    })}.`,
+    ok: r.pix
+      ? `Venda #${r.numero} — ${valor}. Mostre o QR para a cliente.`
+      : `Venda #${r.numero} registrada — ${valor}.`,
     numero: r.numero,
     id: r.id,
+    total: r.total,
+    pix: r.pix ?? null,
+    aviso: r.aviso,
   };
+}
+
+/** "A cliente já pagou?" — a tela do balcão pergunta enquanto o QR está aberto. */
+export async function conferirPagamentoVenda(
+  _estado: Resultado | null,
+  fd: FormData
+): Promise<Resultado> {
+  if (!(await exigirSessao())) return { erro: 'Sessão expirada. Entre novamente.' };
+
+  const id = String(fd.get('id') ?? '');
+  if (!id) return { erro: 'Venda não informada.' };
+
+  const r = await confirmarPagamentoVenda(id);
+  if (r.erro) return { erro: r.erro };
+  if (!r.pago) return { pago: false };
+
+  revalidatePath('/catalogo');
+  revalidatePath('/admin');
+  return { ok: 'Pagamento confirmado.', pago: true };
 }
 
 export async function cancelarVendaLoja(

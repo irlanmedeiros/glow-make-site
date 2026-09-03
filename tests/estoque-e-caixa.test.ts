@@ -322,6 +322,44 @@ describe('resumoDoCaixa — o esperado na gaveta', () => {
     expect(resumo.porForma.find((p) => p.forma === 'DINHEIRO')?.total).toBe(40);
   });
 
+  it('PIX aguardando pagamento NÃO entra no fechamento, mas já reservou o estoque', async () => {
+    await prepararKit(20);
+    const caixa = await prisma.caixa.create({
+      data: { abertoPor: 'TESTE-INT Cida', trocoInicial: new Prisma.Decimal('0') },
+    });
+
+    // Venda de PIX com QR na tela: nasce AGUARDANDO_PIX.
+    const venda = await prisma.vendaLoja.create({
+      data: {
+        vendedora: 'TESTE-INT Cida',
+        formaPagamento: 'PIX',
+        statusPagamento: 'AGUARDANDO_PIX',
+        subtotal: new Prisma.Decimal('40.00'),
+        total: new Prisma.Decimal('40.00'),
+        caixaId: caixa.id,
+      },
+    });
+    // O estoque baixa junto, senão o site venderia a mesma peça na espera.
+    await prisma.$transaction((tx) => baixarEstoque(tx, [{ kitId, qtd: 1 }], 'Venda no balcão'));
+
+    const antes = await resumoDoCaixa(caixa.id);
+    expect(antes.quantidade, 'venda pendente não pode contar').toBe(0);
+    expect(antes.totalVendas).toBe(0);
+    expect(await saldoDe(), 'mas o estoque já saiu').toBe(19);
+
+    // Pagamento confirma (webhook ou consulta).
+    await prisma.vendaLoja.update({
+      where: { id: venda.id },
+      data: { statusPagamento: 'CONFIRMADA' },
+    });
+
+    const depois = await resumoDoCaixa(caixa.id);
+    expect(depois.quantidade).toBe(1);
+    expect(depois.totalVendas).toBe(40);
+    // PIX continua fora da gaveta, confirmado ou não.
+    expect(depois.esperadoNaGaveta).toBe(0);
+  });
+
   it('venda cancelada sai da conta do caixa', async () => {
     await prepararKit(20);
     const caixa = await prisma.caixa.create({

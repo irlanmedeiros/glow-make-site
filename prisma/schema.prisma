@@ -40,6 +40,11 @@ enum FormaPagamentoLoja {
   CREDITO
 }
 
+enum StatusVendaLoja {
+  CONFIRMADA      // dinheiro na mão, ou PIX já confirmado pelo Asaas
+  AGUARDANDO_PIX  // QR na tela, esperando a cliente pagar
+}
+
 enum EtapaLead {
   CARRINHO       // montou o carrinho e parou
   DADOS          // começou a preencher o checkout
@@ -389,6 +394,15 @@ model VendaLoja {
   cancelada   Boolean   @default(false)
   canceladaEm DateTime?
   motivoCancelamento String?
+
+  // Dinheiro, débito e crédito nascem CONFIRMADA: o dinheiro já está na mão da
+  // vendedora quando ela toca em finalizar. O PIX com QR na tela é o único que
+  // tem espera, e enquanto espera NÃO pode entrar no fechamento do dia —
+  // senão o caixa infla com venda que talvez não seja paga.
+  // O estoque baixa em qualquer um dos casos, na mesma transação: reservar a
+  // peça é o que impede o site de vender a mesma unidade durante a espera.
+  statusPagamento StatusVendaLoja @default(CONFIRMADA)
+  asaasPaymentId  String?
 
   // A venda nasce ligada ao caixa aberto no momento. É isso que permite
   // fechar o dia e conferir o que entrou por forma de pagamento.

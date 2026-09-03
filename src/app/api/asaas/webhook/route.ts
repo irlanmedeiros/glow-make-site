@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { aprovarComissaoDoPedido, gerarComissaoAssinatura } from '@/lib/afiliado';
+import { REF_VENDA_BALCAO, confirmarVendaPorReferencia } from '@/lib/pdv';
 
 export const runtime = 'nodejs';
 
@@ -66,6 +67,15 @@ export async function POST(req: Request) {
              duplica o valor a pagar. */
           if (status === 'ATIVA') await gerarComissaoAssinatura(assinante);
         }
+      }
+      return NextResponse.json({ ok: true });
+    }
+
+    // --- venda no balcão (PIX com QR na tela) ---
+    const referencia = pagamento.externalReference ?? '';
+    if (referencia.startsWith(REF_VENDA_BALCAO)) {
+      if (tipo === 'PAYMENT_CONFIRMED' || tipo === 'PAYMENT_RECEIVED') {
+        await confirmarVendaPorReferencia(referencia);
       }
       return NextResponse.json({ ok: true });
     }

@@ -2,6 +2,13 @@ import 'server-only';
 import { Prisma } from '@prisma/client';
 import { prisma } from './prisma';
 import { baixarEstoque, devolverEstoque, EstoqueInsuficiente } from './estoque';
+import {
+  asaasConfigurado,
+  buscarQrCodePix,
+  consultarPagamento,
+  criarCobranca,
+  criarOuBuscarCliente,
+} from './asaas';
 
 /**
  * PDV — venda no balcão da loja física.
@@ -17,8 +24,10 @@ import { baixarEstoque, devolverEstoque, EstoqueInsuficiente } from './estoque';
 
 export type ItemVenda = { kitId: string; qtd: number };
 
+export type QrVenda = { payload: string; imagemBase64: string };
+
 export type ResultadoVenda =
-  | { ok: true; numero: number; id: string; total: number }
+  | { ok: true; numero: number; id: string; total: number; pix?: QrVenda | null; aviso?: string }
   | { ok: false; erro: string };
 
 export const FORMAS = ['DINHEIRO', 'PIX', 'DEBITO', 'CREDITO'] as const;
@@ -30,6 +39,111 @@ export const ROTULO_FORMA: Record<FormaPagamento, string> = {
   DEBITO: 'Cartão de débito',
   CREDITO: 'Cartão de crédito',
 };
+
+/* Prefixo da referência externa da cobrança do balcão. É por ele que o
+   webhook do Asaas reconhece que o pagamento é de uma venda de loja e não de
+   um pedido do site. */
+export const REF_VENDA_BALCAO = 'venda:';
+
+/**
+ * Cria a cobrança PIX de uma venda de balcão e devolve o QR.
+ *
+ * Diferente do site, aqui não existe cadastro de quem está comprando — a
+ * pessoa está na frente da vendedora, não vai digitar CPF para levar um kit de
+ * R$ 40. Então todas as vendas de balcão apontam para um cliente único
+ * ("Consumidor do balcão") registrado com o CNPJ da própria loja. O que
+ * identifica a venda é a `externalReference`, não o cliente.
+ *
+ * Devolve null em qualquer falha: o chamador degrada para cobrança manual.
+ */
+async function cobrarPixNoBalcao(
+  vendaId: string,
+  numero: number,
+  valor: number
+): Promise<{ qr: QrVenda } | null> {
+  if (!asaasConfigurado()) return null;
+
+  const config = await prisma.config.findUnique({ where: { id: 'config' } });
+  const cnpj = (config?.cnpj ?? '').replace(/\D/g, '');
+
+  // O CNPJ de exemplo que vem no seed não serve para abrir cliente no Asaas.
+  if (cnpj.length !== 14 || /^(\d)\1{13}$/.test(cnpj)) {
+    console.error('[pdv] CNPJ da loja inválido em Configurações — QR do balcão indisponível.');
+    return null;
+  }
+
+  try {
+    const customerId = await criarOuBuscarCliente({
+      nome: 'Consumidor do balcão',
+      email: config?.email ?? '',
+      documento: cnpj,
+      telefone: config?.whatsapp ?? '',
+      cep: config?.cepOrigem ?? '',
+    });
+
+    const cobranca = await criarCobranca({
+      customerId,
+      valor,
+      descricao: `Venda no balcão #${numero} — Glow Make`,
+      formaPagamento: 'PIX',
+      referenciaExterna: `${REF_VENDA_BALCAO}${vendaId}`,
+    });
+
+    const qr = await buscarQrCodePix(cobranca.id);
+    if (!qr) return null;
+
+    await prisma.vendaLoja.update({
+      where: { id: vendaId },
+      data: { asaasPaymentId: cobranca.id },
+    });
+
+    return { qr: { payload: qr.payload, imagemBase64: qr.imagemBase64 } };
+  } catch (e) {
+    console.error('[pdv] cobrança PIX do balcão falhou:', e);
+    return null;
+  }
+}
+
+/**
+ * "A cliente já pagou?" — chamada pela tela do balcão enquanto o QR está
+ * aberto, e pelo webhook quando o Asaas avisa.
+ *
+ * Confere o banco primeiro; só pergunta ao Asaas se ainda estiver aguardando.
+ * O `updateMany` filtrando por status faz webhook e consulta chegando juntos
+ * não gravarem duas vezes.
+ */
+export async function confirmarPagamentoVenda(
+  vendaId: string
+): Promise<{ pago: boolean; erro?: string }> {
+  const venda = await prisma.vendaLoja.findUnique({
+    where: { id: vendaId },
+    select: { id: true, statusPagamento: true, asaasPaymentId: true, cancelada: true },
+  });
+  if (!venda) return { pago: false, erro: 'Venda não encontrada.' };
+  if (venda.cancelada) return { pago: false, erro: 'Essa venda foi cancelada.' };
+  if (venda.statusPagamento === 'CONFIRMADA') return { pago: true };
+  if (!venda.asaasPaymentId) return { pago: false };
+
+  const cobranca = await consultarPagamento(venda.asaasPaymentId);
+  if (!cobranca?.pago) return { pago: false };
+
+  await prisma.vendaLoja.updateMany({
+    where: { id: vendaId, statusPagamento: 'AGUARDANDO_PIX' },
+    data: { statusPagamento: 'CONFIRMADA' },
+  });
+  return { pago: true };
+}
+
+/** Marca como paga a venda de balcão referenciada por um webhook do Asaas. */
+export async function confirmarVendaPorReferencia(referencia: string): Promise<boolean> {
+  if (!referencia.startsWith(REF_VENDA_BALCAO)) return false;
+  const id = referencia.slice(REF_VENDA_BALCAO.length);
+  const r = await prisma.vendaLoja.updateMany({
+    where: { id, statusPagamento: 'AGUARDANDO_PIX', cancelada: false },
+    data: { statusPagamento: 'CONFIRMADA' },
+  });
+  return r.count > 0;
+}
 
 /** Caixa aberto no momento, se houver. */
 export async function caixaAberto() {
@@ -45,6 +159,8 @@ export async function registrarVenda(params: {
   formaPagamento: FormaPagamento;
   desconto: number;
   observacao?: string;
+  /** PIX com QR na tela. Sem isto, PIX segue como rótulo, cobrado por fora. */
+  gerarQrPix?: boolean;
 }): Promise<ResultadoVenda> {
   const itens = params.itens.filter(
     (i) => i.kitId && Number.isInteger(i.qtd) && i.qtd > 0 && i.qtd <= 200
@@ -77,6 +193,11 @@ export async function registrarVenda(params: {
   const caixa = await caixaAberto();
   const vendedora = params.vendedora.trim().slice(0, 60) || 'Não informado';
 
+  /* Só o PIX espera. Nas outras formas o dinheiro já está na mão quando a
+     vendedora toca em finalizar, então a venda nasce confirmada — que é
+     exatamente como o balcão funcionava antes desta mudança. */
+  const esperaPix = params.formaPagamento === 'PIX' && params.gerarQrPix === true;
+
   try {
     const venda = await prisma.$transaction(async (tx) => {
       await baixarEstoque(
@@ -89,6 +210,7 @@ export async function registrarVenda(params: {
         data: {
           vendedora,
           formaPagamento: params.formaPagamento,
+          statusPagamento: esperaPix ? 'AGUARDANDO_PIX' : 'CONFIRMADA',
           subtotal,
           desconto,
           total,
@@ -107,7 +229,27 @@ export async function registrarVenda(params: {
       });
     });
 
-    return { ok: true, numero: venda.numero, id: venda.id, total: Number(total.toString()) };
+    const base = { ok: true as const, numero: venda.numero, id: venda.id, total: Number(total.toString()) };
+    if (!esperaPix) return base;
+
+    /* A venda JÁ ESTÁ GRAVADA e o estoque já baixou. Se a cobrança falhar
+       daqui para a frente, o balcão não pode travar: a vendedora cobra o PIX
+       pela chave da loja, como fazia antes, e confirma na mão. Perder a venda
+       porque o Asaas oscilou seria pior. */
+    const cobranca = await cobrarPixNoBalcao(venda.id, venda.numero, Number(total.toString()));
+    if (!cobranca) {
+      await prisma.vendaLoja.update({
+        where: { id: venda.id },
+        data: { statusPagamento: 'CONFIRMADA' },
+      });
+      return {
+        ...base,
+        pix: null,
+        aviso: 'Não consegui gerar o QR agora. Cobre pela chave PIX da loja — a venda já está registrada.',
+      };
+    }
+
+    return { ...base, pix: cobranca.qr };
   } catch (e) {
     if (e instanceof EstoqueInsuficiente) return { ok: false, erro: e.message };
     console.error('[pdv] venda falhou:', e);
@@ -156,8 +298,11 @@ export type ResumoCaixa = {
  */
 export async function resumoDoCaixa(caixaId: string): Promise<ResumoCaixa> {
   const caixa = await prisma.caixa.findUnique({ where: { id: caixaId } });
+  /* PIX ainda esperando pagamento NÃO entra no fechamento: contar uma venda
+     antes de o dinheiro cair é como o caixa deixa de bater. Se a cliente
+     desistir no meio, a vendedora cancela e o estoque volta. */
   const vendas = await prisma.vendaLoja.findMany({
-    where: { caixaId, cancelada: false },
+    where: { caixaId, cancelada: false, statusPagamento: 'CONFIRMADA' },
   });
 
   const porForma = FORMAS.map((forma) => {

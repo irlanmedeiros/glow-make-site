@@ -8,6 +8,7 @@ import {
   fecharCaixa,
   registrarPerda,
   desfazerPerda,
+  conferirPagamentoVenda,
   type Resultado,
 } from '@/app/catalogo/actions';
 import { Busca } from './Icones';
@@ -49,6 +50,17 @@ export type VendaResumo = {
 };
 
 const INTERVALO_MS = 10_000;
+/* De quanto em quanto tempo o balcão pergunta se o PIX caiu. Mais curto que o
+   do estoque: aqui tem uma cliente parada na frente da vendedora esperando. */
+const INTERVALO_PIX_MS = 3_000;
+
+type PixNaTela = {
+  vendaId: string;
+  numero: number;
+  total: number;
+  payload: string;
+  imagemBase64: string;
+};
 const real = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 const FORMAS = [
@@ -226,6 +238,13 @@ function AbaVender({
 
   const [resultado, acaoVender, vendendo] = useActionState(fecharVenda, null as Resultado | null);
 
+  /* Venda de PIX com QR na tela. Fica em estado separado do `resultado`
+     porque o painel do QR sobrevive à limpeza do carrinho: a próxima cliente
+     já pode ser atendida enquanto esta ainda está pagando. */
+  const [pixAberto, setPixAberto] = useState<PixNaTela | null>(null);
+  const [pixPago, setPixPago] = useState(false);
+  const [pedirQr, setPedirQr] = useState(true);
+
   useEffect(() => {
     setVendedora(localStorage.getItem('glowmake_vendedora') ?? '');
   }, []);
@@ -240,8 +259,41 @@ function AbaVender({
       setDesconto('');
       aoVender();
       campoCodigo.current?.focus();
+      if (resultado.pix && resultado.id) {
+        setPixPago(false);
+        setPixAberto({
+          vendaId: resultado.id,
+          numero: resultado.numero ?? 0,
+          total: resultado.total ?? 0,
+          payload: resultado.pix.payload,
+          imagemBase64: resultado.pix.imagemBase64,
+        });
+      }
     }
   }, [resultado, aoVender]);
+
+  /* Enquanto o QR está na tela, pergunta ao servidor se caiu. A vendedora não
+     pode ficar abrindo o app do banco para conferir — é isso que o QR vem
+     resolver. */
+  useEffect(() => {
+    if (!pixAberto || pixPago) return;
+    let vivo = true;
+    const conferir = async () => {
+      const fd = new FormData();
+      fd.set('id', pixAberto.vendaId);
+      try {
+        const r = await conferirPagamentoVenda(null, fd);
+        if (vivo && r.pago) setPixPago(true);
+      } catch {
+        /* tenta de novo no próximo ciclo */
+      }
+    };
+    const t = setInterval(conferir, INTERVALO_PIX_MS);
+    return () => {
+      vivo = false;
+      clearInterval(t);
+    };
+  }, [pixAberto, pixPago]);
 
   const porId = useMemo(() => new Map(produtos.map((p) => [p.id, p])), [produtos]);
 
@@ -441,6 +493,24 @@ function AbaVender({
             </div>
           </div>
 
+          {forma === 'PIX' && (
+            <label className="pdv-qr-opcao">
+              <input
+                type="checkbox"
+                checked={pedirQr}
+                onChange={(e) => setPedirQr(e.target.checked)}
+              />
+              <span>
+                <b>Mostrar QR na tela</b>
+                <small>
+                  A cliente escaneia aqui e o sistema avisa quando cair. Desmarque se ela vai
+                  pagar na chave da loja e você confere no celular.
+                </small>
+              </span>
+            </label>
+          )}
+          <input type="hidden" name="gerarQrPix" value={forma === 'PIX' && pedirQr ? 'sim' : 'nao'} />
+
           <div className="field">
             <label htmlFor="vend">Quem está vendendo</label>
             <input
@@ -461,8 +531,103 @@ function AbaVender({
         </form>
       </div>
 
+      {pixAberto && (
+        <PainelPix
+          pix={pixAberto}
+          pago={pixPago}
+          aoFechar={() => {
+            setPixAberto(null);
+            setPixPago(false);
+            aoVender();
+            campoCodigo.current?.focus();
+          }}
+        />
+      )}
+
       <UltimasVendas vendas={vendas} />
     </>
+  );
+}
+
+/* ============================================================
+   QR do PIX no balcão
+
+   A cliente aponta a câmera para a tela da vendedora. O painel cobre a tela
+   inteira de propósito: no balcão o celular fica na mão de outra pessoa, e
+   QR pequeno no meio de uma lista não se lê.
+   ============================================================ */
+
+function PainelPix({
+  pix,
+  pago,
+  aoFechar,
+}: {
+  pix: PixNaTela;
+  pago: boolean;
+  aoFechar: () => void;
+}) {
+  const [copiado, setCopiado] = useState(false);
+
+  async function copiar() {
+    try {
+      await navigator.clipboard.writeText(pix.payload);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2500);
+    } catch {
+      /* Sem clipboard a vendedora ainda pode ler o código na tela. */
+    }
+  }
+
+  return (
+    <div className="pdv-pix-fundo" role="dialog" aria-modal="true" aria-label="Pagamento com PIX">
+      <div className="pdv-pix-card">
+        {pago ? (
+          <>
+            <div className="pdv-pix-ok" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 6 9 17l-5-5" />
+              </svg>
+            </div>
+            <h3>Pagamento confirmado</h3>
+            <p className="pdv-pix-valor">{real(pix.total)}</p>
+            <p className="pdv-pix-nota">
+              Venda #{pix.numero} entrou no caixa. Pode entregar.
+            </p>
+            <button className="btn btn-primary" onClick={aoFechar}>
+              Próxima cliente
+            </button>
+          </>
+        ) : (
+          <>
+            <h3>Mostre para a cliente</h3>
+            <p className="pdv-pix-valor">{real(pix.total)}</p>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              className="pdv-pix-qr"
+              src={`data:image/png;base64,${pix.imagemBase64}`}
+              alt="QR Code do PIX"
+              width={260}
+              height={260}
+            />
+            <button className="btn btn-ghost btn-sm" onClick={copiar} type="button">
+              {copiado ? 'Código copiado' : 'Copiar código'}
+            </button>
+            <p className="pdv-pix-esperando">
+              <span className="pdv-pix-ponto" aria-hidden="true" />
+              Esperando o pagamento cair
+            </p>
+            <p className="pdv-pix-nota">
+              A venda #{pix.numero} já está registrada e o estoque baixou. Ela só entra no
+              fechamento do caixa quando o PIX cair. Se a cliente desistir, cancele em
+              &ldquo;Últimas vendas&rdquo;.
+            </p>
+            <button className="btn btn-ghost btn-sm" onClick={aoFechar}>
+              Fechar e atender outra
+            </button>
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 
