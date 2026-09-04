@@ -390,8 +390,13 @@ th.num{text-align:right}
 .vazio{text-align:center;padding:54px 20px;color:var(--muted)}
 .vazio b{display:block;font-family:var(--serif);font-size:19px;color:var(--ink);margin-bottom:6px}
 
-.toast{position:fixed;bottom:24px;left:50%;transform:translate(-50%,140%);background:var(--ink);color:#fff;padding:13px 24px;border-radius:999px;font-size:14px;z-index:200;transition:transform .38s cubic-bezier(.2,.9,.3,1);box-shadow:var(--shadow-lg);max-width:90vw;text-align:center}
-.toast.on{transform:translate(-50%,0)}
+/* O deslocamento de esconder precisa vencer a ALTURA do elemento mais os 24px
+   do `bottom`. O antigo 140% era proporcional só à altura, então nunca cobria
+   os dois: sobrava uma tira aparecendo no rodapé — e como o toast fica sempre
+   montado, um toast vazio (sem mensagem) ficava visível o tempo todo, com
+   `pointer-events` capturando clique no meio da página. */
+.toast{position:fixed;bottom:24px;left:50%;transform:translate(-50%,calc(100% + 24px));opacity:0;pointer-events:none;background:var(--ink);color:#fff;padding:13px 24px;border-radius:999px;font-size:14px;z-index:200;transition:transform .38s cubic-bezier(.2,.9,.3,1),opacity .28s ease;box-shadow:var(--shadow-lg);max-width:90vw;text-align:center}
+.toast.on{transform:translate(-50%,0);opacity:1;pointer-events:auto}
 
 /* ---------- responsivo ---------- */
 @media(max-width:1000px){

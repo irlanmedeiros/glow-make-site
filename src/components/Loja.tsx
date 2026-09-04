@@ -192,7 +192,12 @@ export function Loja({
       {children}
       <Gaveta aberta={gaveta} />
       <Checkout modo={checkout} aoLimpar={() => setItens([])} />
-      <div className={`toast${aviso ? ' on' : ''}`}>{aviso}</div>
+      {/* Fica sempre montado de propósito: região viva só é anunciada pelo
+          leitor de tela se já existir no DOM quando o texto muda. Vazio, não
+          anuncia nada — e o CSS garante que também não apareça. */}
+      <div className={`toast${aviso ? ' on' : ''}`} role="status" aria-live="polite">
+        {aviso}
+      </div>
     </LojaCtx.Provider>
   );
 }
