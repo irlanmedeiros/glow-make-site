@@ -385,7 +385,7 @@ export default async function Home() {
                 <li><a href="#">Central de atendimento</a></li>
                 <li><a href="#">Trocas e devoluções</a></li>
                 <li><a href="#">Prazo de entrega</a></li>
-                <li><a href="#">Rastrear pedido</a></li>
+                <li><a href="/meus-pedidos">Acompanhar pedido</a></li>
               </ul>
             </div>
             <div>

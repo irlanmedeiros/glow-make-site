@@ -56,10 +56,18 @@ export async function POST(req: Request) {
               : tipo === 'PAYMENT_DELETED'
                 ? 'CANCELADA'
                 : null;
-        if (status) {
+        /* Cancelar a assinatura no Asaas apaga as cobrancas pendentes e ele
+           avisa com PAYMENT_DELETED. Sem esta guarda, esse eco sobrescrevia
+           quando e por quem ela foi cancelada, e a prova do cancelamento
+           feito pela assinante virava "cancelada pelo Asaas". */
+        const ecoDeCancelamento = status === 'CANCELADA' && assinante.status === 'CANCELADA';
+        if (status && !ecoDeCancelamento) {
           await prisma.assinante.update({
             where: { id: assinante.id },
-            data: { status, ...(status === 'CANCELADA' ? { canceladaEm: new Date() } : {}) },
+            data: {
+              status,
+              ...(status === 'CANCELADA' ? { canceladaEm: new Date(), canceladaPor: 'ASAAS' } : {}),
+            },
           });
 
           /* Cada mensalidade confirmada gera a comissão daquele mês. A

@@ -144,6 +144,14 @@ model Pedido {
   enviadoEm      DateTime?
   entregueEm     DateTime?
 
+  // Pedido de cancelamento feito pela cliente em /meus-pedidos. Sozinho nao
+  // cancela nada: fica pendente ate um admin aprovar ou recusar. Respondido
+  // com o pedido ainda de pe significa recusado.
+  cancelamentoSolicitadoEm DateTime?
+  cancelamentoMotivo       String?
+  cancelamentoRespondidoEm DateTime?
+  cancelamentoResposta     String?
+
   criadoEm DateTime     @default(now())
   atualizadoEm DateTime  @updatedAt
 
@@ -198,6 +206,12 @@ model Assinante {
   asaasSubscriptionId String?
   invoiceUrl          String?
   canceladaEm DateTime?
+  // Quem cancelou e, quando foi a propria assinante, de onde e sob qual versao
+  // do contrato. E a mesma prova guardada no aceite: um cancelamento sem ela
+  // nao se sustenta se a cobranca for contestada depois.
+  canceladaPor               String?   // CLIENTE | ADMIN | ASAAS
+  cancelamentoIp             String?
+  cancelamentoContratoVersao String?
   criadoEm  DateTime        @default(now())
   atualizadoEm DateTime     @updatedAt
 

@@ -277,6 +277,7 @@ export function Cabecalho() {
           <a href="#kits">Kits</a>
           <a href="#como">Como funciona</a>
           <a href="#depo">Avaliações</a>
+          <a href="/meus-pedidos">Meus pedidos</a>
         </nav>
         <div className="hd-right">
           <div className="search">
@@ -331,6 +332,7 @@ export function Cabecalho() {
             <a href="#kits">Kits</a>
             <a href="#como">Como funciona</a>
             <a href="#depo">Avaliações</a>
+            <a href="/meus-pedidos">Meus pedidos</a>
           </nav>
         </div>
       </div>
@@ -855,7 +857,7 @@ function Checkout({ modo, aoLimpar }: { modo: Modo | null; aoLimpar: () => void 
          comprar — e some do site assim que a cobrança estiver ligada. */
       avisar(
         resposta.demo
-          ? 'Pedido registrado! Vamos entrar em contato para combinar o pagamento e a entrega.'
+          ? 'Pedido registrado! Vamos entrar em contato. Acompanhe em Meus pedidos.'
           : 'Tudo certo. Enviamos o link de pagamento para o seu e-mail.'
       );
     } catch {
@@ -909,6 +911,11 @@ function Checkout({ modo, aoLimpar }: { modo: Modo | null; aoLimpar: () => void 
                       Recebemos o seu PIX do pedido <b>#{pagamento?.pedido}</b>. Já estamos
                       separando tudo para enviar.
                     </p>
+                    {/* O site ainda nao manda e-mail: sem este link, fechar a tela
+                        era perder o caminho de volta para o pedido. */}
+                    <a className="btn btn-ghost" href="/meus-pedidos">
+                      Acompanhar pedido
+                    </a>
                     <button className="btn btn-primary" onClick={fechar}>
                       Fechar
                     </button>

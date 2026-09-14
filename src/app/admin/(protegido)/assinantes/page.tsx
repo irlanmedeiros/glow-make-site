@@ -95,6 +95,15 @@ export default async function Assinantes({ searchParams }: Props) {
                     </td>
                     <td>
                       <Pill cor={corAssinante(a.status)}>{ROTULO_ASSINANTE[a.status]}</Pill>
+                      {a.status === 'CANCELADA' && a.canceladaEm && (
+                        <small style={{ display: 'block', color: 'var(--muted)', marginTop: 4 }}>
+                          {a.canceladaPor === 'CLIENTE'
+                            ? `pela assinante em ${dataHora(a.canceladaEm)} (contrato ${a.cancelamentoContratoVersao ?? '?'})`
+                            : a.canceladaPor === 'ADMIN'
+                              ? `pelo admin em ${dataHora(a.canceladaEm)}`
+                              : `em ${dataHora(a.canceladaEm)}`}
+                        </small>
+                      )}
                     </td>
                     <td style={{ color: 'var(--muted)', fontSize: 13, whiteSpace: 'nowrap' }}>
                       {dataHora(a.criadoEm)}

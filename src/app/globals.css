@@ -450,45 +450,6 @@ th.num{text-align:right}
   .card ul,.card-body h3,.card-desc{min-height:0}
   .adm-hd h1{font-size:24px}
 }
-/* ---------- alvos de toque ----------
-   Num ponteiro grosso (dedo) o alvo precisa de ~44px. Aqui o alvo cresce
-   sem que o desenho cresca junto: a bolinha do carrossel continua com 10px,
-   quem ganha tamanho e a area clicavel em volta dela. */
-@keyframes fill-larg{from{width:0}to{width:40px}}
-@media(pointer:coarse){
-  /* borda transparente empurra a area de toque para 44px; o content-box
-     segura o desenho em 10px e o background-clip impede que o branco
-     vaze por baixo da borda. O ::after da barra de progresso continua
-     preso ao padding-box, entao a animacao nao muda. */
-  .dots{gap:0}
-  /* O botao passa a ser so a area de toque (24x44, 54 quando ativo) e o
-     desenho vai para o ::before, que mantem os 10px da arte.
-     Crescer o alvo com borda transparente nao serve aqui: o raio da borda
-     interna e o raio externo menos a largura da borda, da zero, e a
-     bolinha sai quadrada. */
-  .dot{width:24px;height:44px;border-radius:0;background:none;box-shadow:none;
-       overflow:visible;display:grid;place-items:center}
-  .dot.on{width:54px;background:none}
-  .dot::before{content:'';display:block;width:10px;height:10px;border-radius:999px;
-       background:var(--rose-300);transition:width .35s}
-  .dot.on::before{width:40px;background:var(--rose-100)}
-  /* O progresso cresce em largura a partir da borda esquerda da pilula. O
-     scaleX original dependia do overflow:hidden do botao, que aqui nao
-     existe mais — e escalar deformaria o raio da pilula. */
-  .dot.on::after{inset:auto;left:50%;top:50%;margin-left:-20px;width:0;height:10px;
-       border-radius:999px;transform:translateY(-50%);animation:fill-larg 6s linear forwards}
-  .stepper button{width:44px;height:44px}
-  .socials a{width:44px;height:44px}
-  .close{width:44px;height:44px}
-  .aceite input{width:20px;height:20px}
-  /* Links do rodape tinham 17px de altura com 9px de respiro: errar o toque
-     era o normal. Viram linhas de ~41px sem o rodape crescer muito. */
-  .foot ul{gap:0}
-  .foot ul a{display:block;padding:12px 0}
-  /* no carrinho do balcao o espaco e curto: cresce o que da, sem quebrar a linha */
-  .pdv-linha .stepper button{width:38px;height:42px}
-}
-
 @media(prefers-reduced-motion:reduce){
   *,*::after,*::before{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
   .rv{opacity:1;transform:none}
@@ -811,3 +772,115 @@ th.num{text-align:right}
 .menu-mob-links a:active{color:var(--rose)}
 /* No desktop o painel não tem razão de existir: a navegação está no topo. */
 @media(min-width:1001px){.menu-mob{display:none}}
+
+/* ============================================================
+   MEUS PEDIDOS
+   Pagina da cliente: consulta, linha do tempo, rastreio e cancelamento.
+   Escrita mobile-first: a base e o celular, de onde vem quase todo acesso.
+   ============================================================ */
+.acomp{max-width:820px;margin:0 auto;padding:0 12px 60px}
+.acomp-busca{background:#fff;border-radius:22px;box-shadow:var(--shadow);padding:22px 18px;margin-bottom:18px}
+.acomp-busca h1{font-family:var(--serif);font-size:clamp(24px,6vw,34px);line-height:1.15}
+.acomp-busca>p{color:var(--muted);font-size:14px;margin:6px 0 16px}
+.acomp-campos{display:grid;grid-template-columns:1fr;gap:0 12px}
+.acomp-campos .btn{width:100%}
+/* 44px em qualquer largura: o .btn-sm do resto do site mede 37px, pouco
+   para o dedo em Copiar codigo, Rastrear e Solicitar cancelamento. */
+.acomp .btn{min-height:44px}
+.acomp-titulo{font-family:var(--serif);font-size:22px;margin:26px 0 12px}
+.acomp-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px 16px;margin-bottom:14px}
+.acomp-card-topo{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:4px}
+.acomp-card-topo b{font-family:var(--serif);font-size:20px}
+.acomp-sub{font-size:13px;color:var(--muted)}
+
+/* Linha do tempo: vertical no celular, onde cinco etapas lado a lado
+   espremeriam o texto; horizontal a partir do tablet. */
+.linha-tempo{list-style:none;display:flex;flex-direction:column;margin:16px 0}
+.linha-tempo li{position:relative;display:flex;gap:12px;align-items:flex-start;padding-bottom:14px;font-size:14px;color:var(--muted)}
+.linha-tempo li::before{content:'';flex:none;position:relative;z-index:1;width:14px;height:14px;margin-top:3px;border-radius:50%;border:2px solid var(--line);background:#fff}
+.linha-tempo li::after{content:'';position:absolute;left:6px;top:17px;bottom:0;width:2px;background:var(--line)}
+.linha-tempo li:last-child{padding-bottom:0}
+.linha-tempo li:last-child::after{display:none}
+.linha-tempo li.feita{color:var(--ink)}
+.linha-tempo li.feita::before{background:var(--rose);border-color:var(--rose)}
+.linha-tempo li.feita::after{background:var(--rose-300)}
+.linha-tempo li.atual b{color:var(--rose-dark)}
+.linha-tempo small{display:block;font-size:12px;color:var(--muted)}
+
+.acomp-itens{list-style:none;border-top:1px solid var(--line);padding-top:10px;margin-top:6px;font-size:14px}
+.acomp-itens li{display:flex;justify-content:space-between;gap:12px;padding:4px 0}
+.acomp-itens li.total{font-weight:700;border-top:1px solid var(--line);margin-top:6px;padding-top:8px}
+.acomp-itens li.total span:last-child{color:var(--rose)}
+
+.acomp-rastreio{display:flex;flex-direction:column;gap:10px;background:var(--rose-50);border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:14px}
+.acomp-rastreio code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;letter-spacing:.5px;overflow-wrap:anywhere}
+.acomp-rastreio-acoes{display:flex;gap:8px;flex-wrap:wrap}
+.acomp-rastreio-acoes .btn{flex:1 1 140px}
+
+.acomp-acao{margin-top:14px;padding-top:14px;border-top:1px dashed var(--line)}
+.acomp-acao .contrato{max-height:240px;margin:10px 0}
+.acomp-botoes{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.acomp-botoes .btn{width:100%}
+
+@media(min-width:641px){
+  .acomp{padding:0 20px 80px}
+  .acomp-busca{padding:30px}
+  .acomp-campos{grid-template-columns:1fr 1fr auto;align-items:end}
+  .acomp-campos .btn{width:auto;margin-bottom:15px}
+  .acomp-card{padding:22px 24px}
+  .linha-tempo{flex-direction:row}
+  .linha-tempo li{flex:1;flex-direction:column;align-items:center;text-align:center;gap:8px;padding:0 4px}
+  /* o traco vai do centro desta bolinha ao centro da proxima: as etapas
+     tem a mesma largura, entao a proxima esta a 100% de distancia */
+  .linha-tempo li::after{left:calc(50% + 9px);top:9px;bottom:auto;width:calc(100% - 18px);height:2px}
+  .acomp-rastreio{flex-direction:row;align-items:center;justify-content:space-between}
+  .acomp-rastreio-acoes .btn{flex:0 0 auto}
+  .acomp-botoes{flex-direction:row}
+  .acomp-botoes .btn{width:auto}
+}
+
+/* ============================================================
+   ALVOS DE TOQUE
+   Fica no FIM do arquivo de proposito. Estas regras tem a mesma
+   especificidade das regras base que ajustam, e em CSS a que vem depois
+   ganha: no meio do arquivo, `.aceite input` e `.pdv-linha .stepper button`
+   eram definidos mais abaixo e desfaziam o ajuste em silencio.
+   ============================================================ */
+/* ---------- alvos de toque ----------
+   Num ponteiro grosso (dedo) o alvo precisa de ~44px. Aqui o alvo cresce
+   sem que o desenho cresca junto: a bolinha do carrossel continua com 10px,
+   quem ganha tamanho e a area clicavel em volta dela. */
+@keyframes fill-larg{from{width:0}to{width:40px}}
+@media(pointer:coarse){
+  /* borda transparente empurra a area de toque para 44px; o content-box
+     segura o desenho em 10px e o background-clip impede que o branco
+     vaze por baixo da borda. O ::after da barra de progresso continua
+     preso ao padding-box, entao a animacao nao muda. */
+  .dots{gap:0}
+  /* O botao passa a ser so a area de toque (24x44, 54 quando ativo) e o
+     desenho vai para o ::before, que mantem os 10px da arte.
+     Crescer o alvo com borda transparente nao serve aqui: o raio da borda
+     interna e o raio externo menos a largura da borda, da zero, e a
+     bolinha sai quadrada. */
+  .dot{width:24px;height:44px;border-radius:0;background:none;box-shadow:none;
+       overflow:visible;display:grid;place-items:center}
+  .dot.on{width:54px;background:none}
+  .dot::before{content:'';display:block;width:10px;height:10px;border-radius:999px;
+       background:var(--rose-300);transition:width .35s}
+  .dot.on::before{width:40px;background:var(--rose-100)}
+  /* O progresso cresce em largura a partir da borda esquerda da pilula. O
+     scaleX original dependia do overflow:hidden do botao, que aqui nao
+     existe mais — e escalar deformaria o raio da pilula. */
+  .dot.on::after{inset:auto;left:50%;top:50%;margin-left:-20px;width:0;height:10px;
+       border-radius:999px;transform:translateY(-50%);animation:fill-larg 6s linear forwards}
+  .stepper button{width:44px;height:44px}
+  .socials a{width:44px;height:44px}
+  .close{width:44px;height:44px}
+  .aceite input{width:20px;height:20px}
+  /* Links do rodape tinham 17px de altura com 9px de respiro: errar o toque
+     era o normal. Viram linhas de ~41px sem o rodape crescer muito. */
+  .foot ul{gap:0}
+  .foot ul a{display:block;padding:12px 0}
+  /* no carrinho do balcao o espaco e curto: cresce o que da, sem quebrar a linha */
+  .pdv-linha .stepper button{width:38px;height:42px}
+}

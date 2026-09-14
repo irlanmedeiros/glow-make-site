@@ -7,7 +7,7 @@ import { prisma } from '@/lib/prisma';
 import { abrirSessao, ehAdmin, fecharSessao, papelDaSenha, senhaAdminConfigurada, senhaEquipeConfigurada } from '@/lib/auth';
 import { devolverEstoque } from '@/lib/estoque';
 import { cancelarAssinatura as cancelarNoAsaas, asaasConfigurado } from '@/lib/asaas';
-import { cancelarComissaoDoPedido } from '@/lib/afiliado';
+import { cancelarPedido, recusarCancelamentoPedido, ErroCancelamento } from '@/lib/cancelamento';
 
 /**
  * Toda ação confere o login por conta própria. O layout do admin já barra a
@@ -254,33 +254,56 @@ export async function mudarStatusPedido(fd: FormData) {
   const novo = texto(fd, 'status', 30) as StatusPedido;
   if (!STATUS_PEDIDO.includes(novo)) voltar('/admin/pedidos', 'Status inválido.', 'erro');
 
-  const pedido = await prisma.pedido.findUnique({ where: { id }, include: { itens: true } });
+  const pedido = await prisma.pedido.findUnique({ where: { id } });
   if (!pedido) voltar('/admin/pedidos', 'Pedido não encontrado.', 'erro');
   if (pedido.status === novo) voltar('/admin/pedidos', 'O pedido já está nesse status.', 'erro');
 
-  // Cancelar devolve as unidades ao estoque — mas só uma vez, mesmo que o
-  // pedido seja cancelado, reaberto e cancelado de novo.
-  if (novo === 'CANCELADO' && !pedido.estoqueDevolvido) {
-    await prisma.$transaction(async (tx) => {
-      await devolverEstoque(
-        tx,
-        pedido.itens.filter((i) => i.kitId).map((i) => ({ kitId: i.kitId!, qtd: i.qtd })),
-        `Cancelamento do pedido #${pedido.numero}`
-      );
-      await tx.pedido.update({
-        where: { id },
-        data: { status: novo, estoqueDevolvido: true },
-      });
-    });
-    // Pedido cancelado não gera comissão: senão o afiliado receberia por
-    // venda que não existiu.
-    await cancelarComissaoDoPedido(id);
-    revalidatePath('/');
-    voltar('/admin/pedidos', `Pedido #${pedido.numero} cancelado, estoque devolvido e comissão cancelada.`);
-  }
+  // Cancelar pelo seletor e aprovar o pedido da cliente fazem a mesma coisa,
+  // entao passam pelo mesmo lugar: estoque devolvido uma vez, comissao
+  // cancelada e cobranca em aberto apagada no Asaas.
+  if (novo === 'CANCELADO') await concluirCancelamento(id);
 
   await prisma.pedido.update({ where: { id }, data: { status: novo } });
   voltar('/admin/pedidos', `Pedido #${pedido.numero} atualizado.`);
+}
+
+async function concluirCancelamento(id: string, resposta?: string): Promise<never> {
+  let msg: string;
+  try {
+    const r = await cancelarPedido(id, resposta);
+    msg = `Pedido #${r.numero} cancelado, estoque devolvido e comissão cancelada.`;
+    // O estorno nao e automatico de proposito: dinheiro so volta pela mao de alguem.
+    if (r.precisaEstorno) msg += ' O pagamento já tinha entrado: faça o estorno no painel do Asaas.';
+  } catch (e) {
+    if (e instanceof ErroCancelamento) voltar('/admin/pedidos', e.message, 'erro');
+    throw e;
+  }
+  revalidatePath('/');
+  voltar('/admin/pedidos', msg);
+}
+
+/** Aprova o cancelamento pedido pela cliente em /meus-pedidos. */
+export async function aprovarCancelamento(fd: FormData) {
+  await exigirLogin();
+  const id = texto(fd, 'id');
+  const pedido = await prisma.pedido.findUnique({ where: { id } });
+  if (!pedido?.cancelamentoSolicitadoEm || pedido.cancelamentoRespondidoEm) {
+    voltar('/admin/pedidos', 'Esse pedido não tem cancelamento pendente.', 'erro');
+  }
+  await concluirCancelamento(id, texto(fd, 'resposta', 500));
+}
+
+/** Recusa o cancelamento. A resposta aparece para a cliente em /meus-pedidos. */
+export async function recusarCancelamento(fd: FormData) {
+  await exigirLogin();
+  let numero: number;
+  try {
+    numero = await recusarCancelamentoPedido(texto(fd, 'id'), texto(fd, 'resposta', 500));
+  } catch (e) {
+    if (e instanceof ErroCancelamento) voltar('/admin/pedidos', e.message, 'erro');
+    throw e;
+  }
+  voltar('/admin/pedidos', `Cancelamento do pedido #${numero} recusado. A cliente vê a resposta em Meus pedidos.`);
 }
 
 export async function anotarPedido(fd: FormData) {
@@ -319,7 +342,7 @@ export async function cancelarAssinante(fd: FormData) {
   await prisma.$transaction(async (tx) => {
     await tx.assinante.update({
       where: { id },
-      data: { status: 'CANCELADA', canceladaEm: new Date() },
+      data: { status: 'CANCELADA', canceladaEm: new Date(), canceladaPor: 'ADMIN' },
     });
     // A caixa reservada volta para a edição do mês.
     const box = await tx.kit.findFirst({ where: { tipo: 'BOX' } });
@@ -337,7 +360,13 @@ export async function reativarAssinante(fd: FormData) {
   const id = texto(fd, 'id');
   await prisma.assinante.update({
     where: { id },
-    data: { status: 'ATIVA', canceladaEm: null },
+    data: {
+      status: 'ATIVA',
+      canceladaEm: null,
+      canceladaPor: null,
+      cancelamentoIp: null,
+      cancelamentoContratoVersao: null,
+    },
   });
   voltar('/admin/assinantes', 'Assinatura reativada.');
 }

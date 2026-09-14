@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { real, dataHora, ROTULO_PEDIDO, ROTULO_PAGAMENTO, corPedido, num } from '@/lib/format';
-import { mudarStatusPedido, anotarPedido } from '../../actions';
+import { mudarStatusPedido, anotarPedido, aprovarCancelamento, recusarCancelamento } from '../../actions';
 import { Aviso, Cabecalho, Painel, Pill, Vazio, mensagens } from '@/components/admin/Ui';
 
 export const dynamic = 'force-dynamic';
@@ -20,17 +20,30 @@ export default async function Pedidos({ searchParams }: Props) {
   const sp = await searchParams;
   const { ok, erro } = mensagens(sp);
   const filtro = typeof sp.status === 'string' ? sp.status : '';
+  const soPendentes = sp.cancelamento === 'pendente';
+
+  // Mesma condicao de "pendente" usada na pagina da cliente.
+  const pendente = {
+    cancelamentoSolicitadoEm: { not: null },
+    cancelamentoRespondidoEm: null,
+    status: { not: 'CANCELADO' as const },
+  };
 
   const pedidos = await prisma.pedido.findMany({
-    where: STATUS.includes(filtro as (typeof STATUS)[number])
-      ? { status: filtro as (typeof STATUS)[number] }
-      : undefined,
+    where: soPendentes
+      ? pendente
+      : STATUS.includes(filtro as (typeof STATUS)[number])
+        ? { status: filtro as (typeof STATUS)[number] }
+        : undefined,
     orderBy: { criadoEm: 'desc' },
     take: 100,
     include: { itens: true },
   });
 
-  const todos = await prisma.pedido.findMany({ select: { status: true, total: true } });
+  const [todos, pendentes] = await Promise.all([
+    prisma.pedido.findMany({ select: { status: true, total: true } }),
+    prisma.pedido.count({ where: pendente }),
+  ]);
   const faturado = todos
     .filter((p) => p.status !== 'CANCELADO')
     .reduce((s, p) => s + num(p.total), 0);
@@ -39,6 +52,16 @@ export default async function Pedidos({ searchParams }: Props) {
     <>
       <Cabecalho titulo="Pedidos" descricao="Compras avulsas de kits, com baixa de estoque já aplicada" />
       <Aviso ok={ok} erro={erro} />
+
+      {pendentes > 0 && !soPendentes && (
+        <div className="note alerta" style={{ marginBottom: 18 }}>
+          <b>
+            {pendentes} {pendentes === 1 ? 'cliente pediu' : 'clientes pediram'} cancelamento.
+          </b>{' '}
+          Ninguém é avisado sozinho: a cliente só vê a resposta quando consulta Meus pedidos.{' '}
+          <a href="/admin/pedidos?cancelamento=pendente">Ver pedidos</a>
+        </div>
+      )}
 
       <div className="kpis">
         <div className="kpi">
@@ -61,8 +84,15 @@ export default async function Pedidos({ searchParams }: Props) {
       </div>
 
       <div className="chips" style={{ marginBottom: 18 }}>
-        <a className="btn btn-sm" href="/admin/pedidos" style={{ background: !filtro ? 'var(--rose-100)' : 'var(--rose-50)' }}>
+        <a className="btn btn-sm" href="/admin/pedidos" style={{ background: !filtro && !soPendentes ? 'var(--rose-100)' : 'var(--rose-50)' }}>
           Todos
+        </a>
+        <a
+          className="btn btn-sm"
+          href="/admin/pedidos?cancelamento=pendente"
+          style={{ background: soPendentes ? 'var(--rose-100)' : 'var(--rose-50)' }}
+        >
+          Cancelamento pedido ({pendentes})
         </a>
         {STATUS.map((s) => (
           <a
@@ -92,6 +122,9 @@ export default async function Pedidos({ searchParams }: Props) {
                   <b style={{ fontFamily: 'var(--serif)', fontSize: 19 }}>#{p.numero}</b>
                   <Pill cor={corPedido(p.status)}>{ROTULO_PEDIDO[p.status]}</Pill>
                   {p.estoqueDevolvido && <Pill cor="info">Estoque devolvido</Pill>}
+                  {p.cancelamentoSolicitadoEm && !p.cancelamentoRespondidoEm && p.status !== 'CANCELADO' && (
+                    <Pill cor="low">Cancelamento pedido</Pill>
+                  )}
                 </div>
                 <div style={{ fontSize: 14 }}>
                   <b>{p.nome}</b>
@@ -167,6 +200,46 @@ export default async function Pedidos({ searchParams }: Props) {
               </div>
             </div>
 
+            {p.cancelamentoSolicitadoEm && !p.cancelamentoRespondidoEm && p.status !== 'CANCELADO' && (
+              <div className="note alerta" style={{ marginTop: 14 }}>
+                <b>A cliente pediu cancelamento em {dataHora(p.cancelamentoSolicitadoEm)}.</b>
+                <br />
+                {p.cancelamentoMotivo ? <>Motivo: {p.cancelamentoMotivo}</> : 'Sem motivo informado.'}
+                {p.status !== 'AGUARDANDO_PAGAMENTO' && (
+                  <>
+                    <br />
+                    O pagamento já entrou. Aprovar devolve o estoque e cancela a comissão, mas{' '}
+                    <b>o estorno é feito à mão no painel do Asaas</b>.
+                  </>
+                )}
+                <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 12 }}>
+                  <form action={aprovarCancelamento} style={{ flex: '1 1 220px' }}>
+                    <input type="hidden" name="id" value={p.id} />
+                    <div className="field" style={{ marginBottom: 8 }}>
+                      <label>Mensagem para a cliente (opcional)</label>
+                      <textarea name="resposta" rows={2} maxLength={500} placeholder="Cancelamento aprovado." />
+                    </div>
+                    <button className="btn btn-danger btn-sm">Aprovar e cancelar</button>
+                  </form>
+                  <form action={recusarCancelamento} style={{ flex: '1 1 220px' }}>
+                    <input type="hidden" name="id" value={p.id} />
+                    <div className="field" style={{ marginBottom: 8 }}>
+                      <label>Motivo da recusa (a cliente vê)</label>
+                      <textarea name="resposta" rows={2} maxLength={500} required minLength={5} />
+                    </div>
+                    <button className="btn btn-ghost btn-sm">Recusar</button>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {p.cancelamentoRespondidoEm && p.status !== 'CANCELADO' && (
+              <div className="note" style={{ marginTop: 14 }}>
+                Cancelamento recusado em {dataHora(p.cancelamentoRespondidoEm)}
+                {p.cancelamentoResposta && <>: {p.cancelamentoResposta}</>}
+              </div>
+            )}
+
             <details style={{ marginTop: 14 }}>
               <summary style={{ cursor: 'pointer', color: 'var(--rose)', fontSize: 13.5, fontWeight: 600 }}>
                 Observação interna
@@ -188,7 +261,10 @@ export default async function Pedidos({ searchParams }: Props) {
             {p.status !== 'CANCELADO' && (
               <div className="note" style={{ marginTop: 12 }}>
                 Cancelar este pedido devolve {p.itens.reduce((s, i) => s + i.qtd, 0)} unidade(s) ao
-                estoque, uma única vez.
+                estoque, uma única vez
+                {p.status === 'AGUARDANDO_PAGAMENTO' && p.asaasPaymentId
+                  ? ', e apaga a cobrança em aberto no Asaas.'
+                  : '.'}
               </div>
             )}
           </Painel>

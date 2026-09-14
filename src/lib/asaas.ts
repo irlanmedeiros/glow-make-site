@@ -191,3 +191,13 @@ export async function criarAssinatura(params: {
 export async function cancelarAssinatura(id: string): Promise<void> {
   await chamar(`/subscriptions/${id}`, { method: 'DELETE' });
 }
+
+/**
+ * Apaga uma cobranca que ainda nao foi paga. Usado quando o pedido e
+ * cancelado: sem isto o link de pagamento continuava valendo, e a cliente
+ * podia pagar um pedido que ja nao existe. O Asaas recusa apagar cobranca
+ * recebida, e e bom que recuse.
+ */
+export async function cancelarCobranca(id: string): Promise<void> {
+  await chamar(`/payments/${id}`, { method: 'DELETE' });
+}
