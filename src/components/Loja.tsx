@@ -12,6 +12,7 @@ import {
 import type { ConfigPublica, KitPublico } from './tipos';
 import { Busca, Carrinho, Check, Menu, Seta } from './Icones';
 import { evento } from './Consentimento';
+import { a } from 'vitest/dist/chunks/suite.d.FvehnV49.js';
 
 /** Lê o código do afiliado que o middleware guardou no cookie. */
 function refDoCookie(): string {
@@ -232,6 +233,7 @@ export function Cabecalho() {
   const { qtdTotal, abrirCarrinho, pulso } = useLoja();
   const [grudado, setGrudado] = useState(false);
   const [busca, setBusca] = useState('');
+  const [menuAberto, setMenuAberto] = useState(false);
 
   useEffect(() => {
     const rolar = () => setGrudado(window.scrollY > 20);
@@ -244,6 +246,23 @@ export function Cabecalho() {
   useEffect(() => {
     window.dispatchEvent(new CustomEvent('glow:busca', { detail: busca }));
   }, [busca]);
+
+  // O menu só existe abaixo de 1000px. Sem isto ele continuaria "aberto" ao
+  // girar o aparelho ou alargar a janela, escondendo o topo do site.
+  useEffect(() => {
+    if (!menuAberto) return;
+    const fechar = () => setMenuAberto(false);
+    const mq = window.matchMedia('(min-width:1001px)');
+    const porTecla = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') fechar();
+    };
+    mq.addEventListener('change', fechar);
+    window.addEventListener('keydown', porTecla);
+    return () => {
+      mq.removeEventListener('change', fechar);
+      window.removeEventListener('keydown', porTecla);
+    };
+  }, [menuAberto]);
 
   return (
     <header className={`site${grudado ? ' stuck' : ''}`}>
@@ -272,8 +291,10 @@ export function Cabecalho() {
           </div>
           <button
             className="icon-btn burger"
-            onClick={() => document.getElementById('kits')?.scrollIntoView()}
-            aria-label="Ir para os kits"
+            onClick={() => setMenuAberto((a) => !a)}
+            aria-label={menuAberto ? 'Fechar menu' : 'Abrir menu'}
+            aria-expanded={menuAberto}
+            aria-controls="menu-mobile"
           >
             <Menu />
           </button>
@@ -281,6 +302,36 @@ export function Cabecalho() {
             <Carrinho />
             <span className={`badge${pulso ? ' pop' : ''}`}>{qtdTotal}</span>
           </button>
+        </div>
+      </div>
+
+      {/* Abaixo de 1000px a navegação e a busca do topo somem. Sem este painel
+          a busca simplesmente não existiria no celular, que é de onde vem a
+          maior parte do acesso. */}
+      <div className="menu-mob" id="menu-mobile" hidden={!menuAberto}>
+        <div className="wrap">
+          <div className="search menu-mob-busca">
+            <Busca />
+            <input
+              type="search"
+              placeholder="Buscar kits..."
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              onKeyDown={(e) => {
+                // Enter leva aos resultados: eles ficam atrás do painel.
+                if (e.key !== 'Enter') return;
+                e.preventDefault();
+                setMenuAberto(false);
+                document.getElementById('kits')?.scrollIntoView();
+              }}
+              aria-label="Buscar kits"
+            />
+          </div>
+          <nav className="menu-mob-links" onClick={() => setMenuAberto(false)}>
+            <a href="#kits">Kits</a>
+            <a href="#como">Como funciona</a>
+            <a href="#depo">Avaliações</a>
+          </nav>
         </div>
       </div>
     </header>

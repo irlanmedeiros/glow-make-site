@@ -58,12 +58,16 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <span>Admin</span>
         </div>
 
-        {MENU.map(({ href, rotulo, Icone }) => (
-          <Link className="adm-nav" href={href} key={href}>
-            <Icone />
-            {rotulo}
-          </Link>
-        ))}
+        {/* A lista fica num container proprio para virar, no celular, uma
+            faixa unica que rola de lado em vez de empilhar 14 linhas. */}
+        <nav className="adm-nav-lista">
+          {MENU.map(({ href, rotulo, Icone }) => (
+            <Link className="adm-nav" href={href} key={href}>
+              <Icone />
+              {rotulo}
+            </Link>
+          ))}
+        </nav>
 
         <div className="sep">
           <Link className="adm-nav" href="/" target="_blank">
