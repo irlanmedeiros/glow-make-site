@@ -118,8 +118,12 @@ nav.main a:hover::after{right:0}
 
 /* ---------- selos ---------- */
 .perks{background:#fff;border-bottom:1px solid var(--line)}
-.perks-g{display:grid;grid-template-columns:1fr;gap:14px;padding:20px 0}
-@media(min-width:480px){.perks-g{grid-template-columns:1fr 1fr;gap:18px;padding:26px 0}}
+/* O elemento e `wrap perks-g`: o respiro lateral (16px, 20px a partir de 480)
+   vem do .wrap, entao aqui so o vertical. O atalho `padding:20px 0` zerava o
+   lateral do .wrap e os selos colavam na borda da tela. Alinhado a esquerda
+   de proposito: centralizado ficou pior, decisao do dono. */
+.perks-g{display:grid;grid-template-columns:1fr;gap:14px;padding-block:20px}
+@media(min-width:480px){.perks-g{grid-template-columns:1fr 1fr;gap:18px;padding-block:26px}}
 @media(min-width:1001px){.perks-g{grid-template-columns:repeat(4,1fr)}}
 .perk{display:flex;align-items:center;gap:13px;transition:transform .25s}
 .perk:hover{transform:translateY(-3px)}
@@ -140,7 +144,8 @@ section{padding:78px 0}
 .sec-head p{color:var(--muted);font-size:16px}
 
 .stats{background:var(--rose-50);border-block:1px solid var(--line)}
-.stats-g{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;padding:44px 0;text-align:center}
+/* Tambem e `wrap stats-g`: padding so vertical, senao zera o lateral do .wrap. */
+.stats-g{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;padding-block:44px;text-align:center}
 .stat b{display:block;font-family:var(--serif);font-size:clamp(30px,3.6vw,44px);color:var(--rose);line-height:1}
 .stat span{font-size:13.5px;color:var(--muted)}
 

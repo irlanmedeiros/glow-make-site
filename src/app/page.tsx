@@ -219,7 +219,6 @@ export default async function Home() {
                   <span>PIX</span>
                   <span>Boleto</span>
                   <span>Cartão de crédito</span>
-                  <span>Cobrança via Asaas</span>
                 </div>
                 <p className="sub-note">
                   Cobrança recorrente mensal processada pelo Asaas. Você recebe o link de pagamento
