@@ -219,3 +219,9 @@ export const IcVendas = ({ size = 17 }: P) => (
     <path d="M2 10h20M6 15h4" />
   </svg>
 );
+export const IcCupons = ({ size = 17 }: P) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" {...adm}>
+    <path d="M4 7h16v3a2 2 0 0 0 0 4v3H4v-3a2 2 0 0 0 0-4z" />
+    <path d="M10 15l4-6" />
+  </svg>
+);

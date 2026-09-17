@@ -9,6 +9,7 @@ import { devolverEstoque } from '@/lib/estoque';
 import { cancelarAssinatura as cancelarNoAsaas, asaasConfigurado } from '@/lib/asaas';
 import { cancelarPedido, recusarCancelamentoPedido, ErroCancelamento } from '@/lib/cancelamento';
 import { PREFIXO_AVATAR_EXEMPLO } from '@/lib/conteudo';
+import { codigoLivre, validarCupom } from '@/lib/cupom';
 
 /**
  * Toda ação confere o login por conta própria. O layout do admin já barra a
@@ -453,6 +454,61 @@ export async function ocultarDepoimentosDeExemplo() {
   });
   revalidatePath('/');
   voltar('/admin/depoimentos', `${r.count} depoimento(s) de exemplo ocultado(s).`);
+}
+
+/* ============================================================
+   Cupons de indicação
+   ============================================================ */
+
+export async function salvarCupom(fd: FormData) {
+  await exigirLogin();
+  const id = texto(fd, 'id');
+  const r = validarCupom({
+    codigo: texto(fd, 'codigo', 30),
+    tipo: texto(fd, 'tipo', 20),
+    valor: texto(fd, 'valor', 20),
+    indicadorNome: texto(fd, 'indicadorNome', 120),
+    indicadorEmail: texto(fd, 'indicadorEmail', 160),
+    indicadorDocumento: texto(fd, 'indicadorDocumento', 20),
+    indicadorTelefone: texto(fd, 'indicadorTelefone', 30),
+    primeiraCompra: fd.get('primeiraCompra') === 'on',
+    validoAte: texto(fd, 'validoAte', 10),
+    ativo: fd.get('ativo') === 'on',
+    observacao: texto(fd, 'observacao', 300),
+  });
+  if ('erro' in r) voltar('/admin/cupons', r.erro, 'erro');
+
+  const codigo = r.codigo || (await codigoLivre(r.indicadorNome));
+  try {
+    if (id) await prisma.cupom.update({ where: { id }, data: { ...r, codigo } });
+    else await prisma.cupom.create({ data: { ...r, codigo } });
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+      voltar('/admin/cupons', `O código ${codigo} já existe. Escolha outro ou deixe vazio para gerar.`, 'erro');
+    }
+    throw e;
+  }
+  voltar('/admin/cupons', id ? `Cupom ${codigo} atualizado.` : `Cupom ${codigo} criado.`);
+}
+
+export async function alternarCupom(fd: FormData) {
+  await exigirLogin();
+  const id = texto(fd, 'id');
+  const c = await prisma.cupom.findUnique({ where: { id } });
+  if (!c) voltar('/admin/cupons', 'Cupom não encontrado.', 'erro');
+  await prisma.cupom.update({ where: { id }, data: { ativo: !c.ativo } });
+  voltar('/admin/cupons', `Cupom ${c.codigo} ${c.ativo ? 'desativado' : 'ativado'}.`);
+}
+
+/** Cupom ja usado nao se apaga: o pedido guarda o codigo, mas o historico de
+    quem indicou se perderia. Para tirar de circulacao, desative. */
+export async function excluirCupom(fd: FormData) {
+  await exigirLogin();
+  const id = texto(fd, 'id');
+  const usos = await prisma.pedido.count({ where: { cupomId: id } });
+  if (usos > 0) voltar('/admin/cupons', 'Este cupom já foi usado. Desative em vez de excluir.', 'erro');
+  const c = await prisma.cupom.delete({ where: { id } });
+  voltar('/admin/cupons', `Cupom ${c.codigo} excluído.`);
 }
 
 /* ============================================================

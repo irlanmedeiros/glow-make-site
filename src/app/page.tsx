@@ -316,10 +316,10 @@ export default async function Home() {
       )}
 
       {/* ---------- INDIQUE UM AMIGO ---------- */}
-      {/* Entrou no lugar da promocao de 10%, que foi encerrada. O cupom de
-          primeira compra para a amiga indicada chega na etapa seguinte; ate la
-          o bloco convida e leva ao WhatsApp da loja. As condicoes do brinde sao
-          definidas pela loja e nao ficam escritas aqui. A galeria que ficava
+      {/* Entrou no lugar da promocao de 10%, que foi encerrada. Quem indica
+          pede o codigo a loja (os cupons sao criados no admin, em Cupons de
+          indicacao) e a amiga usa no checkout. Valor do desconto e condicoes
+          do brinde sao definidos pela loja e nao ficam escritos aqui. A galeria que ficava
           antes deste bloco saiu: eram fotos de banco apresentadas como caixas
           "na casa de quem assina". */}
       <section id="indique">
@@ -328,9 +328,10 @@ export default async function Home() {
             <div className="news">
               <h3>Indique um amigo e ganhe um brinde</h3>
               <p>
+                Quem você indicar ganha um cupom de desconto na primeira compra.{' '}
                 {whatsappIndicacao
-                  ? 'Conte para quem você gosta sobre a Glow Make. Fale com a gente para saber como participar.'
-                  : 'Em breve você vai poder indicar direto pelo site.'}
+                  ? 'Peça o seu código de indicação pelo WhatsApp.'
+                  : 'Peça o seu código de indicação à nossa equipe.'}
               </p>
               {whatsappIndicacao && (
                 <a className="btn" href={whatsappIndicacao} target="_blank" rel="noopener noreferrer">

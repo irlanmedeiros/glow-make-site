@@ -150,6 +150,8 @@ export type PedidoDaCliente = {
   subtotal: number;
   frete: number;
   total: number;
+  desconto: number;
+  cupomCodigo: string | null;
   freteServico: string | null;
   cidade: string;
   uf: string;

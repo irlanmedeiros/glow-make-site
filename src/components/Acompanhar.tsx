@@ -206,6 +206,12 @@ function CardPedido({ p, chamar, ...props }: { p: PedidoDaCliente; chamar: Chama
             <span>{real(i.preco * i.qtd)}</span>
           </li>
         ))}
+        {p.desconto > 0 && (
+          <li>
+            <span>Cupom {p.cupomCodigo}</span>
+            <span>− {real(p.desconto)}</span>
+          </li>
+        )}
         <li>
           <span>Frete{p.freteServico ? ` (${p.freteServico})` : ''}</span>
           <span>{p.frete === 0 ? 'Grátis' : real(p.frete)}</span>

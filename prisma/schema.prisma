@@ -65,6 +65,11 @@ enum StatusAssinante {
   CANCELADA
 }
 
+enum TipoDesconto {
+  PERCENTUAL
+  VALOR
+}
+
 model Kit {
   id          String      @id @default(cuid())
   sku         String      @unique
@@ -125,6 +130,14 @@ model Pedido {
   subtotal Decimal      @db.Decimal(10, 2)
   frete    Decimal      @db.Decimal(10, 2)
   total    Decimal      @db.Decimal(10, 2)
+
+  // Desconto de cupom, ja abatido do total. O codigo fica copiado no pedido
+  // porque o cupom pode ser editado ou apagado depois, e o pedido precisa
+  // continuar dizendo com qual codigo foi feito.
+  desconto    Decimal @db.Decimal(10, 2) @default(0)
+  cupomId     String?
+  cupom       Cupom?  @relation(fields: [cupomId], references: [id], onDelete: SetNull)
+  cupomCodigo String?
   pagamento String
   status   StatusPedido @default(AGUARDANDO_PAGAMENTO)
   asaasPaymentId String?
@@ -159,6 +172,7 @@ model Pedido {
 
   @@index([criadoEm])
   @@index([status])
+  @@index([cupomId])
 }
 
 model PedidoItem {
@@ -467,4 +481,33 @@ model Caixa {
   vendas VendaLoja[]
 
   @@index([abertoEm])
+}
+
+// Cupom de indicacao. Cada pessoa que indica tem o seu codigo; quem USA e a
+// amiga indicada, normalmente na primeira compra. Tipo e valor do desconto sao
+// definidos no admin, cupom a cupom: a regra comercial e da loja, nao do codigo.
+// O brinde de quem indicou tambem nao esta aqui. O sistema so registra quem
+// indicou e quais pedidos usaram o codigo, para a loja combinar a entrega.
+model Cupom {
+  id     String       @id @default(cuid())
+  codigo String       @unique // sempre em maiusculas
+  tipo   TipoDesconto
+  valor  Decimal      @db.Decimal(10, 2) // percentual (10 = 10%) ou reais
+
+  indicadorNome      String
+  indicadorEmail     String @default("")
+  indicadorDocumento String @default("") // opcional; impede usar o proprio cupom
+  indicadorTelefone  String @default("")
+
+  primeiraCompra Boolean   @default(true)
+  validoAte      DateTime?
+  ativo          Boolean   @default(true)
+  observacao     String?
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  pedidos Pedido[]
+
+  @@index([ativo])
 }

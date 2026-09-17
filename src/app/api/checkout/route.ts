@@ -8,6 +8,7 @@ import { calcularFrete } from '@/lib/frete';
 import { afiliadoPorCodigo, gerarComissaoPedido } from '@/lib/afiliado';
 import { marcarConvertido } from '@/lib/lead';
 import { num } from '@/lib/format';
+import { aplicarCupom, type CupomAplicado } from '@/lib/cupom';
 
 export const runtime = 'nodejs';
 
@@ -16,6 +17,7 @@ type Corpo = {
   itens?: { kitId?: string; qtd?: number }[];
   freteServico?: string;
   ref?: string;
+  cupom?: string;
 };
 
 export async function POST(req: Request) {
@@ -61,6 +63,18 @@ export async function POST(req: Request) {
 
   const subtotal = linhas.reduce((s, l) => s.add(l.valor), new Prisma.Decimal(0));
 
+  /* Cupom: o navegador manda so o codigo. Se vale, se a cliente ainda pode usar
+     e quanto desconta e decidido aqui, e o desconto nunca passa dos produtos.
+     Cupom recusado barra o pedido em vez de seguir sem desconto: a cliente
+     fechou a compra contando com ele. */
+  let cupomAplicado: CupomAplicado | null = null;
+  if (corpo.cupom) {
+    const r = await aplicarCupom(corpo.cupom, cliente, subtotal);
+    if ('erro' in r) return NextResponse.json({ erro: r.erro, campo: 'cupom' }, { status: 400 });
+    cupomAplicado = r;
+  }
+  const desconto = cupomAplicado?.desconto ?? new Prisma.Decimal(0);
+
   /* O frete é RECALCULADO aqui, mesmo que o navegador já tenha mostrado o
      valor. O que vem do cliente é só qual serviço ele escolheu — o preço vem
      da cotação feita agora. Aceitar o valor enviado pelo navegador é o mesmo
@@ -88,7 +102,13 @@ export async function POST(req: Request) {
      caiu seria pior do que combinar o frete depois por WhatsApp. */
   const frete = escolhida ? new Prisma.Decimal(escolhida.valor.toFixed(2)) : new Prisma.Decimal(0);
   const freteServico = escolhida?.servico ?? 'A combinar';
-  const total = subtotal.add(frete);
+  const total = subtotal.sub(desconto).add(frete);
+  if (total.lte(0)) {
+    return NextResponse.json(
+      { erro: 'Este cupom não pode zerar o pedido.', campo: 'cupom' },
+      { status: 400 }
+    );
+  }
 
   const afiliado = await afiliadoPorCodigo(corpo.ref);
 
@@ -116,6 +136,9 @@ export async function POST(req: Request) {
           subtotal,
           frete,
           total,
+          desconto,
+          cupomId: cupomAplicado?.id ?? null,
+          cupomCodigo: cupomAplicado?.codigo ?? null,
           freteServico,
           afiliadoId: afiliado?.id ?? null,
           observacao: escolhida ? null : cotacao.aviso ?? 'Frete a combinar com o cliente.',
@@ -135,7 +158,9 @@ export async function POST(req: Request) {
     });
 
     // A comissão nasce PENDENTE e só é aprovada quando o pagamento entra.
-    await gerarComissaoPedido(pedido);
+    // A comissao e sobre o que a cliente pagou pelos produtos: sem isso o
+    // afiliado receberia tambem sobre o desconto que a loja deu.
+    await gerarComissaoPedido({ ...pedido, subtotal: pedido.subtotal.sub(pedido.desconto) });
     await marcarConvertido(cliente.email);
 
     // Sem Asaas configurado o pedido existe e o estoque já baixou — só não há

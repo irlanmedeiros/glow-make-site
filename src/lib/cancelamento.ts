@@ -64,6 +64,8 @@ export async function buscarDaCliente({ email, documento }: Credenciais): Promis
         subtotal: num(p.subtotal),
         frete: num(p.frete),
         total: num(p.total),
+        desconto: num(p.desconto),
+        cupomCodigo: p.cupomCodigo,
         freteServico: p.freteServico,
         cidade: p.cidade,
         uf: p.uf,

@@ -638,6 +638,18 @@ function Checkout({ modo, aoLimpar }: { modo: Modo | null; aoLimpar: () => void 
   const [avisoFrete, setAvisoFrete] = useState('');
   const [cotando, setCotando] = useState(false);
 
+  // Cupom de indicacao. O valor mostrado aqui e so previa: quem decide e o
+  // servidor, no fechamento.
+  const [cupomTexto, setCupomTexto] = useState('');
+  const [cupom, setCupom] = useState<{
+    codigo: string;
+    desconto: number;
+    descricao: string;
+    primeiraCompra: boolean;
+  } | null>(null);
+  const [cupomErro, setCupomErro] = useState('');
+  const [validandoCupom, setValidandoCupom] = useState(false);
+
   const [aceitouContrato, setAceitouContrato] = useState(false);
   const assinatura = modo === 'assinatura';
 
@@ -707,7 +719,33 @@ function Checkout({ modo, aoLimpar }: { modo: Modo | null; aoLimpar: () => void 
 
   const opcaoAtual = fretes.find((f) => f.servico === freteEscolhido) ?? fretes[0];
   const valorFrete = opcaoAtual?.valor ?? 0;
-  const totalFinal = (assinatura ? (box?.preco ?? 0) : subtotal) + valorFrete;
+  const descontoCupom = !assinatura && cupom ? cupom.desconto : 0;
+  const totalFinal = (assinatura ? (box?.preco ?? 0) : subtotal) - descontoCupom + valorFrete;
+
+  async function aplicarCupom() {
+    if (!cupomTexto.trim()) return;
+    setCupomErro('');
+    setValidandoCupom(true);
+    try {
+      const r = await fetch('/api/cupom', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          codigo: cupomTexto,
+          itens: itens.map((i) => ({ kitId: i.id, qtd: i.qtd })),
+        }),
+      });
+      const resposta = await r.json();
+      if (r.ok) setCupom(resposta);
+      else {
+        setCupom(null);
+        setCupomErro(resposta.erro ?? 'Cupom inválido.');
+      }
+    } catch {
+      setCupomErro('Falha de conexão. Tente de novo.');
+    }
+    setValidandoCupom(false);
+  }
 
   /* Busca endereço e cotação de uma vez: os dois dependem do mesmo CEP, e
      pedir para a pessoa clicar em "calcular frete" só adiciona um passo. */
@@ -814,6 +852,7 @@ function Checkout({ modo, aoLimpar }: { modo: Modo | null; aoLimpar: () => void 
           itens: itens.map((i) => ({ kitId: i.id, qtd: i.qtd })),
           freteServico: opcaoAtual?.servico,
           ref: refDoCookie(),
+          cupom: cupom?.codigo,
         };
 
     try {
@@ -826,6 +865,10 @@ function Checkout({ modo, aoLimpar }: { modo: Modo | null; aoLimpar: () => void 
 
       if (!r.ok) {
         setErro(resposta.erro ?? 'Não consegui concluir. Tente novamente.');
+        if (resposta.campo === 'cupom') {
+          setCupom(null);
+          setCupomErro(resposta.erro);
+        }
         setEnviando(false);
         if (assinatura) setEtapa('dados');
         return;
@@ -1027,6 +1070,12 @@ function Checkout({ modo, aoLimpar }: { modo: Modo | null; aoLimpar: () => void 
                           </div>
                         ) : null;
                       })}
+                      {cupom && (
+                        <div className="tot">
+                          <span>Cupom {cupom.codigo}</span>
+                          <span className="tot-desconto">− {real(cupom.desconto)}</span>
+                        </div>
+                      )}
                       <div className="tot">
                         <span>Frete</span>
                         <span>
@@ -1046,6 +1095,63 @@ function Checkout({ modo, aoLimpar }: { modo: Modo | null; aoLimpar: () => void 
                     </div>
                   )}
                 </div>
+
+                {!assinatura && (
+                  <div className="cupom">
+                    <label htmlFor="ck-cupom">Cupom de indicação</label>
+                    <div className="cupom-linha">
+                      <input
+                        id="ck-cupom"
+                        value={cupomTexto}
+                        onChange={(e) => {
+                          setCupomTexto(e.target.value);
+                          setCupomErro('');
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key !== 'Enter') return;
+                          e.preventDefault();
+                          aplicarCupom();
+                        }}
+                        placeholder="Código"
+                        autoCapitalize="characters"
+                        autoComplete="off"
+                        disabled={Boolean(cupom)}
+                      />
+                      {cupom ? (
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => {
+                            setCupom(null);
+                            setCupomTexto('');
+                          }}
+                        >
+                          Remover
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="btn btn-soft btn-sm"
+                          onClick={aplicarCupom}
+                          disabled={validandoCupom || !cupomTexto.trim()}
+                        >
+                          {validandoCupom ? 'Conferindo...' : 'Aplicar'}
+                        </button>
+                      )}
+                    </div>
+                    {cupom && (
+                      <small className="cupom-ok">
+                        {cupom.descricao}
+                        {cupom.primeiraCompra ? ' · válido na primeira compra' : ''}
+                      </small>
+                    )}
+                    {cupomErro && (
+                      <small className="cupom-erro" role="alert">
+                        {cupomErro}
+                      </small>
+                    )}
+                  </div>
+                )}
 
                 <form onSubmit={aoSubmeterDados}>
                   <div className="field">

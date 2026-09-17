@@ -152,6 +152,16 @@ export default async function Pedidos({ searchParams }: Props) {
                         </td>
                       </tr>
                     ))}
+                    {num(p.desconto) > 0 && (
+                      <tr>
+                        <td style={{ padding: '5px 0', border: 'none', color: 'var(--muted)' }}>
+                          Cupom {p.cupomCodigo}
+                        </td>
+                        <td className="num" style={{ padding: '5px 0', border: 'none', color: 'var(--ok)' }}>
+                          − {real(p.desconto)}
+                        </td>
+                      </tr>
+                    )}
                     <tr>
                       <td style={{ padding: '5px 0', border: 'none', color: 'var(--muted)' }}>Frete</td>
                       <td className="num" style={{ padding: '5px 0', border: 'none' }}>
