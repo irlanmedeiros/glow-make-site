@@ -42,8 +42,7 @@ export async function POST(req: Request) {
     cepOrigem: config?.cepOrigem ?? '58000-000',
     pesoKg: pesoUnitario * totalPecas,
     valorSegurado: valorSegurado || 100,
-    cidadeGratis: config?.cidadeFreteGratis ?? 'João Pessoa',
-    ufGratis: config?.ufFreteGratis ?? 'PB',
+    freteReserva: num(config?.freteValor ?? 0),
     caixa: {
       alturaCm: config?.caixaAlturaCm ?? 11,
       larguraCm: config?.caixaLarguraCm ?? 20,

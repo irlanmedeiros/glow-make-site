@@ -34,9 +34,6 @@ export type DepoimentoPublico = {
 };
 
 export type ConfigPublica = {
-  freteValor: number;
-  freteGratisAcima: number;
-  cidadeFreteGratis: string;
   contratoTexto: string;
   contratoVersao: string;
   metaPixelId: string;

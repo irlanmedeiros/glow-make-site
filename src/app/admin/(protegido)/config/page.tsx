@@ -24,18 +24,11 @@ export default async function Configuracoes({ searchParams }: Props) {
 
       <Painel titulo="Loja">
         <form action={salvarConfig}>
-          <input type="hidden" name="freteValor" value={brl(num(config?.freteValor ?? 24.9))} />
-          <input
-            type="hidden"
-            name="freteGratisAcima"
-            value={brl(num(config?.freteGratisAcima ?? 199))}
-          />
-
           <div className="row3">
             <div className="field">
-              <label>Cidade com entrega grátis</label>
+              <label>Cidade da loja</label>
               <input name="cidadeFreteGratis" defaultValue={config?.cidadeFreteGratis ?? 'João Pessoa'} />
-              <small>Comparado com a cidade real do CEP</small>
+              <small>Aparece nos Termos de Uso (endereço e foro)</small>
             </div>
             <div className="field">
               <label>UF</label>
@@ -46,6 +39,15 @@ export default async function Configuracoes({ searchParams }: Props) {
               <input name="cepOrigem" defaultValue={config?.cepOrigem ?? ''} placeholder="58000-000" />
               <small>De onde as encomendas saem</small>
             </div>
+          </div>
+
+          <div className="field">
+            <label>Frete padrão (R$)</label>
+            <input name="freteValor" defaultValue={brl(num(config?.freteValor ?? 24.9))} />
+            <small>
+              Cobrado quando a cotação automática não vem (CEP sem cobertura, transportadora fora
+              do ar). Zero faz o pedido entrar como &ldquo;frete a combinar&rdquo;.
+            </small>
           </div>
 
           <div className="field">
@@ -137,9 +139,11 @@ export default async function Configuracoes({ searchParams }: Props) {
           </Pill>
         </div>
         <div className="note">
-          Entrega na cidade acima sai <b>grátis</b> sempre. Fora dela, o preço vem do Melhor Envio
-          pelo peso e pelo CEP. Sem o token, o pedido entra com <b>frete a combinar</b> e uma
-          observação — perder a venda porque a API de terceiro caiu seria pior.
+          Todo pedido avulso paga frete, <b>inclusive na cidade da loja</b>: frete grátis é
+          benefício de quem assina a Glow Box, e a assinatura cobra só a mensalidade. O preço vem
+          do Melhor Envio, pelo peso e pelo CEP. Sem o token, ou quando a cotação falha, entra o
+          <b> frete padrão</b> acima — zero viraria entrega de graça toda vez que um terceiro
+          falhasse.
           <br />
           <br />
           Variáveis: <code>MELHOR_ENVIO_TOKEN</code> e <code>MELHOR_ENVIO_ENV</code>.

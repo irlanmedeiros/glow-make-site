@@ -525,12 +525,8 @@ export async function excluirCupom(fd: FormData) {
 export async function salvarConfig(fd: FormData) {
   await exigirLogin();
   const freteValor = decimal(fd, 'freteValor');
-  const freteGratisAcima = decimal(fd, 'freteGratisAcima');
   if (!Number.isFinite(freteValor) || freteValor < 0) {
-    voltar('/admin/config', 'Valor do frete inválido.', 'erro');
-  }
-  if (!Number.isFinite(freteGratisAcima) || freteGratisAcima < 0) {
-    voltar('/admin/config', 'Limite do frete grátis inválido.', 'erro');
+    voltar('/admin/config', 'Frete padrão inválido. Use o formato 24,90.', 'erro');
   }
 
   // Dimensões da caixa: o Melhor Envio recusa qualquer lado menor que 1 cm.
@@ -547,7 +543,6 @@ export async function salvarConfig(fd: FormData) {
     where: { id: 'config' },
     update: {
       freteValor: new Prisma.Decimal(freteValor.toFixed(2)),
-      freteGratisAcima: new Prisma.Decimal(freteGratisAcima.toFixed(2)),
       avisos: texto(fd, 'avisos', 1000).split('\n').map((l) => l.trim()).filter(Boolean),
       whatsapp: texto(fd, 'whatsapp', 40),
       email: texto(fd, 'email', 120),
@@ -567,7 +562,6 @@ export async function salvarConfig(fd: FormData) {
     create: {
       id: 'config',
       freteValor: new Prisma.Decimal(freteValor.toFixed(2)),
-      freteGratisAcima: new Prisma.Decimal(freteGratisAcima.toFixed(2)),
       avisos: texto(fd, 'avisos', 1000).split('\n').map((l) => l.trim()).filter(Boolean),
     },
   });

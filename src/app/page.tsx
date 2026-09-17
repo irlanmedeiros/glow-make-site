@@ -115,9 +115,6 @@ export default async function Home() {
   }));
 
   const config: ConfigPublica = {
-    freteValor: num(configDb?.freteValor ?? 24.9),
-    freteGratisAcima: num(configDb?.freteGratisAcima ?? 199),
-    cidadeFreteGratis: configDb?.cidadeFreteGratis ?? 'João Pessoa',
     contratoTexto: configDb?.contratoTexto ?? '',
     contratoVersao: configDb?.contratoVersao ?? 'v1',
     metaPixelId: configDb?.metaPixelId ?? '',

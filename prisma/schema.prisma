@@ -274,7 +274,10 @@ model Foto {
 // Linha única (id = "config") com os ajustes gerais da loja.
 model Config {
   id               String  @id @default("config")
+  // Frete padrao: entra quando a cotacao automatica nao vem, para a falha de
+  // um terceiro nao virar entrega de graca.
   freteValor       Decimal @db.Decimal(10, 2) @default(24.90)
+  // MORTO: regra antiga de "frete gratis acima de X". Nao e lido por nada.
   freteGratisAcima Decimal @db.Decimal(10, 2) @default(199.00)
   avisos           String[]
   whatsapp         String  @default("(00) 00000-0000")
@@ -283,6 +286,9 @@ model Config {
   cnpj             String  @default("00.000.000/0001-00")
 
   // Frete
+  // LEGADO: estes dois nomes vem de quando a cidade da loja tinha frete
+  // gratis. Hoje frete gratis e so da assinatura, e eles sobraram apenas
+  // para dizer onde a loja fica (endereco e foro nos Termos de Uso).
   cidadeFreteGratis String  @default("João Pessoa")
   ufFreteGratis     String  @default("PB")
   cepOrigem         String  @default("58000-000")

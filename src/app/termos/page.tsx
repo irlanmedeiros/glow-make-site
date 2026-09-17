@@ -21,8 +21,9 @@ export default async function Termos() {
   const config = await prisma.config.findUnique({ where: { id: 'config' } });
   const email = config?.email || 'contato@glowmake.com.br';
   const cnpj = config?.cnpj || '';
-  const cidadeGratis = config?.cidadeFreteGratis || 'João Pessoa';
-  const ufGratis = config?.ufFreteGratis || 'PB';
+  // Campos com nome legado: hoje so dizem onde fica a loja (ver schema).
+  const cidadeLoja = config?.cidadeFreteGratis || 'João Pessoa';
+  const ufLoja = config?.ufFreteGratis || 'PB';
 
   return (
     <div className="legal">
@@ -57,7 +58,7 @@ export default async function Termos() {
         <h2>2. Quem opera a loja</h2>
         <p>
           A Glow Make{cnpj ? `, inscrita no CNPJ ${cnpj},` : ''} monta e revende kits de presente,
-          com loja física em {cidadeGratis}/{ufGratis} e vendas por este site. Contato:{' '}
+          com loja física em {cidadeLoja}/{ufLoja} e vendas por este site. Contato:{' '}
           <a href={`mailto:${email}`}>{email}</a>.
         </p>
 
@@ -96,7 +97,10 @@ export default async function Termos() {
         <p>
           O frete é calculado no momento do pedido, pelo CEP de destino e pelo peso, e informado
           antes do pagamento. A cotação é feita por meio do Melhor Envio e das transportadoras. Os
-          prazos são estimados pela transportadora e contados a partir da postagem.
+          prazos são estimados pela transportadora e contados a partir da postagem. Quando a
+          cotação automática não estiver disponível, aplica-se o frete padrão informado na tela
+          antes da conclusão do pedido. <b>O frete incluso é benefício da assinatura da Glow Box</b>;
+          nas compras avulsas o frete é cobrado, inclusive em {cidadeLoja}.
         </p>
         <p>
           É responsabilidade do cliente informar endereço e CEP corretos. Reenvios motivados por
@@ -154,7 +158,7 @@ export default async function Termos() {
 
         <h2>13. Lei aplicável e foro</h2>
         <p>
-          Aplica-se a lei brasileira. Fica eleito o foro da comarca de {cidadeGratis}/{ufGratis}{' '}
+          Aplica-se a lei brasileira. Fica eleito o foro da comarca de {cidadeLoja}/{ufLoja}{' '}
           para dirimir questões destes Termos, sem prejuízo do foro do domicílio do consumidor
           quando a lei assim garantir.
         </p>

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { ehCidadeGratis, melhorEnvioConfigurado, cotarMelhorEnvio } from './frete';
+import { calcularFrete, melhorEnvioConfigurado, cotarMelhorEnvio } from './frete';
 
 /**
  * A regra de frete grátis é por NOME DE CIDADE, não por faixa de CEP
@@ -9,41 +9,84 @@ import { ehCidadeGratis, melhorEnvioConfigurado, cotarMelhorEnvio } from './fret
 
 const JP = { cep: '58013420', cidade: 'João Pessoa', uf: 'PB' };
 
-describe('ehCidadeGratis', () => {
-  it('reconhece a cidade-sede exatamente igual', () => {
-    expect(ehCidadeGratis(JP, 'João Pessoa', 'PB')).toBe(true);
+describe('calcularFrete — não existe frete grátis na compra avulsa', () => {
+  const viaCep = {
+    cep: '58056-030', localidade: 'João Pessoa', uf: 'PB',
+  };
+
+  function respostas(destino: unknown, cotacao: unknown | Error) {
+    return vi.fn(async (url: string) => {
+      if (String(url).includes('viacep')) {
+        return { ok: true, json: async () => destino } as unknown as Response;
+      }
+      if (cotacao instanceof Error) throw cotacao;
+      return { ok: true, json: async () => cotacao } as unknown as Response;
+    });
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    delete process.env.MELHOR_ENVIO_TOKEN;
   });
 
-  it('ignora acento — o ViaCEP nem sempre devolve igual ao que foi digitado', () => {
-    expect(ehCidadeGratis({ ...JP, cidade: 'Joao Pessoa' }, 'João Pessoa', 'PB')).toBe(true);
-    expect(ehCidadeGratis(JP, 'Joao Pessoa', 'PB')).toBe(true);
+  const params = {
+    cepDestino: '58056030',
+    cepOrigem: '58056030',
+    pesoKg: 0.7,
+    valorSegurado: 100,
+    freteReserva: 24.9,
+  };
+
+  it('a cidade da loja paga frete como qualquer outra', async () => {
+    process.env.MELHOR_ENVIO_TOKEN = 'tok';
+    vi.stubGlobal(
+      'fetch',
+      respostas(viaCep, [{ id: 1, name: 'PAC', price: '40.16', delivery_time: 8, company: { name: 'Correios' } }])
+    );
+    const r = await calcularFrete(params);
+    expect(r.destino?.cidade).toBe('João Pessoa');
+    expect(r.opcoes.map((o) => [o.servico, o.valor, o.gratis])).toEqual([['PAC', 40.16, false]]);
+    expect(r.opcoes.some((o) => o.gratis)).toBe(false);
   });
 
-  it('ignora caixa e espaço em volta', () => {
-    expect(ehCidadeGratis({ ...JP, cidade: '  JOÃO PESSOA  ' }, 'João Pessoa', 'PB')).toBe(true);
-    expect(ehCidadeGratis({ ...JP, cidade: 'joão pessoa' }, 'João Pessoa', 'PB')).toBe(true);
+  it('sem cotação entra o frete padrão, nunca zero', async () => {
+    process.env.MELHOR_ENVIO_TOKEN = 'tok';
+    vi.stubGlobal('fetch', respostas(viaCep, new Error('Melhor Envio fora do ar')));
+    const r = await calcularFrete(params);
+    expect(r.opcoes).toEqual([
+      { servico: 'Frete padrão', transportadora: 'Glow Make', valor: 24.9, prazoDias: null, gratis: false },
+    ]);
+    expect(r.aviso).toMatch(/frete padrão/i);
   });
 
-  it('ignora caixa da UF', () => {
-    expect(ehCidadeGratis({ ...JP, uf: 'pb' }, 'João Pessoa', 'PB')).toBe(true);
+  it('sem token também entra o frete padrão', async () => {
+    vi.stubGlobal('fetch', respostas(viaCep, []));
+    const r = await calcularFrete(params);
+    expect(r.opcoes[0]?.valor).toBe(24.9);
   });
 
-  it('NÃO dá frete grátis para outra cidade', () => {
-    expect(ehCidadeGratis({ cep: '01310100', cidade: 'São Paulo', uf: 'SP' }, 'João Pessoa', 'PB')).toBe(false);
-    expect(ehCidadeGratis({ cep: '58400000', cidade: 'Campina Grande', uf: 'PB' }, 'João Pessoa', 'PB')).toBe(false);
+  it('nenhuma transportadora cotou: frete padrão', async () => {
+    process.env.MELHOR_ENVIO_TOKEN = 'tok';
+    vi.stubGlobal('fetch', respostas(viaCep, []));
+    const r = await calcularFrete(params);
+    expect(r.opcoes[0]?.servico).toBe('Frete padrão');
   });
 
-  it('NÃO dá frete grátis para cidade homônima em outro estado', () => {
-    // A UF faz parte da comparação de propósito.
-    expect(ehCidadeGratis({ cep: '00000000', cidade: 'João Pessoa', uf: 'SP' }, 'João Pessoa', 'PB')).toBe(false);
+  it('frete padrão zerado volta a ser "a combinar", sem opção de R$ 0', async () => {
+    process.env.MELHOR_ENVIO_TOKEN = 'tok';
+    vi.stubGlobal('fetch', respostas(viaCep, new Error('fora do ar')));
+    const r = await calcularFrete({ ...params, freteReserva: 0 });
+    expect(r.opcoes).toEqual([]);
+    expect(r.aviso).toMatch(/combinar/i);
   });
 
-  it('recusa destino nulo — CEP não encontrado não é frete grátis', () => {
-    expect(ehCidadeGratis(null, 'João Pessoa', 'PB')).toBe(false);
-  });
-
-  it('não casa por prefixo', () => {
-    expect(ehCidadeGratis({ ...JP, cidade: 'João Pessoa do Norte' }, 'João Pessoa', 'PB')).toBe(false);
+  it('CEP inexistente não cota nem cobra', async () => {
+    process.env.MELHOR_ENVIO_TOKEN = 'tok';
+    vi.stubGlobal('fetch', respostas({ erro: true }, []));
+    const r = await calcularFrete(params);
+    expect(r.destino).toBeNull();
+    expect(r.opcoes).toEqual([]);
+    expect(r.aviso).toMatch(/CEP não encontrado/);
   });
 });
 

@@ -60,18 +60,6 @@ export async function consultarCep(cep: string): Promise<Endereco | null> {
   }
 }
 
-export function ehCidadeGratis(
-  destino: Endereco | null,
-  cidadeGratis: string,
-  ufGratis: string
-): boolean {
-  if (!destino) return false;
-  const iguais = (a: string, b: string) =>
-    a.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase() ===
-    b.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
-  return iguais(destino.cidade, cidadeGratis) && iguais(destino.uf, ufGratis);
-}
-
 type RespostaMelhorEnvio = {
   id: number;
   name: string;
@@ -151,14 +139,23 @@ export type ResultadoFrete = {
 /**
  * Ponto único de cálculo — usado pelo checkout e pela API de cotação, para os
  * dois nunca discordarem sobre quanto custa entregar.
+ *
+ * NÃO existe frete grátis na compra avulsa, nem na cidade da loja: grátis é
+ * benefício de quem assina a Glow Box, e a assinatura nem passa por aqui —
+ * ela cobra só a mensalidade.
+ *
+ * Quando a cotação não vem (CEP sem cobertura, transportadora fora do ar,
+ * token vencido), o pedido segue com o FRETE PADRÃO de Configurações em vez
+ * de frete zero. Zero seria dar entrega de graça toda vez que um terceiro
+ * falhasse — exatamente o que a regra nova quer evitar.
  */
 export async function calcularFrete(params: {
   cepDestino: string;
   cepOrigem: string;
   pesoKg: number;
   valorSegurado: number;
-  cidadeGratis: string;
-  ufGratis: string;
+  /** Valor fixo de reserva, de Configurações. Zero ou negativo = "a combinar". */
+  freteReserva: number;
   caixa?: Caixa;
 }): Promise<ResultadoFrete> {
   const destino = await consultarCep(params.cepDestino);
@@ -167,28 +164,31 @@ export async function calcularFrete(params: {
     return { opcoes: [], destino: null, aviso: 'CEP não encontrado. Confira o número.' };
   }
 
-  if (ehCidadeGratis(destino, params.cidadeGratis, params.ufGratis)) {
+  const comReserva = (motivo: string): ResultadoFrete => {
+    if (!(params.freteReserva > 0)) {
+      return {
+        destino,
+        opcoes: [],
+        aviso: `${motivo} Vamos combinar o valor do frete com você antes de enviar.`,
+      };
+    }
     return {
       destino,
+      aviso: `${motivo} Aplicamos o frete padrão da loja.`,
       opcoes: [
         {
-          servico: `Entrega grátis em ${params.cidadeGratis}`,
+          servico: 'Frete padrão',
           transportadora: 'Glow Make',
-          valor: 0,
-          prazoDias: 2,
-          gratis: true,
+          valor: Number(params.freteReserva.toFixed(2)),
+          prazoDias: null,
+          gratis: false,
         },
       ],
     };
-  }
+  };
 
   if (!melhorEnvioConfigurado()) {
-    return {
-      destino,
-      opcoes: [],
-      aviso:
-        'A cotação de frete ainda não está ligada. Vamos confirmar o valor com você antes de enviar.',
-    };
+    return comReserva('A cotação automática não está ligada.');
   }
 
   try {
@@ -200,18 +200,12 @@ export async function calcularFrete(params: {
       caixa: params.caixa,
     });
 
-    if (!opcoes.length) {
-      return { destino, opcoes: [], aviso: 'Nenhuma transportadora atende esse CEP no momento.' };
-    }
+    if (!opcoes.length) return comReserva('Nenhuma transportadora cotou para esse CEP.');
     return { destino, opcoes };
   } catch (e) {
-    // Transportadora fora do ar não pode derrubar a venda: o pedido segue e
-    // alguém confirma o frete depois, com o aviso registrado.
+    // Transportadora fora do ar não derruba a venda, mas também não vira
+    // frete grátis: entra o frete padrão e o aviso fica registrado.
     console.error('[frete] cotação falhou:', e);
-    return {
-      destino,
-      opcoes: [],
-      aviso: 'Não consegui cotar o frete agora. Vamos confirmar o valor com você antes de enviar.',
-    };
+    return comReserva('Não consegui cotar o frete agora.');
   }
 }
