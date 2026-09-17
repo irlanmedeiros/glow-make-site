@@ -229,7 +229,8 @@ export function Topbar({ avisos }: { avisos: string[] }) {
   );
 }
 
-export function Cabecalho() {
+// Sem depoimento real cadastrado a secao nao existe, e o link para ela tambem nao.
+export function Cabecalho({ temDepoimentos = false }: { temDepoimentos?: boolean }) {
   const { qtdTotal, abrirCarrinho, pulso } = useLoja();
   const [grudado, setGrudado] = useState(false);
   const [busca, setBusca] = useState('');
@@ -276,7 +277,7 @@ export function Cabecalho() {
         <nav className="main">
           <a href="#kits">Kits</a>
           <a href="#como">Como funciona</a>
-          <a href="#depo">Avaliações</a>
+          {temDepoimentos && <a href="#depo">Avaliações</a>}
           <a href="/meus-pedidos">Meus pedidos</a>
         </nav>
         <div className="hd-right">
@@ -331,7 +332,7 @@ export function Cabecalho() {
           <nav className="menu-mob-links" onClick={() => setMenuAberto(false)}>
             <a href="#kits">Kits</a>
             <a href="#como">Como funciona</a>
-            <a href="#depo">Avaliações</a>
+            {temDepoimentos && <a href="#depo">Avaliações</a>}
             <a href="/meus-pedidos">Meus pedidos</a>
           </nav>
         </div>
@@ -556,8 +557,7 @@ function Gaveta({ aberta }: { aberta: boolean }) {
           ) : (
             <>
               <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 10 }}>
-                Entrega <b style={{ color: 'var(--rose) '}}>grátis em João Pessoa</b>. Para outras
-                cidades, o valor é calculado pelo CEP no próximo passo.
+                O frete é calculado pelo CEP no próximo passo.
               </div>
               <div className="tot">
                 <span>Subtotal</span>

@@ -1,7 +1,9 @@
 import { prisma } from '@/lib/prisma';
 import { num } from '@/lib/format';
+import { linkWhatsapp } from '@/lib/acompanhamento';
+import { avisosPublicaveis, ehDepoimentoDeExemplo, iniciais, semPromocaoEncerrada } from '@/lib/conteudo';
 import Hero from '@/components/Hero';
-import { Reveal, Contador } from '@/components/Enfeites';
+import { Reveal } from '@/components/Enfeites';
 import Consentimento from '@/components/Consentimento';
 import {
   Loja,
@@ -57,19 +59,17 @@ const PASSOS = [
 const PALAVRAS = [
   'Pronto para presentear',
   'Embalagem inclusa',
-  'Entrega grátis em João Pessoa',
   'Amor em cada detalhe',
   'Sem fidelidade',
   'Curadoria mensal',
 ];
 
 export default async function Home() {
-  const [kitsDb, boxDb, bannersDb, depoimentosDb, fotosDb, configDb] = await Promise.all([
+  const [kitsDb, boxDb, bannersDb, depoimentosDb, configDb] = await Promise.all([
     prisma.kit.findMany({ where: { ativo: true, tipo: 'KIT' }, orderBy: { ordem: 'asc' } }),
     prisma.kit.findFirst({ where: { tipo: 'BOX' } }),
     prisma.banner.findMany({ where: { ativo: true }, orderBy: { ordem: 'asc' } }),
     prisma.depoimento.findMany({ where: { ativo: true }, orderBy: { ordem: 'asc' } }),
-    prisma.foto.findMany({ where: { ativo: true }, orderBy: { ordem: 'asc' } }),
     prisma.config.findUnique({ where: { id: 'config' } }),
   ]);
 
@@ -98,7 +98,11 @@ export default async function Home() {
     ctaLink: b.ctaLink,
   }));
 
-  const depoimentos: DepoimentoPublico[] = depoimentosDb.map((d) => ({
+  // Os depoimentos do seed eram ficticios. Mesmo que ainda estejam no banco de
+  // producao, nao aparecem: so conta o que foi cadastrado de verdade no admin.
+  const depoimentos: DepoimentoPublico[] = depoimentosDb
+    .filter((d) => !ehDepoimentoDeExemplo(d.avatar))
+    .map((d) => ({
     id: d.id,
     nome: d.nome,
     cidade: d.cidade,
@@ -115,7 +119,7 @@ export default async function Home() {
     contratoTexto: configDb?.contratoTexto ?? '',
     contratoVersao: configDb?.contratoVersao ?? 'v1',
     metaPixelId: configDb?.metaPixelId ?? '',
-    avisos: configDb?.avisos ?? [],
+    avisos: avisosPublicaveis(configDb?.avisos ?? []),
     whatsapp: configDb?.whatsapp ?? '',
     email: configDb?.email ?? '',
     instagram: configDb?.instagram ?? '',
@@ -127,11 +131,17 @@ export default async function Home() {
   const meio = Math.ceil(depoimentos.length / 2);
   const faixa1 = depoimentos.slice(0, meio);
   const faixa2 = depoimentos.slice(meio);
+  const temDepoimentos = depoimentos.length > 0;
+
+  const whatsapp = linkWhatsapp(config.whatsapp);
+  const whatsappIndicacao = whatsapp
+    ? `${whatsapp}?text=${encodeURIComponent('Olá! Quero participar do Indique um amigo da Glow Make.')}`
+    : null;
 
   return (
     <Loja kits={kits} box={box} config={config}>
       <Topbar avisos={config.avisos} />
-      <Cabecalho />
+      <Cabecalho temDepoimentos={temDepoimentos} />
       <Consentimento pixelId={config.metaPixelId} />
 
       <Hero banners={banners} />
@@ -141,8 +151,8 @@ export default async function Home() {
           <div className="perk">
             <i><Frete /></i>
             <div>
-              <b>Frete grátis</b>
-              <span>Em {config.cidadeFreteGratis}</span>
+              <b>Acompanhe seu pedido</b>
+              <span>Rastreio em Meus pedidos</span>
             </div>
           </div>
           <div className="perk">
@@ -191,16 +201,6 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ---------- NÚMEROS ---------- */}
-      <div className="stats">
-        <div className="wrap stats-g">
-          <Contador alvo={3240} rotulo="caixas entregues" />
-          <Contador alvo={12800} rotulo="clientes atendidas" />
-          <Contador alvo={49} decimal rotulo="nota média das avaliações" />
-          <Contador alvo={27} rotulo="estados que já receberam" />
-        </div>
-      </div>
-
       {/* ---------- ASSINATURA ---------- */}
       <section id="assinatura">
         <div className="wrap">
@@ -210,10 +210,10 @@ export default async function Home() {
                 <div className="eyebrow">Assinatura mensal</div>
                 <h2>Glow Box: sua caixa de beleza <span className="script">todo mês</span></h2>
                 <p className="lead">
-                  De quatro a seis produtos selecionados chegando na sua casa, com valor de varejo
-                  acima de R$ 250. Sem fidelidade, cancele quando quiser.
+                  De quatro a seis produtos selecionados chegando na sua casa. Sem fidelidade,
+                  cancele quando quiser.
                 </p>
-                <ListaBeneficios itens={box?.itens ?? []} />
+                <ListaBeneficios itens={semPromocaoEncerrada(box?.itens ?? [])} />
                 <BlocoAssinatura />
                 <div className="pay-brands">
                   <span>PIX</span>
@@ -280,73 +280,63 @@ export default async function Home() {
       </section>
 
       {/* ---------- DEPOIMENTOS ---------- */}
-      <section id="depo">
-        <div className="wrap">
-          <Reveal>
-            <div className="sec-head">
-              <div className="eyebrow">Quem já usa</div>
-              <h2>Mais de três mil caixas <span className="script">entregues</span></h2>
-              <p>Passe o mouse sobre um depoimento para pausar o carrossel.</p>
-            </div>
-          </Reveal>
-        </div>
-
-        <div className="mq">
-          <div className="mq-track">
-            {[...faixa1, ...faixa1].map((d, i) => (
-              <CardDepoimento key={`a-${d.id}-${i}`} d={d} />
-            ))}
+      {/* So aparece com depoimento real cadastrado no admin. Secao vazia ou
+          inventada e pior do que secao nenhuma. */}
+      {temDepoimentos && (
+        <section id="depo">
+          <div className="wrap">
+            <Reveal>
+              <div className="sec-head">
+                <div className="eyebrow">Depoimentos</div>
+                <h2>
+                  O que dizem nossas <span className="script">clientes</span>
+                </h2>
+                <p>Passe o mouse sobre um depoimento para pausar o carrossel.</p>
+              </div>
+            </Reveal>
           </div>
-        </div>
-        <div className="mq rev">
-          <div className="mq-track">
-            {[...faixa2, ...faixa2].map((d, i) => (
-              <CardDepoimento key={`b-${d.id}-${i}`} d={d} />
-            ))}
-          </div>
-        </div>
 
-        <div className="wrap">
-          <p className="depo-foot">
-            Nota média <b>4,9 de 5</b> em 1.184 avaliações verificadas.
-          </p>
-        </div>
-      </section>
-
-      {/* ---------- GALERIA ---------- */}
-      <section style={{ paddingBottom: 0 }}>
-        <div className="wrap">
-          <Reveal>
-            <div className="sec-head">
-              <div className="eyebrow">No Instagram</div>
-              <h2>As caixas na casa de <span className="script">quem assina</span></h2>
-              <p>Marque {config.instagram} para aparecer aqui.</p>
-            </div>
-          </Reveal>
-          <Reveal>
-            <div className="gal">
-              {fotosDb.map((f, i) => (
-                <a href="#" key={f.id} aria-label={`Foto ${i + 1}`}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={f.url} alt="" loading="lazy" />
-                </a>
+          <div className="mq">
+            <div className="mq-track">
+              {[...faixa1, ...faixa1].map((d, i) => (
+                <CardDepoimento key={`a-${d.id}-${i}`} d={d} />
               ))}
             </div>
-          </Reveal>
-        </div>
-      </section>
+          </div>
+          {faixa2.length > 0 && (
+            <div className="mq rev">
+              <div className="mq-track">
+                {[...faixa2, ...faixa2].map((d, i) => (
+                  <CardDepoimento key={`b-${d.id}-${i}`} d={d} />
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+      )}
 
-      {/* ---------- NEWSLETTER ---------- */}
-      <section>
+      {/* ---------- INDIQUE UM AMIGO ---------- */}
+      {/* Entrou no lugar da promocao de 10%, que foi encerrada. O cupom de
+          primeira compra para a amiga indicada chega na etapa seguinte; ate la
+          o bloco convida e leva ao WhatsApp da loja. As condicoes do brinde sao
+          definidas pela loja e nao ficam escritas aqui. A galeria que ficava
+          antes deste bloco saiu: eram fotos de banco apresentadas como caixas
+          "na casa de quem assina". */}
+      <section id="indique">
         <div className="wrap">
           <Reveal>
             <div className="news">
-              <h3>Ganhe dez por cento na primeira compra</h3>
-              <p>Cadastre seu e-mail e receba o cupom junto com as novidades de cada edição.</p>
-              <form action="#">
-                <input type="email" placeholder="seu@email.com" required aria-label="Seu e-mail" />
-                <button className="btn">Quero meu cupom</button>
-              </form>
+              <h3>Indique um amigo e ganhe um brinde</h3>
+              <p>
+                {whatsappIndicacao
+                  ? 'Conte para quem você gosta sobre a Glow Make. Fale com a gente para saber como participar.'
+                  : 'Em breve você vai poder indicar direto pelo site.'}
+              </p>
+              {whatsappIndicacao && (
+                <a className="btn" href={whatsappIndicacao} target="_blank" rel="noopener noreferrer">
+                  <Whatsapp /> Quero indicar
+                </a>
+              )}
             </div>
           </Reveal>
         </div>
@@ -375,7 +365,7 @@ export default async function Home() {
                 <li><a href="#kits">Todos os kits</a></li>
                 <li><a href="#assinatura">Assinatura</a></li>
                 <li><a href="#como">Como funciona</a></li>
-                <li><a href="#depo">Avaliações</a></li>
+                {temDepoimentos && <li><a href="#depo">Avaliações</a></li>}
               </ul>
             </div>
             <div>
@@ -409,22 +399,27 @@ export default async function Home() {
 }
 
 function CardDepoimento({ d }: { d: DepoimentoPublico }) {
+  const detalhe = [d.cidade, d.tempo].filter(Boolean).join(' · ');
   return (
     <article className="dep">
-      <div className="stars">
+      <div className="stars" aria-label={`Nota ${d.nota} de 5`}>
         {Array.from({ length: d.nota }, (_, i) => (
           <Estrela key={i} />
         ))}
       </div>
       <p>&ldquo;{d.texto}&rdquo;</p>
       <div className="dep-who">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={d.avatar} alt="" loading="lazy" />
+        {d.avatar ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={d.avatar} alt="" loading="lazy" />
+        ) : (
+          <span className="dep-inicial" aria-hidden="true">
+            {iniciais(d.nome)}
+          </span>
+        )}
         <div>
           <b>{d.nome}</b>
-          <span>
-            {d.cidade} · {d.tempo}
-          </span>
+          {detalhe && <span>{detalhe}</span>}
         </div>
       </div>
     </article>

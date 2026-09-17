@@ -889,3 +889,7 @@ th.num{text-align:right}
   /* no carrinho do balcao o espaco e curto: cresce o que da, sem quebrar a linha */
   .pdv-linha .stepper button{width:38px;height:42px}
 }
+
+/* Iniciais no lugar da foto do depoimento: a foto e opcional, porque nem toda
+   cliente autoriza aparecer. */
+.dep-inicial{width:42px;height:42px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;background:var(--rose-100);color:var(--rose-dark);font-weight:700;font-size:14px;letter-spacing:.5px}

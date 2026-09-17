@@ -77,7 +77,6 @@ const KITS: Prisma.KitCreateInput[] = [
     itens: [
       'Curadoria nova a cada mês, nunca repetida',
       'Frete incluso para todo o Brasil',
-      'Dez por cento de desconto em qualquer kit avulso',
       'Acesso antecipado aos lançamentos',
       'Cancele a qualquer momento, sem multa',
     ],
@@ -141,23 +140,9 @@ const BANNERS: Prisma.BannerCreateInput[] = [
   },
 ];
 
-const DEPOIMENTOS: Omit<Prisma.DepoimentoCreateInput, 'avatar' | 'ordem'>[] = [
-  { nome: 'Mariana Alves', cidade: 'São Paulo, SP', tempo: 'Assinante há 8 meses', texto: 'A caixa de julho veio com uma paleta que eu queria comprar havia meses. Vale muito mais do que eu pago.' },
-  { nome: 'Camila Souza', cidade: 'Belo Horizonte, MG', tempo: 'Cliente desde 2025', texto: 'Comprei o Kit Pele Perfeita para testar e acabei assinando. Entrega rápida e embalagem impecável.' },
-  { nome: 'Juliana Pires', cidade: 'Curitiba, PR', tempo: 'Assinante há 1 ano', texto: 'Dei o Kit Completo Deluxe de presente para minha irmã. Ela achou que era de marca importada.' },
-  { nome: 'Larissa Rocha', cidade: 'Recife, PE', tempo: 'Assinante há 5 meses', texto: 'O que mais gosto é não saber o que vem. Toda vez descubro uma marca nova que não conhecia.' },
-  { nome: 'Beatriz Fontes', cidade: 'Porto Alegre, RS', tempo: 'Cliente desde 2024', texto: 'Chegou em quatro dias aqui no Sul, com rastreio funcionando direitinho. Nada quebrado.' },
-  { nome: 'Tatiane Nunes', cidade: 'Salvador, BA', tempo: 'Assinante há 3 meses', texto: 'A base do Kit Essencial acertou meu tom de primeira, coisa que nunca acontece comigo.' },
-  { nome: 'Amanda Vieira', cidade: 'Fortaleza, CE', tempo: 'Assinante há 7 meses', texto: 'Cancelei um mês porque estava apertada e voltei no seguinte, sem multa e sem drama nenhum.' },
-  { nome: 'Renata Dias', cidade: 'Campinas, SP', tempo: 'Cliente desde 2025', texto: 'O Kit Olhar Marcante virou meu padrão para trabalhar. A paleta rende muito mais do que eu esperava.' },
-  { nome: 'Patrícia Campos', cidade: 'Goiânia, GO', tempo: 'Assinante há 10 meses', texto: 'Já indiquei para cinco amigas. Três assinaram no mesmo mês e ninguém se arrependeu.' },
-  { nome: 'Gabriela Martins', cidade: 'Florianópolis, SC', tempo: 'Assinante há 2 meses', texto: 'O atendimento no WhatsApp respondeu em minutos quando errei o endereço. Resolveram na hora.' },
-  { nome: 'Sabrina Lima', cidade: 'Manaus, AM', tempo: 'Cliente desde 2025', texto: 'Moro longe e sempre pago caro no frete. Aqui veio grátis e chegou antes do prazo previsto.' },
-  { nome: 'Vanessa Cardoso', cidade: 'Brasília, DF', tempo: 'Assinante há 6 meses', texto: 'Uso o desconto de assinante para comprar refil dos kits. No fim das contas, a assinatura se paga.' },
-  { nome: 'Daniela Araújo', cidade: 'Natal, RN', tempo: 'Assinante há 4 meses', texto: 'A curadoria é honesta. Nunca recebi aquele produto de encher caixa que ninguém usa.' },
-  { nome: 'Karina Mendes', cidade: 'Vitória, ES', tempo: 'Cliente desde 2024', texto: 'Comprei o Kit Lábios Glow no lançamento. O gloss é o melhor que já usei nessa faixa de preço.' },
-  { nome: 'Nathália Barbosa', cidade: 'Belém, PA', tempo: 'Assinante há 9 meses', texto: 'Abrir a caixa virou meu programa do mês. Minha filha já espera junto comigo.' },
-];
+// Nao ha depoimentos no seed. Os que existiam eram ficticios, com fotos de
+// pessoas reais de banco de imagens. Depoimento so entra pelo admin, real e
+// com autorizacao de quem aparece.
 
 const CONTRATO_RASCUNHO = `CONTRATO DE ASSINATURA — GLOW BOX MENSAL
 
@@ -230,17 +215,6 @@ async function main() {
   }
   console.log(`  ${BANNERS.length} banners`);
 
-  if ((await prisma.depoimento.count()) === 0) {
-    await prisma.depoimento.createMany({
-      data: DEPOIMENTOS.map((d, i) => ({
-        ...d,
-        avatar: `/assets/avatares/avatar-${i + 1}.jpg`,
-        ordem: i + 1,
-      })),
-    });
-    console.log(`  ${DEPOIMENTOS.length} depoimentos`);
-  }
-
   if ((await prisma.foto.count()) === 0) {
     await prisma.foto.createMany({
       data: Array.from({ length: 8 }, (_, i) => ({
@@ -261,9 +235,8 @@ async function main() {
       id: 'config',
       contratoTexto: CONTRATO_RASCUNHO,
       avisos: [
-        // Frete grátis é por cidade (cidadeFreteGratis), não por valor de
-        // compra. O antigo "acima de R$ 199" descrevia uma regra que não existe.
-        'Frete grátis para João Pessoa',
+        // Sem aviso de frete gratis: deixou de ser regra geral, so a assinatura
+        // tem frete incluso.
         'Parcele em até 6x sem juros no cartão',
         'Assine a Glow Box até dia 10 e receba a edição deste mês',
       ],

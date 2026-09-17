@@ -94,11 +94,9 @@ export default async function Termos() {
 
         <h2>6. Entrega e frete</h2>
         <p>
-          A entrega em {cidadeGratis}/{ufGratis} é <b>grátis</b> — a checagem é feita pelo nome da
-          cidade correspondente ao CEP informado. Para as demais localidades, o frete é cotado no
-          momento do pedido pelo peso e pelo destino, por meio do Melhor Envio e das
-          transportadoras. Os prazos são estimados pela transportadora e contados a partir da
-          postagem.
+          O frete é calculado no momento do pedido, pelo CEP de destino e pelo peso, e informado
+          antes do pagamento. A cotação é feita por meio do Melhor Envio e das transportadoras. Os
+          prazos são estimados pela transportadora e contados a partir da postagem.
         </p>
         <p>
           É responsabilidade do cliente informar endereço e CEP corretos. Reenvios motivados por

@@ -8,6 +8,7 @@ import { abrirSessao, ehAdmin, fecharSessao, papelDaSenha, senhaAdminConfigurada
 import { devolverEstoque } from '@/lib/estoque';
 import { cancelarAssinatura as cancelarNoAsaas, asaasConfigurado } from '@/lib/asaas';
 import { cancelarPedido, recusarCancelamentoPedido, ErroCancelamento } from '@/lib/cancelamento';
+import { PREFIXO_AVATAR_EXEMPLO } from '@/lib/conteudo';
 
 /**
  * Toda ação confere o login por conta própria. O layout do admin já barra a
@@ -440,6 +441,18 @@ export async function excluirDepoimento(fd: FormData) {
   await prisma.depoimento.delete({ where: { id: texto(fd, 'id') } });
   revalidatePath('/');
   voltar('/admin/depoimentos', 'Depoimento excluído.');
+}
+
+/** Oculta de uma vez os depoimentos ficticios que vieram no seed. Oculta, nao
+    apaga: se algum tiver sido aproveitado por engano, volta com um clique. */
+export async function ocultarDepoimentosDeExemplo() {
+  await exigirLogin();
+  const r = await prisma.depoimento.updateMany({
+    where: { ativo: true, avatar: { startsWith: PREFIXO_AVATAR_EXEMPLO } },
+    data: { ativo: false },
+  });
+  revalidatePath('/');
+  voltar('/admin/depoimentos', `${r.count} depoimento(s) de exemplo ocultado(s).`);
 }
 
 /* ============================================================
