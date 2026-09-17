@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { CUPOM_INEXISTENTE, consultarCupom } from '@/lib/cupom';
+import { TIPOS_NA_VITRINE } from '@/lib/produto';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -31,7 +32,7 @@ export async function POST(req: Request) {
 
   // Preco do banco, como no checkout.
   const kits = await prisma.kit.findMany({
-    where: { id: { in: itens.map((i) => i.kitId) }, ativo: true, tipo: 'KIT' },
+    where: { id: { in: itens.map((i) => i.kitId) }, ativo: true, tipo: { in: TIPOS_NA_VITRINE } },
     select: { id: true, preco: true },
   });
   const subtotal = itens.reduce((s, i) => {

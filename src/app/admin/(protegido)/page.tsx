@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
+import { ROTULO_TIPO } from '@/lib/produto';
 import { real, dataHora, num, ROTULO_PEDIDO, corPedido } from '@/lib/format';
 import { asaasConfigurado } from '@/lib/asaas';
 import { Cabecalho, Painel, Pill, Vazio } from '@/components/admin/Ui';
@@ -122,7 +123,7 @@ export default async function PainelAdmin() {
                         <img src={p.imagem} alt="" />
                         <div>
                           <b>{p.nome}</b>
-                          <span>{p.tipo === 'BOX' ? 'Assinatura' : 'Kit avulso'}</span>
+                          <span>{ROTULO_TIPO[p.tipo]}</span>
                         </div>
                       </div>
                     </td>

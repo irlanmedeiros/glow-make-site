@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { real, num } from '@/lib/format';
+import { PRECO_MINIMO_INDIVIDUAL, ROTULO_TIPO, TIPOS_EDITAVEIS, type TipoProduto } from '@/lib/produto';
 import { salvarKit, alternarKit, excluirKit } from '../../actions';
 import { Aviso, Cabecalho, Painel, Pill, mensagens } from '@/components/admin/Ui';
 
@@ -18,7 +19,7 @@ type Campos = {
   estoqueBaixo?: number;
   ordem?: number;
   ativo?: boolean;
-  tipo?: string;
+  tipo?: TipoProduto;
   codigoBarras?: string | null;
 };
 
@@ -26,6 +27,22 @@ function Formulario({ k, novo = false }: { k: Campos; novo?: boolean }) {
   return (
     <form action={salvarKit}>
       {k.id && <input type="hidden" name="id" value={k.id} />}
+      {k.tipo === 'BOX' ? (
+        <div className="note" style={{ marginBottom: 14 }}>
+          Esta é a caixa da assinatura. O tipo dela não muda por aqui.
+        </div>
+      ) : (
+        <div className="field">
+          <label>Tipo</label>
+          <select name="tipo" defaultValue={k.tipo ?? 'KIT'}>
+            {TIPOS_EDITAVEIS.map((t) => (
+              <option key={t} value={t}>
+                {ROTULO_TIPO[t]}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
       <div className="row2">
         <div className="field">
           <label>Nome</label>
@@ -53,6 +70,9 @@ function Formulario({ k, novo = false }: { k: Campos; novo?: boolean }) {
         <div className="field">
           <label>Preço</label>
           <input name="preco" defaultValue={k.preco != null ? k.preco.toFixed(2).replace('.', ',') : ''} required />
+          <small>
+            Produto individual: mínimo R$ {PRECO_MINIMO_INDIVIDUAL},00. Kit pode custar menos.
+          </small>
           <small>Use vírgula: 129,90</small>
         </div>
         <div className="field">
@@ -132,7 +152,7 @@ export default async function Kits({ searchParams }: Props) {
               </div>
 
               <Pill cor={p.ativo ? 'ok' : 'out'}>{p.ativo ? 'No site' : 'Oculto'}</Pill>
-              {p.tipo === 'BOX' && <Pill cor="info">Assinatura</Pill>}
+              {p.tipo !== 'KIT' && <Pill cor="info">{ROTULO_TIPO[p.tipo]}</Pill>}
 
               <div className="adm-acoes">
                 <form action={alternarKit}>
@@ -165,6 +185,7 @@ export default async function Kits({ searchParams }: Props) {
                     estoqueBaixo: p.estoqueBaixo,
                     ordem: p.ordem,
                     ativo: p.ativo,
+                    tipo: p.tipo,
                     codigoBarras: p.codigoBarras,
                   }}
                 />

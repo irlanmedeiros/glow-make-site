@@ -9,6 +9,7 @@ import { afiliadoPorCodigo, gerarComissaoPedido } from '@/lib/afiliado';
 import { marcarConvertido } from '@/lib/lead';
 import { num } from '@/lib/format';
 import { aplicarCupom, type CupomAplicado } from '@/lib/cupom';
+import { TIPOS_NA_VITRINE } from '@/lib/produto';
 
 export const runtime = 'nodejs';
 
@@ -45,7 +46,7 @@ export async function POST(req: Request) {
   // Os preços vêm SEMPRE do banco. Se viessem do navegador, bastaria editar o
   // JSON no DevTools para comprar o Kit Deluxe por um real.
   const kits = await prisma.kit.findMany({
-    where: { id: { in: pedidos.map((p) => p.kitId) }, ativo: true, tipo: 'KIT' },
+    where: { id: { in: pedidos.map((p) => p.kitId) }, ativo: true, tipo: { in: TIPOS_NA_VITRINE } },
   });
   if (kits.length !== pedidos.length) {
     return NextResponse.json(

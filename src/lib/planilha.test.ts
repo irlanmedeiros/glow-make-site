@@ -261,3 +261,38 @@ describe('gerarModelo — a planilha que o lojista baixa', () => {
     expect(wb.getWorksheet('Como preencher')).toBeDefined();
   });
 });
+
+describe('coluna tipo — produto individual tem piso de R$ 50', () => {
+  it('entende kit e individual, e em branco não mexe no tipo', async () => {
+    const r = await lerPlanilha(
+      csv('sku;nome;preco;tipo\nGM-A;Kit A;35,00;kit\nGM-B;Batom;50,00;individual\nGM-C;Kit C;40,00;'),
+      'p.csv'
+    );
+    expect(r.linhas.map((l) => l.tipo)).toEqual(['KIT', 'INDIVIDUAL', null]);
+    expect(r.linhas.every((l) => l.erros.length === 0)).toBe(true);
+  });
+
+  it('kit pode custar menos de R$ 50; individual não', async () => {
+    const r = await lerPlanilha(
+      csv('sku;nome;preco;tipo\nGM-A;Kit A;35,00;kit\nGM-B;Batom;49,99;individual'),
+      'p.csv'
+    );
+    expect(r.linhas[0].erros).toEqual([]);
+    expect(r.linhas[1].erros.join(' ')).toMatch(/individual não pode custar menos/);
+  });
+
+  it('R$ 50 exatos passam', async () => {
+    const r = await lerPlanilha(csv('sku;nome;preco;tipo\nGM-B;Batom;50,00;individual'), 'p.csv');
+    expect(r.linhas[0].erros).toEqual([]);
+  });
+
+  it('tipo desconhecido vira erro em vez de virar kit em silêncio', async () => {
+    const r = await lerPlanilha(csv('sku;nome;preco;tipo\nGM-A;Combo;80,00;combo'), 'p.csv');
+    expect(r.linhas[0].erros.join(' ')).toMatch(/tipo desconhecido/);
+  });
+
+  it('a caixa da assinatura não se cadastra por planilha', async () => {
+    const r = await lerPlanilha(csv('sku;nome;preco;tipo\nGM-BOX;Glow Box;99,90;assinatura'), 'p.csv');
+    expect(r.linhas[0].erros.join(' ')).toMatch(/assinatura não se cadastra/);
+  });
+});

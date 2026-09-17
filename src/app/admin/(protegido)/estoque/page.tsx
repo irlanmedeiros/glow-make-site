@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { ROTULO_TIPO } from '@/lib/produto';
 import { dataHora } from '@/lib/format';
 import { lancarEntrada, ajustarSaldo } from '../../actions';
 import { Aviso, Cabecalho, Painel, Pill, Vazio, mensagens } from '@/components/admin/Ui';
@@ -80,7 +81,7 @@ export default async function Estoque({ searchParams }: Props) {
                       <div>
                         <b>{p.nome}</b>
                         <span>
-                          {p.sku} · {p.tipo === 'BOX' ? 'Assinatura' : 'Kit avulso'}
+                          {p.sku} · {ROTULO_TIPO[p.tipo]}
                         </span>
                       </div>
                     </div>

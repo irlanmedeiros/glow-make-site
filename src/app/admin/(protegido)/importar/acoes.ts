@@ -5,6 +5,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { ehAdmin } from '@/lib/auth';
 import { lerPlanilha, type LinhaPlanilha } from '@/lib/planilha';
+import { erroDePreco } from '@/lib/produto';
 
 /**
  * Importação em dois passos: primeiro a gente MOSTRA o que vai acontecer,
@@ -77,6 +78,16 @@ export async function analisarPlanilha(
     }
     const atual = porSku.get(l.sku);
     if (atual) {
+      /* Trocar o tipo para individual sem mandar preco novo tambem precisa
+         respeitar o piso: vale o preco que o produto ja tem. */
+      const tipoFinal = l.tipo ?? atual.tipo;
+      const precoFinal = l.preco ?? Number(atual.preco.toString());
+      const erroTipo = erroDePreco(tipoFinal, precoFinal);
+      if (erroTipo) {
+        l.erros.push(erroTipo);
+        plano.comErro.push(l);
+        continue;
+      }
       plano.atualizar.push({
         ...l,
         antes: {
@@ -89,6 +100,10 @@ export async function analisarPlanilha(
       });
     } else {
       if (!l.preco) l.erros.push('produto novo precisa de preço');
+      else {
+        const e = erroDePreco(l.tipo ?? 'KIT', l.preco);
+        if (e) l.erros.push(e);
+      }
       if (l.erros.length) plano.comErro.push(l);
       else plano.criar.push(l);
     }
@@ -152,6 +167,7 @@ export async function aplicarPlanilha(
           ordem: l.ordem ?? 0,
           ativo: l.ativo ?? true,
           codigoBarras: l.codigoBarras || null,
+          tipo: l.tipo ?? 'KIT',
           entradas: l.estoque ?? 0,
         },
       });
@@ -185,6 +201,8 @@ export async function aplicarPlanilha(
       if (l.ordem !== null) dados.ordem = l.ordem;
       if (l.ativo !== null) dados.ativo = l.ativo;
       if (l.codigoBarras) dados.codigoBarras = l.codigoBarras;
+      // A caixa da assinatura nunca muda de tipo por planilha.
+      if (l.tipo && atual.tipo !== 'BOX') dados.tipo = l.tipo;
 
       await prisma.kit.update({ where: { sku: l.sku }, data: dados });
       atualizados++;

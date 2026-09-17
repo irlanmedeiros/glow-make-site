@@ -1,5 +1,6 @@
 import 'server-only';
 import ExcelJS from 'exceljs';
+import { erroDePreco, lerTipo, PRECO_MINIMO_INDIVIDUAL, type TipoProduto } from './produto';
 
 /**
  * Leitura da planilha de produtos.
@@ -23,6 +24,7 @@ export type LinhaPlanilha = {
   ordem: number | null;
   ativo: boolean | null;
   codigoBarras: string;
+  tipo: TipoProduto | null; // em branco = nao mexe no tipo atual
   erros: string[];
 };
 
@@ -39,6 +41,7 @@ const COLUNAS: Record<string, string[]> = {
   ordem: ['ordem', 'posicao'],
   ativo: ['ativo', 'publicado', 'visivel', 'no site'],
   codigoBarras: ['codigo de barras', 'ean', 'codigo barras', 'barras'],
+  tipo: ['tipo', 'tipo de produto', 'categoria'],
 };
 
 function normalizar(s: string): string {
@@ -164,6 +167,17 @@ export async function lerPlanilha(buffer: ArrayBuffer, nomeArquivo: string): Pro
     const preco = lerNumero(pega('preco'));
     if (preco !== null && preco <= 0) erros.push('preço precisa ser maior que zero');
 
+    const tipoBruto = pega('tipo');
+    const tipo = lerTipo(tipoBruto);
+    if (tipoBruto && !tipo) erros.push('tipo desconhecido (use "kit" ou "individual")');
+    // A caixa da assinatura e unica e tem fluxo proprio; criar outra por
+    // planilha quebraria a assinatura sem ninguem perceber.
+    if (tipo === 'BOX') erros.push('a caixa da assinatura não se cadastra por planilha');
+    if (tipo === 'INDIVIDUAL' && preco !== null) {
+      const e = erroDePreco(tipo, preco);
+      if (e) erros.push(`produto individual não pode custar menos de R$ ${PRECO_MINIMO_INDIVIDUAL},00`);
+    }
+
     const estoque = lerNumero(pega('estoque'));
     if (estoque !== null && (estoque < 0 || !Number.isInteger(estoque))) {
       erros.push('estoque precisa ser inteiro e não negativo');
@@ -186,6 +200,7 @@ export async function lerPlanilha(buffer: ArrayBuffer, nomeArquivo: string): Pro
       ordem: lerNumero(pega('ordem')),
       ativo: lerBooleano(pega('ativo')),
       codigoBarras: pega('codigoBarras'),
+      tipo,
       erros,
     });
   }
@@ -220,6 +235,7 @@ export async function gerarModelo(): Promise<Buffer> {
     { header: 'ordem', key: 'ordem', width: 8 },
     { header: 'ativo', key: 'ativo', width: 8 },
     { header: 'codigo de barras', key: 'codigoBarras', width: 18 },
+    { header: 'tipo', key: 'tipo', width: 18 },
   ];
   ws.getRow(1).font = { bold: true };
   ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE4EC' } };
@@ -236,6 +252,7 @@ export async function gerarModelo(): Promise<Buffer> {
     ordem: 1,
     ativo: 'sim',
     codigoBarras: '7891234567890',
+    tipo: 'kit',
   });
 
   const ajuda = wb.addWorksheet('Como preencher');
@@ -257,6 +274,7 @@ export async function gerarModelo(): Promise<Buffer> {
     ['ordem', 'não', 'Posição na vitrine. Menor aparece primeiro.'],
     ['ativo', 'não', 'sim ou nao. Em branco mantém como está.'],
     ['codigo de barras', 'não', 'EAN da embalagem. É o que o leitor do balcão lê para achar o produto na hora da venda.'],
+    ['tipo', 'não', `kit ou individual. Produto individual não pode custar menos de R$ ${PRECO_MINIMO_INDIVIDUAL},00; kit pode. Em branco mantém como está (produto novo nasce kit).`],
   ].forEach(([c, o, d]) => ajuda.addRow({ c, o, d }));
 
   const buf = await wb.xlsx.writeBuffer();

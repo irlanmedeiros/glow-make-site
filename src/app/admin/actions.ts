@@ -10,6 +10,7 @@ import { cancelarAssinatura as cancelarNoAsaas, asaasConfigurado } from '@/lib/a
 import { cancelarPedido, recusarCancelamentoPedido, ErroCancelamento } from '@/lib/cancelamento';
 import { PREFIXO_AVATAR_EXEMPLO } from '@/lib/conteudo';
 import { codigoLivre, validarCupom } from '@/lib/cupom';
+import { erroDePreco, tipoValido } from '@/lib/produto';
 
 /**
  * Toda ação confere o login por conta própria. O layout do admin já barra a
@@ -167,15 +168,21 @@ export async function salvarKit(fd: FormData) {
     .filter(Boolean);
 
   if (!nome || !sku) voltar('/admin/kits', 'Nome e SKU são obrigatórios.', 'erro');
-  if (!Number.isFinite(preco) || preco <= 0) {
-    voltar('/admin/kits', 'Preço inválido. Use o formato 129,90.', 'erro');
-  }
+
+  /* A caixa da assinatura nao muda de tipo pelo formulario: ela e unica e o
+     fluxo dela depende disso. Produto novo sem tipo nasce kit. */
+  const atual = id ? await prisma.kit.findUnique({ where: { id }, select: { tipo: true } }) : null;
+  const tipo = atual?.tipo === 'BOX' ? 'BOX' : (tipoValido(texto(fd, 'tipo', 20)) ?? 'KIT');
+
+  const erroPreco = erroDePreco(tipo, Number.isFinite(preco) ? preco : null);
+  if (erroPreco) voltar('/admin/kits', erroPreco, 'erro');
 
   const codigoBarras = texto(fd, 'codigoBarras', 60) || null;
 
   const dados = {
     nome,
     sku,
+    tipo,
     descricao,
     itens,
     codigoBarras,

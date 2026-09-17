@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { num } from '@/lib/format';
 import { linkWhatsapp } from '@/lib/acompanhamento';
 import { avisosPublicaveis, ehDepoimentoDeExemplo, iniciais, semPromocaoEncerrada } from '@/lib/conteudo';
+import { TIPOS_NA_VITRINE } from '@/lib/produto';
 import Hero from '@/components/Hero';
 import { Reveal } from '@/components/Enfeites';
 import Consentimento from '@/components/Consentimento';
@@ -66,7 +67,8 @@ const PALAVRAS = [
 
 export default async function Home() {
   const [kitsDb, boxDb, bannersDb, depoimentosDb, configDb] = await Promise.all([
-    prisma.kit.findMany({ where: { ativo: true, tipo: 'KIT' }, orderBy: { ordem: 'asc' } }),
+    // Kits e produtos individuais dividem a mesma vitrine; a BOX tem fluxo proprio.
+    prisma.kit.findMany({ where: { ativo: true, tipo: { in: TIPOS_NA_VITRINE } }, orderBy: { ordem: 'asc' } }),
     prisma.kit.findFirst({ where: { tipo: 'BOX' } }),
     prisma.banner.findMany({ where: { ativo: true }, orderBy: { ordem: 'asc' } }),
     prisma.depoimento.findMany({ where: { ativo: true }, orderBy: { ordem: 'asc' } }),

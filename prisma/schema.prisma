@@ -14,8 +14,9 @@ datasource db {
 }
 
 enum TipoProduto {
-  KIT
-  BOX
+  KIT        // conjunto montado; pode custar menos de R$ 50
+  BOX        // a caixa da assinatura
+  INDIVIDUAL // produto vendido sozinho; preco minimo de R$ 50 (src/lib/produto.ts)
 }
 
 enum TipoMovimentacao {
