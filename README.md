@@ -40,8 +40,8 @@ qualquer teste mexe em pedido e estoque reais.
 | Variável | Obrigatória | Para quê |
 |---|---|---|
 | `DATABASE_URL` | sim | PostgreSQL |
-| `ADMIN_PASSWORD` | sim | senha do painel completo |
-| `EQUIPE_PASSWORD` | sim | senha da equipe da loja (só `/catalogo`) |
+| `ADMIN_PASSWORD` | sim | senha mestra do painel (login sem usuário); o dia a dia usa Admin > Usuários |
+| `EQUIPE_PASSWORD` | não | senha mestra da equipe (só `/catalogo`); opcional com usuários cadastrados |
 | `AUTH_SECRET` | sim | assina o cookie de sessão (mín. 16 caracteres) |
 | `ASAAS_API_KEY` | não | sem ela, nenhuma cobrança é gerada |
 | `ASAAS_ENV` | não | `sandbox` ou `producao` |

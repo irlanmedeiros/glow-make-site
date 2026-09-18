@@ -57,8 +57,21 @@ Ao criar uma server action nova, **chame `exigirLogin()` (admin) ou
 
 `src/lib/auth.ts`
 
-Duas senhas, um formulário. O **papel faz parte do texto assinado** do cookie,
-então não dá para editar o cookie e virar admin.
+Cada pessoa entra com usuário e senha cadastrados em **Admin > Usuários**
+(tabela `Usuario`, hash scrypt em `src/lib/senha.ts`). O **papel, o id do
+usuário e a versão da sessão fazem parte do texto assinado** do cookie, então
+não dá para editar o cookie e virar admin, nem virar outra pessoa.
+
+- **A assinatura não basta.** `sessaoAtual()` confere no banco, a cada
+  requisição, se o usuário existe, está ativo, tem o mesmo papel e a mesma
+  `versaoSessao`. Trocar senha, papel, desativar ou "Desconectar aparelhos"
+  soma 1 na versão e derruba na hora todo cookie antigo — sem isso a sessão da
+  equipe viveria 30 dias depois de a pessoa sair da loja.
+- **`ADMIN_PASSWORD` e `EQUIPE_PASSWORD` continuam valendo**, como senha
+  mestra: login com o campo de usuário em branco. É a chave reserva para
+  ninguém se trancar fora do painel. Tirar a variável da Vercel encerra também
+  as sessões que ela abriu. Não apague as duas sem ter um admin cadastrado.
+- Cinco senhas erradas seguidas travam aquele login por 15 minutos.
 
 - `admin` → tudo. Sessão de 12h.
 - `equipe` → só `/catalogo`. Sessão de 30 dias, porque a vendedora usa o

@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { ehAdmin } from '@/lib/auth';
+import { sessaoAtual } from '@/lib/auth';
 import { sair } from '../actions';
 import {
   IcPainel,
@@ -20,6 +20,7 @@ import {
   IcLeads,
   IcVendas,
   IcCupons,
+  IcUsuarios,
 } from '@/components/Icones';
 
 export const dynamic = 'force-dynamic';
@@ -39,6 +40,7 @@ const MENU = [
   { href: '/admin/banners', rotulo: 'Banners', Icone: IcBanners },
   { href: '/admin/depoimentos', rotulo: 'Depoimentos', Icone: IcDepoimentos },
   { href: '/admin/importar', rotulo: 'Importar planilha', Icone: IcImportar },
+  { href: '/admin/usuarios', rotulo: 'Usuários', Icone: IcUsuarios },
   { href: '/admin/config', rotulo: 'Configurações', Icone: IcConfig },
 ];
 
@@ -49,7 +51,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   // Aqui é a checagem que vale: valida assinatura, validade e PAPEL do token
   // em Node. O middleware só faz o redirecionamento rápido de quem nem cookie
   // tem — e não sabe distinguir admin de vendedora, porque roda no Edge.
-  if (!(await ehAdmin())) redirect('/admin/login');
+  const eu = await sessaoAtual();
+  if (eu?.papel !== 'admin') redirect('/admin/login');
 
   return (
     <div className="adm">
@@ -72,6 +75,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </nav>
 
         <div className="sep">
+          <p className="adm-quem">Entrou como <b>{eu.nome}</b></p>
           <Link className="adm-nav" href="/" target="_blank">
             <IcSite />
             Ver o site

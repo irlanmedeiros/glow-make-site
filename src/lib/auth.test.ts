@@ -6,7 +6,7 @@ import { createHmac } from 'node:crypto';
 // não tocam em cookie — o mock existe só para o módulo carregar.
 vi.mock('next/headers', () => ({ cookies: async () => ({ get: () => undefined, set: () => {}, delete: () => {} }) }));
 
-import { papelDaSenha, papelDoToken, senhaAdminConfigurada, senhaEquipeConfigurada } from './auth';
+import { lerToken, papelDaSenha, papelDoToken, senhaAdminConfigurada, senhaEquipeConfigurada } from './auth';
 
 /**
  * O cookie de sessão é a única coisa entre a internet e o painel. O papel faz
@@ -30,8 +30,15 @@ afterEach(() => {
 });
 
 /** Monta um token do mesmo jeito que o auth.ts monta. */
-function token(papel: string, expiraEm = Date.now() + 60_000, segredo = SEGREDO, nonce = 'abcdef0123456789') {
-  const payload = `${expiraEm}.${nonce}.${papel}`;
+function token(
+  papel: string,
+  expiraEm = Date.now() + 60_000,
+  segredo = SEGREDO,
+  nonce = 'abcdef0123456789',
+  usuario = 'mestra',
+  versao = '0'
+) {
+  const payload = `${expiraEm}.${nonce}.${papel}.${usuario}.${versao}`;
   const assinatura = createHmac('sha256', segredo).update(payload).digest('hex');
   return `${payload}.${assinatura}`;
 }
@@ -88,6 +95,7 @@ describe('papelDoToken — recusa o resto', () => {
   it('recusa token com número de partes errado', () => {
     expect(papelDoToken('a.b.c')).toBe(null);
     expect(papelDoToken('a.b.c.d.e')).toBe(null);
+    expect(papelDoToken('a.b.c.d.e.f.g')).toBe(null);
     expect(papelDoToken('lixo')).toBe(null);
   });
 
@@ -105,8 +113,19 @@ describe('papelDoToken — recusa o resto', () => {
     expect(papelDoToken(token('admin', Date.now() - 1000))).toBe(null);
   });
 
+  it('recusa o formato antigo, sem usuário e versão: quem estava logado entra de novo', () => {
+    const payload = `${Date.now() + 60_000}.abc.admin`;
+    const t = `${payload}.${createHmac('sha256', SEGREDO).update(payload).digest('hex')}`;
+    expect(papelDoToken(t)).toBe(null);
+  });
+
+  it('recusa versão de sessão que não é inteiro', () => {
+    expect(lerToken(token('admin', undefined, undefined, undefined, 'u1', '-1'))).toBe(null);
+    expect(lerToken(token('admin', undefined, undefined, undefined, 'u1', 'x'))).toBe(null);
+  });
+
   it('recusa validade não numérica', () => {
-    const payload = `sempre.abc.admin`;
+    const payload = `sempre.abc.admin.mestra.0`;
     const t = `${payload}.${createHmac('sha256', SEGREDO).update(payload).digest('hex')}`;
     expect(papelDoToken(t)).toBe(null);
   });
@@ -120,8 +139,8 @@ describe('papelDoToken — recusa o resto', () => {
 describe('papelDoToken — escalada de privilégio', () => {
   it('trocar "equipe" por "admin" no cookie NÃO promove: o papel é assinado', () => {
     const daEquipe = token('equipe');
-    const [expira, nonce, , assinatura] = daEquipe.split('.');
-    const forjado = `${expira}.${nonce}.admin.${assinatura}`;
+    const [expira, nonce, , uid, versao, assinatura] = daEquipe.split('.');
+    const forjado = `${expira}.${nonce}.admin.${uid}.${versao}.${assinatura}`;
 
     expect(papelDoToken(daEquipe)).toBe('equipe');
     expect(papelDoToken(forjado)).toBe(null);
@@ -129,10 +148,36 @@ describe('papelDoToken — escalada de privilégio', () => {
 
   it('esticar a validade no cookie NÃO renova: a validade é assinada', () => {
     const vencido = token('admin', Date.now() - 1000);
-    const [, nonce, papel, assinatura] = vencido.split('.');
-    const esticado = `${Date.now() + 999_999}.${nonce}.${papel}.${assinatura}`;
+    const [, nonce, papel, uid, versao, assinatura] = vencido.split('.');
+    const esticado = `${Date.now() + 999_999}.${nonce}.${papel}.${uid}.${versao}.${assinatura}`;
 
     expect(papelDoToken(esticado)).toBe(null);
+  });
+
+  it('trocar o id do usuário no cookie NÃO vira outra pessoa: o id é assinado', () => {
+    const t = token('equipe', undefined, undefined, undefined, 'usuario-balcao', '3');
+    const [expira, nonce, papel, , versao, assinatura] = t.split('.');
+    expect(lerToken(`${expira}.${nonce}.${papel}.usuario-dono.${versao}.${assinatura}`)).toBe(null);
+  });
+
+  it('voltar a versão no cookie NÃO ressuscita sessão encerrada: a versão é assinada', () => {
+    const t = token('admin', undefined, undefined, undefined, 'u1', '2');
+    const [expira, nonce, papel, uid, , assinatura] = t.split('.');
+    expect(lerToken(`${expira}.${nonce}.${papel}.${uid}.1.${assinatura}`)).toBe(null);
+  });
+});
+
+describe('lerToken', () => {
+  it('senha mestra não tem usuário', () => {
+    expect(lerToken(token('admin'))).toEqual({ papel: 'admin', usuarioId: null, versao: 0 });
+  });
+
+  it('usuário cadastrado leva id e versão, que sessaoAtual confere no banco', () => {
+    expect(lerToken(token('equipe', undefined, undefined, undefined, 'cmabc123', '4'))).toEqual({
+      papel: 'equipe',
+      usuarioId: 'cmabc123',
+      versao: 4,
+    });
   });
 });
 

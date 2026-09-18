@@ -4,7 +4,18 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import { abrirSessao, ehAdmin, fecharSessao, papelDaSenha, senhaAdminConfigurada, senhaEquipeConfigurada } from '@/lib/auth';
+import {
+  abrirSessao,
+  ehAdmin,
+  fecharSessao,
+  papelDaSenha,
+  papelDoUsuario,
+  senhaAdminConfigurada,
+  senhaEquipeConfigurada,
+  sessaoAtual,
+} from '@/lib/auth';
+import { autenticarUsuario } from '@/lib/usuarios';
+import { erroDeLogin, erroDeSenha, gerarHash, normalizarLogin } from '@/lib/senha';
 import { devolverEstoque } from '@/lib/estoque';
 import { cancelarAssinatura as cancelarNoAsaas, asaasConfigurado } from '@/lib/asaas';
 import { cancelarPedido, recusarCancelamentoPedido, ErroCancelamento } from '@/lib/cancelamento';
@@ -43,15 +54,30 @@ function voltar(rota: string, msg: string, tipo: 'ok' | 'erro' = 'ok'): never {
    ============================================================ */
 
 /**
- * Um formulário só para os dois papéis: a senha digitada é que decide se a
- * pessoa cai no painel completo ou no catálogo da loja.
+ * Um formulário só para os dois papéis. Com usuário preenchido, vale o cadastro
+ * de Admin > Usuários e o papel dele decide se a pessoa cai no painel ou no
+ * catálogo. Sem usuário, a senha é conferida contra a senha mestra.
  */
 export async function entrar(_estado: unknown, fd: FormData) {
-  if (!senhaAdminConfigurada() && !senhaEquipeConfigurada()) {
-    return { erro: 'Nenhuma senha configurada no servidor (ADMIN_PASSWORD ou EQUIPE_PASSWORD).' };
+  const login = normalizarLogin(fd.get('usuario'));
+  const senha = String(fd.get('senha') ?? '');
+
+  if (login) {
+    const r = await autenticarUsuario(login, senha);
+    if (!r.ok) {
+      await new Promise((ok) => setTimeout(ok, 600));
+      return { erro: r.erro };
+    }
+    const papel = papelDoUsuario(r.usuario.papel);
+    await abrirSessao(papel, r.usuario);
+    redirect(papel === 'admin' ? '/admin' : '/catalogo');
   }
 
-  const papel = papelDaSenha(String(fd.get('senha') ?? ''));
+  if (!senhaAdminConfigurada() && !senhaEquipeConfigurada()) {
+    return { erro: 'Informe seu usuário.' };
+  }
+
+  const papel = papelDaSenha(senha);
   if (!papel) {
     // Espera curta para desestimular tentativa em massa por força bruta.
     await new Promise((r) => setTimeout(r, 600));
@@ -526,6 +552,130 @@ export async function excluirCupom(fd: FormData) {
   if (usos > 0) voltar('/admin/cupons', 'Este cupom já foi usado. Desative em vez de excluir.', 'erro');
   const c = await prisma.cupom.delete({ where: { id } });
   voltar('/admin/cupons', `Cupom ${c.codigo} excluído.`);
+}
+
+/* ============================================================
+   Usuários
+   ============================================================ */
+
+const USUARIOS = '/admin/usuarios';
+
+function papelDoForm(fd: FormData): 'ADMIN' | 'EQUIPE' | null {
+  const p = texto(fd, 'papel');
+  return p === 'ADMIN' || p === 'EQUIPE' ? p : null;
+}
+
+/** Quem está logado agora, para as regras de "não mexa no próprio acesso". */
+async function euMesmo(): Promise<string | null> {
+  return (await sessaoAtual())?.usuarioId ?? null;
+}
+
+export async function criarUsuario(fd: FormData) {
+  await exigirLogin();
+  const nome = texto(fd, 'nome', 80);
+  const login = normalizarLogin(fd.get('login'));
+  const papel = papelDoForm(fd);
+  const senha = String(fd.get('senha') ?? '');
+
+  if (!nome) voltar(USUARIOS, 'Informe o nome.', 'erro');
+  const erro = erroDeLogin(login) ?? erroDeSenha(senha, String(fd.get('confirmacao') ?? ''));
+  if (erro) voltar(USUARIOS, erro, 'erro');
+  if (!papel) voltar(USUARIOS, 'Escolha o tipo de acesso.', 'erro');
+
+  try {
+    await prisma.usuario.create({ data: { nome, login, papel, senhaHash: await gerarHash(senha) } });
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+      voltar(USUARIOS, `Já existe alguém com o usuário "${login}".`, 'erro');
+    }
+    throw e;
+  }
+  voltar(USUARIOS, `Acesso de ${nome} criado. Usuário: ${login}.`);
+}
+
+export async function alterarUsuario(fd: FormData) {
+  await exigirLogin();
+  const id = texto(fd, 'id');
+  const nome = texto(fd, 'nome', 80);
+  const papel = papelDoForm(fd);
+  if (!nome || !papel) voltar(USUARIOS, 'Informe nome e tipo de acesso.', 'erro');
+
+  const u = await prisma.usuario.findUnique({ where: { id } });
+  if (!u) voltar(USUARIOS, 'Usuário não encontrado.', 'erro');
+  const mudouPapel = u.papel !== papel;
+  if (mudouPapel && id === (await euMesmo())) {
+    voltar(USUARIOS, 'Você não pode mudar o seu próprio tipo de acesso. Peça a outro admin.', 'erro');
+  }
+
+  await prisma.usuario.update({
+    where: { id },
+    // Papel novo derruba as sessões abertas: quem virou equipe não pode seguir
+    // no painel com o cookie de admin que já tinha.
+    data: { nome, papel, ...(mudouPapel && { versaoSessao: { increment: 1 } }) },
+  });
+  voltar(USUARIOS, `${nome} atualizado.`);
+}
+
+export async function redefinirSenhaUsuario(fd: FormData) {
+  await exigirLogin();
+  const id = texto(fd, 'id');
+  const senha = String(fd.get('senha') ?? '');
+  const erro = erroDeSenha(senha, String(fd.get('confirmacao') ?? ''));
+  if (erro) voltar(USUARIOS, erro, 'erro');
+
+  const existe = await prisma.usuario.findUnique({ where: { id }, select: { id: true } });
+  if (!existe) voltar(USUARIOS, 'Usuário não encontrado.', 'erro');
+
+  // Senha nova encerra as sessões abertas com a antiga e destrava o login.
+  const u = await prisma.usuario.update({
+    where: { id },
+    data: {
+      senhaHash: await gerarHash(senha),
+      versaoSessao: { increment: 1 },
+      tentativasFalhas: 0,
+      bloqueadoAte: null,
+    },
+  });
+
+  // Quem trocou a própria senha continua logado neste aparelho; os outros caem.
+  if (id === (await euMesmo())) await abrirSessao(papelDoUsuario(u.papel), u);
+  voltar(USUARIOS, `Senha de ${u.nome} trocada. Os aparelhos que estavam conectados precisam entrar de novo.`);
+}
+
+export async function alternarUsuario(fd: FormData) {
+  await exigirLogin();
+  const id = texto(fd, 'id');
+  if (id === (await euMesmo())) voltar(USUARIOS, 'Você não pode desativar o seu próprio acesso.', 'erro');
+
+  const u = await prisma.usuario.findUnique({ where: { id } });
+  if (!u) voltar(USUARIOS, 'Usuário não encontrado.', 'erro');
+  await prisma.usuario.update({
+    where: { id },
+    data: u.ativo
+      ? { ativo: false, versaoSessao: { increment: 1 } }
+      : { ativo: true, tentativasFalhas: 0, bloqueadoAte: null },
+  });
+  voltar(USUARIOS, u.ativo ? `Acesso de ${u.nome} desativado. Ele sai na hora de todos os aparelhos.` : `Acesso de ${u.nome} reativado.`);
+}
+
+export async function encerrarSessoesUsuario(fd: FormData) {
+  await exigirLogin();
+  const id = texto(fd, 'id');
+  if (id === (await euMesmo())) voltar(USUARIOS, 'Para sair deste aparelho, use o botão Sair.', 'erro');
+
+  const u = await prisma.usuario.update({ where: { id }, data: { versaoSessao: { increment: 1 } } }).catch(() => null);
+  if (!u) voltar(USUARIOS, 'Usuário não encontrado.', 'erro');
+  voltar(USUARIOS, `${u.nome} foi desconectado de todos os aparelhos.`);
+}
+
+export async function excluirUsuario(fd: FormData) {
+  await exigirLogin();
+  const id = texto(fd, 'id');
+  if (id === (await euMesmo())) voltar(USUARIOS, 'Você não pode excluir o seu próprio acesso.', 'erro');
+
+  const u = await prisma.usuario.delete({ where: { id } }).catch(() => null);
+  if (!u) voltar(USUARIOS, 'Usuário não encontrado.', 'erro');
+  voltar(USUARIOS, `Acesso de ${u.nome} excluído.`);
 }
 
 /* ============================================================

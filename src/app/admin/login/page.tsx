@@ -13,16 +13,21 @@ export default function Login() {
         <img src="/assets/logo.png" alt="Glow Make" />
 
         <div className="field">
-          <label htmlFor="senha">Sua senha de acesso</label>
+          <label htmlFor="usuario">Usuário</label>
           <input
-            id="senha"
-            name="senha"
-            type="password"
-            required
+            id="usuario"
+            name="usuario"
             autoFocus
-            autoComplete="current-password"
-            placeholder="••••••••"
+            autoCapitalize="none"
+            autoComplete="username"
+            spellCheck={false}
+            maxLength={40}
           />
+        </div>
+
+        <div className="field">
+          <label htmlFor="senha">Senha</label>
+          <input id="senha" name="senha" type="password" required autoComplete="current-password" />
         </div>
 
         {estado?.erro && <div className="note erro">{estado.erro}</div>}
@@ -32,9 +37,8 @@ export default function Login() {
         </button>
 
         <div className="note" style={{ marginTop: 16 }}>
-          A senha do administrador abre o painel completo. A senha da equipe abre só o{' '}
-          <b>catálogo da loja</b>, com o estoque ao vivo. As duas ficam no servidor e nunca são
-          enviadas para o navegador.
+          Administrador entra no painel completo. A equipe do balcão entra direto no{' '}
+          <b>catálogo da loja</b>, com o estoque ao vivo. Os acessos são criados em Admin &gt; Usuários.
         </div>
       </form>
     </div>

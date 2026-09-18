@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
-import { podeVerCatalogo, sessao } from '@/lib/auth';
+import { podeVerCatalogo, sessaoAtual } from '@/lib/auth';
 import { devolverEstoque } from '@/lib/estoque';
 import {
   registrarVenda,
@@ -207,7 +207,7 @@ export async function registrarPerda(
   if (!Number.isInteger(qtd) || qtd < 1 || qtd > 50) return { erro: 'Quantidade inválida.' };
   if (!motivo) return { erro: 'Diga o motivo da baixa (quebra, perda, brinde...).' };
 
-  const papel = await sessao();
+  const eu = await sessaoAtual();
   const kit = await prisma.kit.findUnique({ where: { id } });
   if (!kit) return { erro: 'Produto não encontrado.' };
   if (kit.entradas - kit.saidas < qtd) {
@@ -225,7 +225,7 @@ export async function registrarPerda(
         nome: atualizado.nome,
         tipo: 'SAIDA',
         qtd,
-        origem: `Baixa sem venda (${motivo}) — ${papel === 'admin' ? 'admin' : 'equipe'}`,
+        origem: `Baixa sem venda (${motivo}) — ${eu?.nome ?? 'sessão encerrada'}`,
         saldoApos: atualizado.entradas - atualizado.saidas,
       },
     });

@@ -123,7 +123,7 @@ As duas chaves sozinhas **não concluem a integração**.
 | Repositório | colaborador no GitHub |
 | Vercel | membro do projeto `glow-make-site` |
 | Banco | branch de desenvolvimento no Neon — **não o de produção** |
-| Senhas do admin | `ADMIN_PASSWORD` e `EQUIPE_PASSWORD`, pelo dono |
+| Senhas do admin | usuário próprio em Admin > Usuários; senha mestra (`ADMIN_PASSWORD`) só com o dono |
 
 **Nunca aponte o ambiente local para o banco de produção.** Qualquer teste
 mexeria em pedido, estoque e caixa reais.

@@ -518,3 +518,39 @@ model Cupom {
 
   @@index([ativo])
 }
+
+enum PapelUsuario {
+  ADMIN
+  EQUIPE
+}
+
+/**
+ * Acesso nominal ao painel e ao balcão. Antes havia só duas senhas
+ * compartilhadas em variável de ambiente: trocar a da equipe exigia mexer na
+ * Vercel e derrubava todo mundo junto, e não dava para tirar o acesso de uma
+ * pessoa só. ADMIN_PASSWORD e EQUIPE_PASSWORD continuam valendo como senha
+ * mestra — é o que impede a loja de ficar trancada para fora do próprio painel.
+ */
+model Usuario {
+  id    String       @id @default(cuid())
+  nome  String
+  login String       @unique // sempre minúsculo; ver normalizarLogin
+  papel PapelUsuario
+
+  // scrypt com sal próprio (src/lib/senha.ts). A senha em si não fica em lugar nenhum.
+  senhaHash String
+  ativo     Boolean @default(true)
+
+  // Vai dentro do cookie. Trocar senha, papel ou desativar soma 1 aqui, e todo
+  // cookie emitido antes deixa de valer na hora — inclusive o de um celular
+  // perdido. Sem isso, a sessão da equipe duraria 30 dias depois da demissão.
+  versaoSessao Int @default(0)
+
+  // Trava por usuário depois de errar a senha várias vezes seguidas.
+  tentativasFalhas Int       @default(0)
+  bloqueadoAte     DateTime?
+
+  ultimoAcesso DateTime?
+  criadoEm     DateTime  @default(now())
+  atualizadoEm DateTime  @updatedAt
+}
