@@ -2,7 +2,7 @@
 
 Loja de kits de presente com venda online, PDV de balcão e assinatura mensal.
 
-**Produção:** https://glow-make-site.vercel.app
+**Produção:** https://www.glowmake10.com (o endereço sem `www` redireciona)
 **Stack:** Next.js 15 (App Router) · TypeScript · Prisma · PostgreSQL (Neon) · Vercel
 
 > **Novo no projeto?** Leia [`docs/DECISOES.md`](docs/DECISOES.md) antes de mexer no

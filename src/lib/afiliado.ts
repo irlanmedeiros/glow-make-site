@@ -5,7 +5,7 @@ import { prisma } from './prisma';
 /**
  * Programa de afiliados.
  *
- * Cada influenciador tem um código que vira glowmake.com.br/?ref=CODIGO.
+ * Cada influenciador tem um código que vira www.glowmake10.com/?ref=CODIGO.
  * O código é gravado num cookie de 30 dias; quem chegou pelo link e comprou
  * duas semanas depois ainda conta para ele.
  *

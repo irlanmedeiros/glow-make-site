@@ -1,3 +1,4 @@
+import { headers } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import { real, dataHora, num } from '@/lib/format';
 import { salvarAfiliado, pagarComissoes } from '../../actions';
@@ -108,7 +109,13 @@ export default async function Afiliados({ searchParams }: Props) {
     prisma.config.findUnique({ where: { id: 'config' } }),
   ]);
 
-  const site = 'https://glow-make-site.vercel.app';
+  /* O link sai do endereco em que o admin esta aberto. Era fixo no endereco
+     antigo da Vercel, e quando o dominio mudou todo link divulgado passou a
+     dar 404 — com a comissao do influenciador perdida junto. */
+  const h = await headers();
+  const host = h.get('x-forwarded-host') ?? h.get('host') ?? 'www.glowmake10.com';
+  const protocolo = h.get('x-forwarded-proto') ?? (host.startsWith('localhost') ? 'http' : 'https');
+  const site = `${protocolo}://${host}`;
   const soma = (id: string, status: string) =>
     comissoes.filter((c) => c.afiliadoId === id && c.status === status).reduce((s, c) => s + num(c.valor), 0);
 
