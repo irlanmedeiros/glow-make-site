@@ -107,8 +107,12 @@ As duas chaves sozinhas **não concluem a integração**.
    regra morta "frete grátis acima de R$ 199" ainda aparecendo nos avisos.
    As **dimensões da caixa (11 × 20 × 25 cm) estão fixas no código**, em
    `frete.ts`, apesar do comentário mandar ajustar em Configurações.
-6. **Domínio próprio.** Hoje é `glow-make-site.vercel.app`. Resolver **antes**
-   de cadastrar o webhook, senão a URL terá que ser refeita.
+6. **Domínio próprio: `www.glowmake10.com`**, desde 18/09/2026 (o endereço
+   sem `www` redireciona). O webhook do Asaas precisa apontar para
+   `https://www.glowmake10.com/api/asaas/webhook`, **com `www`**: webhook não
+   costuma seguir redirecionamento. O endereço antigo `glow-make-site.vercel.app`
+   deixou de responder; links de afiliado divulgados com ele só voltam a
+   funcionar se ele for readicionado na Vercel com redirecionamento.
 
 ---
 

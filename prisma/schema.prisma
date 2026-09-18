@@ -316,7 +316,7 @@ model Config {
 model Afiliado {
   id        String  @id @default(cuid())
   nome      String
-  codigo    String  @unique   // vira glowmake.com.br/?ref=CODIGO
+  codigo    String  @unique   // vira www.glowmake10.com/?ref=CODIGO
   email     String
   telefone  String  @default("")
   instagram String  @default("")

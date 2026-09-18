@@ -108,7 +108,7 @@ export async function cotarMelhorEnvio(params: {
       Accept: 'application/json',
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
-      'User-Agent': 'Glow Make (contato@glowmake.com.br)',
+      'User-Agent': 'Glow Make (www.glowmake10.com)',
     },
     body: JSON.stringify(corpo),
     cache: 'no-store',
