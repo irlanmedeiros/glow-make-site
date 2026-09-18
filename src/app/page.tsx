@@ -3,6 +3,7 @@ import { num } from '@/lib/format';
 import { linkWhatsapp } from '@/lib/acompanhamento';
 import { avisosPublicaveis, ehDepoimentoDeExemplo, iniciais, semPromocaoEncerrada } from '@/lib/conteudo';
 import { TIPOS_NA_VITRINE } from '@/lib/produto';
+import { assinaturaAtiva } from '@/lib/recursos';
 import Hero from '@/components/Hero';
 import { Reveal } from '@/components/Enfeites';
 import Consentimento from '@/components/Consentimento';
@@ -57,15 +58,14 @@ const PASSOS = [
   },
 ];
 
-const PALAVRAS = [
-  'Pronto para presentear',
-  'Embalagem inclusa',
-  'Amor em cada detalhe',
-  'Sem fidelidade',
-  'Curadoria mensal',
-];
+const PALAVRAS = ['Pronto para presentear', 'Embalagem inclusa', 'Amor em cada detalhe'];
+// Estas falam da assinatura e so entram na faixa quando ela esta no ar.
+const PALAVRAS_ASSINATURA = ['Sem fidelidade', 'Curadoria mensal'];
 
 export default async function Home() {
+  // Assinatura pronta e escondida ate o lancamento (src/lib/recursos.ts).
+  const assinatura = assinaturaAtiva();
+  const palavras = assinatura ? [...PALAVRAS, ...PALAVRAS_ASSINATURA] : PALAVRAS;
   const [kitsDb, boxDb, bannersDb, depoimentosDb, configDb] = await Promise.all([
     // Kits e produtos individuais dividem a mesma vitrine; a BOX tem fluxo proprio.
     prisma.kit.findMany({ where: { ativo: true, tipo: { in: TIPOS_NA_VITRINE } }, orderBy: { ordem: 'asc' } }),
@@ -118,7 +118,7 @@ export default async function Home() {
     contratoTexto: configDb?.contratoTexto ?? '',
     contratoVersao: configDb?.contratoVersao ?? 'v1',
     metaPixelId: configDb?.metaPixelId ?? '',
-    avisos: avisosPublicaveis(configDb?.avisos ?? []),
+    avisos: avisosPublicaveis(configDb?.avisos ?? [], { assinaturaAtiva: assinatura }),
     whatsapp: configDb?.whatsapp ?? '',
     email: configDb?.email ?? '',
     instagram: configDb?.instagram ?? '',
@@ -140,7 +140,7 @@ export default async function Home() {
   return (
     <Loja kits={kits} box={box} config={config}>
       <Topbar avisos={config.avisos} />
-      <Cabecalho temDepoimentos={temDepoimentos} />
+      <Cabecalho temDepoimentos={temDepoimentos} mostrarComoFunciona={assinatura} />
       <Consentimento pixelId={config.metaPixelId} />
 
       <Hero banners={banners} />
@@ -188,8 +188,8 @@ export default async function Home() {
                 Kits prontos para <span className="script">presentear</span>
               </h2>
               <p>
-                Montados um a um pela nossa equipe, com embalagem pronta para entregar. Compre
-                avulso ou receba todo mês na Glow Box.
+                Montados um a um pela nossa equipe, com embalagem pronta para entregar.
+                {assinatura && ' Compre avulso ou receba todo mês na Glow Box.'}
               </p>
               <div className="div-coracao">
                 <CoracaoTraco size={18} />
@@ -201,45 +201,47 @@ export default async function Home() {
       </section>
 
       {/* ---------- ASSINATURA ---------- */}
-      <section id="assinatura">
-        <div className="wrap">
-          <Reveal>
-            <div className="sub">
-              <div>
-                <div className="eyebrow">Assinatura mensal</div>
-                <h2>Glow Box: sua caixa de beleza <span className="script">todo mês</span></h2>
-                <p className="lead">
-                  De quatro a seis produtos selecionados chegando na sua casa. Sem fidelidade,
-                  cancele quando quiser.
-                </p>
-                <ListaBeneficios itens={semPromocaoEncerrada(box?.itens ?? [])} />
-                <BlocoAssinatura />
-                <div className="pay-brands">
-                  <span>PIX</span>
-                  <span>Boleto</span>
-                  <span>Cartão de crédito</span>
+      {assinatura && (
+        <section id="assinatura">
+          <div className="wrap">
+            <Reveal>
+              <div className="sub">
+                <div>
+                  <div className="eyebrow">Assinatura mensal</div>
+                  <h2>Glow Box: sua caixa de beleza <span className="script">todo mês</span></h2>
+                  <p className="lead">
+                    De quatro a seis produtos selecionados chegando na sua casa. Sem fidelidade,
+                    cancele quando quiser.
+                  </p>
+                  <ListaBeneficios itens={semPromocaoEncerrada(box?.itens ?? [])} />
+                  <BlocoAssinatura />
+                  <div className="pay-brands">
+                    <span>PIX</span>
+                    <span>Boleto</span>
+                    <span>Cartão de crédito</span>
+                  </div>
+                  <p className="sub-note">
+                    Cobrança recorrente mensal processada pelo Asaas. Você recebe o link de pagamento
+                    por e-mail e pode cancelar direto com a gente.
+                  </p>
                 </div>
-                <p className="sub-note">
-                  Cobrança recorrente mensal processada pelo Asaas. Você recebe o link de pagamento
-                  por e-mail e pode cancelar direto com a gente.
-                </p>
-              </div>
-              <div className="sub-img">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={box?.imagem ?? '/assets/kits/glowbox.jpg'} alt="Glow Box mensal" />
-                <div className="sub-float">
-                  Edição de agosto
-                  <b>Fecha dia 10</b>
+                <div className="sub-img">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={box?.imagem ?? '/assets/kits/glowbox.jpg'} alt="Glow Box mensal" />
+                  <div className="sub-float">
+                    Edição de agosto
+                    <b>Fecha dia 10</b>
+                  </div>
                 </div>
               </div>
-            </div>
-          </Reveal>
-        </div>
-      </section>
+            </Reveal>
+          </div>
+        </section>
+      )}
 
       <div className="strip">
         <div className="strip-track">
-          {[...PALAVRAS, ...PALAVRAS].map((p, i) => (
+          {[...palavras, ...palavras].map((p, i) => (
             <span key={`${p}-${i}`}>
               {p}
               <i> ·</i>
@@ -249,34 +251,36 @@ export default async function Home() {
       </div>
 
       {/* ---------- COMO FUNCIONA ---------- */}
-      <section id="como">
-        <div className="wrap">
-          <Reveal>
-            <div className="sec-head">
-              <div className="eyebrow">Como funciona</div>
-              <h2>Três passos até a <span className="script">sua Glow Box</span></h2>
-              <p>Do cadastro à entrega, sem burocracia e sem contrato de fidelidade.</p>
+      {assinatura && (
+        <section id="como">
+          <div className="wrap">
+            <Reveal>
+              <div className="sec-head">
+                <div className="eyebrow">Como funciona</div>
+                <h2>Três passos até a <span className="script">sua Glow Box</span></h2>
+                <p>Do cadastro à entrega, sem burocracia e sem contrato de fidelidade.</p>
+              </div>
+            </Reveal>
+            <div className="steps">
+              {PASSOS.map((p, i) => (
+                <Reveal key={p.n} delay={i * 90}>
+                  <article className="step">
+                    <div className="step-img">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={p.img} alt="" loading="lazy" />
+                      <div className="n">{p.n}</div>
+                    </div>
+                    <div className="step-body">
+                      <h4>{p.titulo}</h4>
+                      <p>{p.texto}</p>
+                    </div>
+                  </article>
+                </Reveal>
+              ))}
             </div>
-          </Reveal>
-          <div className="steps">
-            {PASSOS.map((p, i) => (
-              <Reveal key={p.n} delay={i * 90}>
-                <article className="step">
-                  <div className="step-img">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={p.img} alt="" loading="lazy" />
-                    <div className="n">{p.n}</div>
-                  </div>
-                  <div className="step-body">
-                    <h4>{p.titulo}</h4>
-                    <p>{p.texto}</p>
-                  </div>
-                </article>
-              </Reveal>
-            ))}
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* ---------- DEPOIMENTOS ---------- */}
       {/* So aparece com depoimento real cadastrado no admin. Secao vazia ou
@@ -350,8 +354,9 @@ export default async function Home() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img className="fl" src="/assets/logo.png" alt="Glow Make" />
               <p>
-                Kits de maquiagem selecionados e a Glow Box mensal entregue na sua casa. Beleza sem
-                complicação.
+                {assinatura
+                  ? 'Kits de maquiagem selecionados e a Glow Box mensal entregue na sua casa. Beleza sem complicação.'
+                  : 'Kits de maquiagem selecionados, prontos para presentear. Beleza sem complicação.'}
               </p>
               <div className="socials">
                 <a href="#" aria-label="Instagram"><Instagram /></a>
@@ -363,8 +368,8 @@ export default async function Home() {
               <h5>Loja</h5>
               <ul>
                 <li><a href="#kits">Todos os kits</a></li>
-                <li><a href="#assinatura">Assinatura</a></li>
-                <li><a href="#como">Como funciona</a></li>
+                {assinatura && <li><a href="#assinatura">Assinatura</a></li>}
+                {assinatura && <li><a href="#como">Como funciona</a></li>}
                 {temDepoimentos && <li><a href="#depo">Avaliações</a></li>}
               </ul>
             </div>

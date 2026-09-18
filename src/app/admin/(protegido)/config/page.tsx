@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { num } from '@/lib/format';
 import { asaasConfigurado } from '@/lib/asaas';
+import { assinaturaAtiva } from '@/lib/recursos';
 import { salvarConfig } from '../../actions';
 import { Aviso, Cabecalho, Painel, Pill, mensagens } from '@/components/admin/Ui';
 
@@ -147,6 +148,20 @@ export default async function Configuracoes({ searchParams }: Props) {
           <br />
           <br />
           Variáveis: <code>MELHOR_ENVIO_TOKEN</code> e <code>MELHOR_ENVIO_ENV</code>.
+        </div>
+      </Painel>
+
+      <Painel titulo="Assinatura (Glow Box)" descricao="Ligada por variável de ambiente">
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
+          <Pill cor={assinaturaAtiva() ? 'ok' : 'info'}>
+            {assinaturaAtiva() ? 'Oferecida no site' : 'Oculta para o público'}
+          </Pill>
+        </div>
+        <div className="note">
+          Oculta, a assinatura some da página inicial, do menu, do rodapé e dos avisos, e ninguém
+          consegue assinar. Nada é apagado: quem já assina continua vendo e cancelando em Meus
+          pedidos. Para lançar, defina <code>SUBSCRIPTION_ENABLED</code> como <code>true</code>{' '}
+          na Vercel e faça um Redeploy.
         </div>
       </Painel>
 

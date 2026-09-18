@@ -230,7 +230,14 @@ export function Topbar({ avisos }: { avisos: string[] }) {
 }
 
 // Sem depoimento real cadastrado a secao nao existe, e o link para ela tambem nao.
-export function Cabecalho({ temDepoimentos = false }: { temDepoimentos?: boolean }) {
+export function Cabecalho({
+  temDepoimentos = false,
+  mostrarComoFunciona = true,
+}: {
+  temDepoimentos?: boolean;
+  // "Como funciona" explica a assinatura; com ela oculta, o link some junto.
+  mostrarComoFunciona?: boolean;
+}) {
   const { qtdTotal, abrirCarrinho, pulso } = useLoja();
   const [grudado, setGrudado] = useState(false);
   const [busca, setBusca] = useState('');
@@ -276,7 +283,7 @@ export function Cabecalho({ temDepoimentos = false }: { temDepoimentos?: boolean
             banners do topo, não como mais um item de navegação. */}
         <nav className="main">
           <a href="#kits">Kits</a>
-          <a href="#como">Como funciona</a>
+          {mostrarComoFunciona && <a href="#como">Como funciona</a>}
           {temDepoimentos && <a href="#depo">Avaliações</a>}
           <a href="/meus-pedidos">Meus pedidos</a>
         </nav>
@@ -331,7 +338,7 @@ export function Cabecalho({ temDepoimentos = false }: { temDepoimentos?: boolean
           </div>
           <nav className="menu-mob-links" onClick={() => setMenuAberto(false)}>
             <a href="#kits">Kits</a>
-            <a href="#como">Como funciona</a>
+            {mostrarComoFunciona && <a href="#como">Como funciona</a>}
             {temDepoimentos && <a href="#depo">Avaliações</a>}
             <a href="/meus-pedidos">Meus pedidos</a>
           </nav>

@@ -27,8 +27,17 @@ export function semPromocaoEncerrada(textos: string[]): string[] {
   return textos.filter((t) => !menciona(t, PROMOCAO_ENCERRADA));
 }
 
-export function avisosPublicaveis(avisos: string[]): string[] {
-  return semPromocaoEncerrada(avisos).filter((t) => !menciona(t, FRETE_GRATIS_GERAL));
+// Com a assinatura oculta, aviso que a oferece tambem sai do topo.
+const OFERTA_DE_ASSINATURA = [/assin/i, /glow\s*box/i];
+
+export function avisosPublicaveis(
+  avisos: string[],
+  opcoes: { assinaturaAtiva?: boolean } = {}
+): string[] {
+  const assinaturaAtiva = opcoes.assinaturaAtiva ?? true;
+  return semPromocaoEncerrada(avisos)
+    .filter((t) => !menciona(t, FRETE_GRATIS_GERAL))
+    .filter((t) => assinaturaAtiva || !menciona(t, OFERTA_DE_ASSINATURA));
 }
 
 /** Foto de depoimento e opcional: nem toda cliente autoriza aparecer. */

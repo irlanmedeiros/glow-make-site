@@ -42,6 +42,20 @@ describe('avisosPublicaveis', () => {
   });
 });
 
+describe('avisosPublicaveis com a assinatura oculta', () => {
+  const avisos = [
+    'Assine a Glow Box até dia 10 e receba a edição deste mês',
+    'Parcele em até 6x sem juros no cartão',
+    'Conheça a Glowbox',
+  ];
+
+  it('tira o aviso da assinatura só quando ela está oculta', () => {
+    expect(avisosPublicaveis(avisos, { assinaturaAtiva: false })).toEqual(['Parcele em até 6x sem juros no cartão']);
+    expect(avisosPublicaveis(avisos, { assinaturaAtiva: true })).toEqual(avisos);
+    expect(avisosPublicaveis(avisos)).toEqual(avisos);
+  });
+});
+
 describe('iniciais', () => {
   it('usa primeira e ultima palavra', () => {
     expect(iniciais('Ana Maria de Souza')).toBe('AS');

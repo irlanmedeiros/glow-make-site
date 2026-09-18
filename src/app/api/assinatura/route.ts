@@ -5,10 +5,17 @@ import { asaasConfigurado, criarOuBuscarCliente, criarAssinatura } from '@/lib/a
 import { validarCliente } from '@/lib/validacao';
 import { afiliadoPorCodigo, gerarComissaoAssinatura } from '@/lib/afiliado';
 import { marcarConvertido } from '@/lib/lead';
+import { assinaturaAtiva } from '@/lib/recursos';
 
 export const runtime = 'nodejs';
 
 export async function POST(req: Request) {
+  // Oculta tambem no servidor: esconder o botao nao impede chamar a rota
+  // direto, e ninguem pode assinar algo que a loja ainda nao lancou.
+  if (!assinaturaAtiva()) {
+    return NextResponse.json({ erro: 'A assinatura ainda não está disponível.' }, { status: 404 });
+  }
+
   let corpo: { cliente?: unknown; aceitouContrato?: boolean; ref?: string };
   try {
     corpo = await req.json();
