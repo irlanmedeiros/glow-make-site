@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { salvarBanner, excluirBanner } from '../../actions';
 import { Aviso, Cabecalho, Painel, Pill, mensagens } from '@/components/admin/Ui';
+import CampoImagem from '@/components/admin/CampoImagem';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,7 +19,15 @@ type Campos = {
   ativo?: boolean;
 };
 
-function Formulario({ b, novo = false }: { b: Campos; novo?: boolean }) {
+function Formulario({
+  b,
+  novo = false,
+  uploadDisponivel,
+}: {
+  b: Campos;
+  novo?: boolean;
+  uploadDisponivel: boolean;
+}) {
   return (
     <form action={salvarBanner}>
       {b.id && <input type="hidden" name="id" value={b.id} />}
@@ -41,11 +50,18 @@ function Formulario({ b, novo = false }: { b: Campos; novo?: boolean }) {
         <textarea name="subtitulo" defaultValue={b.subtitulo ?? ''} rows={2} maxLength={240} />
       </div>
       <div className="field">
-        <label>Imagem</label>
-        <input name="imagem" defaultValue={b.imagem ?? ''} required maxLength={300} />
-        <small>
-          1600×720 px. O assunto principal deve ficar à direita — a esquerda é onde o texto entra.
-        </small>
+        <label>Arte do banner</label>
+        {/* O site nao escreve nada sobre a arte (docs/DECISOES.md #10): titulo,
+            preco e itens precisam estar desenhados na propria imagem. */}
+        <CampoImagem
+          name="imagem"
+          valorInicial={b.imagem ?? ''}
+          pasta="banners"
+          uploadDisponivel={uploadDisponivel}
+          obrigatorio
+          formato="banner"
+          dica="Arte pronta na proporção 20:9 (ex.: 2000 × 900 px). Aparece inteira, sem corte e sem texto por cima: título e preço vão desenhados na própria arte."
+        />
       </div>
       <div className="row2">
         <div className="field">
@@ -70,6 +86,7 @@ function Formulario({ b, novo = false }: { b: Campos; novo?: boolean }) {
 
 export default async function Banners({ searchParams }: Props) {
   const { ok, erro } = mensagens(await searchParams);
+  const uploadDisponivel = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
   const banners = await prisma.banner.findMany({ orderBy: { ordem: 'asc' } });
 
   return (
@@ -109,14 +126,14 @@ export default async function Banners({ searchParams }: Props) {
               Editar
             </summary>
             <div style={{ marginTop: 16 }}>
-              <Formulario b={b} />
+              <Formulario b={b} uploadDisponivel={uploadDisponivel} />
             </div>
           </details>
         </Painel>
       ))}
 
       <Painel titulo="Novo banner">
-        <Formulario b={{ ativo: true, ordem: banners.length + 1 }} novo />
+        <Formulario b={{ ativo: true, ordem: banners.length + 1 }} novo uploadDisponivel={uploadDisponivel} />
       </Painel>
     </>
   );

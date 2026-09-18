@@ -48,6 +48,7 @@ qualquer teste mexe em pedido e estoque reais.
 | `ASAAS_WEBHOOK_TOKEN` | não | sem ele o webhook recusa tudo, de propósito |
 | `MELHOR_ENVIO_TOKEN` | não | sem ele, frete fora da cidade-sede sai como "a combinar" |
 | `MELHOR_ENVIO_ENV` | não | `sandbox` ou `producao` |
+| `BLOB_READ_WRITE_TOKEN` | não | fotos enviadas pelo admin; sem ela, só dá para colar o endereço |
 
 O código **degrada em vez de quebrar**: sem Asaas o pedido é gravado sem
 cobrança; sem Melhor Envio o frete fica a combinar. Ver `docs/DECISOES.md`.

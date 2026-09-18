@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" role="img" aria-label="Produto sem foto">
+  <rect width="600" height="600" fill="#FDE2EC"/>
+  <rect x="190" y="230" width="220" height="170" rx="16" fill="none" stroke="#FFB3C9" stroke-width="10"/>
+  <path d="M190 280h220M250 230v-30h100v30" fill="none" stroke="#FFB3C9" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

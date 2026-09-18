@@ -3,6 +3,7 @@ import { real, num } from '@/lib/format';
 import { PRECO_MINIMO_INDIVIDUAL, ROTULO_TIPO, TIPOS_EDITAVEIS, type TipoProduto } from '@/lib/produto';
 import { salvarKit, alternarKit, excluirKit } from '../../actions';
 import { Aviso, Cabecalho, Painel, Pill, mensagens } from '@/components/admin/Ui';
+import CampoImagem from '@/components/admin/CampoImagem';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,7 +24,15 @@ type Campos = {
   codigoBarras?: string | null;
 };
 
-function Formulario({ k, novo = false }: { k: Campos; novo?: boolean }) {
+function Formulario({
+  k,
+  novo = false,
+  uploadDisponivel,
+}: {
+  k: Campos;
+  novo?: boolean;
+  uploadDisponivel: boolean;
+}) {
   return (
     <form action={salvarKit}>
       {k.id && <input type="hidden" name="id" value={k.id} />}
@@ -93,11 +102,14 @@ function Formulario({ k, novo = false }: { k: Campos; novo?: boolean }) {
       </div>
 
       <div className="field">
-        <label>Caminho da imagem</label>
-        <input name="imagem" defaultValue={k.imagem ?? '/assets/kits/kit-1.jpg'} maxLength={300} />
-        <small>
-          Arquivo dentro de <code>public/</code> (ex.: /assets/kits/kit-1.jpg) ou uma URL completa.
-        </small>
+        <label>Foto</label>
+        <CampoImagem
+          name="imagem"
+          valorInicial={k.imagem ?? ''}
+          pasta="produtos"
+          uploadDisponivel={uploadDisponivel}
+          dica="Foto quadrada fica melhor no card. Sem foto, o site mostra uma imagem neutra."
+        />
       </div>
 
       <div className="field">
@@ -114,6 +126,8 @@ function Formulario({ k, novo = false }: { k: Campos; novo?: boolean }) {
 
 export default async function Kits({ searchParams }: Props) {
   const { ok, erro } = mensagens(await searchParams);
+  // Sem a variavel do Blob, o campo de foto so aceita colar endereco.
+  const uploadDisponivel = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
   const produtos = await prisma.kit.findMany({
     orderBy: [{ tipo: 'asc' }, { ordem: 'asc' }],
     include: { _count: { select: { itensPedido: true } } },
@@ -126,6 +140,23 @@ export default async function Kits({ searchParams }: Props) {
         descricao="Nome, preço, itens e foto de cada produto do catálogo"
       />
       <Aviso ok={ok} erro={erro} />
+
+      {/* Criar fica em cima: e a acao mais comum de quem monta o catalogo, e
+          no fim de uma lista longa ninguem acha. */}
+      <Painel titulo="Novo produto ou kit" descricao="Nasce com estoque zero; lance a entrada na aba Estoque">
+        <details>
+          <summary style={{ cursor: 'pointer', color: 'var(--rose)', fontSize: 14, fontWeight: 600 }}>
+            Abrir formulário
+          </summary>
+          <div style={{ marginTop: 16 }}>
+            <Formulario
+              uploadDisponivel={uploadDisponivel}
+              k={{ ativo: true, estoqueBaixo: 10, ordem: produtos.length + 1 }}
+              novo
+            />
+          </div>
+        </details>
+      </Painel>
 
       {produtos.map((p) => {
         const saldo = p.entradas - p.saidas;
@@ -174,6 +205,7 @@ export default async function Kits({ searchParams }: Props) {
               </summary>
               <div style={{ marginTop: 16 }}>
                 <Formulario
+                  uploadDisponivel={uploadDisponivel}
                   k={{
                     id: p.id,
                     sku: p.sku,
@@ -202,9 +234,6 @@ export default async function Kits({ searchParams }: Props) {
         );
       })}
 
-      <Painel titulo="Novo produto" descricao="Ele nasce com estoque zero; lance a entrada na aba Estoque">
-        <Formulario k={{ ativo: true, estoqueBaixo: 10, ordem: produtos.length + 1 }} novo />
-      </Painel>
     </>
   );
 }
