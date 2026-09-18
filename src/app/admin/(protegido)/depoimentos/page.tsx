@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { salvarDepoimento, excluirDepoimento, ocultarDepoimentosDeExemplo } from '../../actions';
 import { ehDepoimentoDeExemplo, iniciais } from '@/lib/conteudo';
+import CampoImagem from '@/components/admin/CampoImagem';
 import { Aviso, Cabecalho, Painel, Pill, mensagens } from '@/components/admin/Ui';
 
 export const dynamic = 'force-dynamic';
@@ -19,7 +20,15 @@ type Campos = {
   ativo?: boolean;
 };
 
-function Formulario({ d, novo = false }: { d: Campos; novo?: boolean }) {
+function Formulario({
+  d,
+  novo = false,
+  uploadDisponivel,
+}: {
+  d: Campos;
+  novo?: boolean;
+  uploadDisponivel: boolean;
+}) {
   return (
     <form action={salvarDepoimento}>
       {d.id && <input type="hidden" name="id" value={d.id} />}
@@ -44,8 +53,14 @@ function Formulario({ d, novo = false }: { d: Campos; novo?: boolean }) {
       <div className="row3">
         <div className="field">
           <label>Foto (opcional)</label>
-          <input name="avatar" defaultValue={d.avatar ?? ''} maxLength={300} placeholder="Endereço da imagem" />
-          <small>200×200 px. Sem foto, aparecem as iniciais.</small>
+          <CampoImagem
+            name="avatar"
+            valorInicial={d.avatar ?? ''}
+            pasta="depoimentos"
+            uploadDisponivel={uploadDisponivel}
+            formato="avatar"
+            dica="Só com autorização de quem aparece. Sem foto, aparecem as iniciais."
+          />
         </div>
         <div className="field">
           <label>Nota</label>
@@ -77,6 +92,7 @@ export default async function Depoimentos({ searchParams }: Props) {
   const { ok, erro } = mensagens(await searchParams);
   const depoimentos = await prisma.depoimento.findMany({ orderBy: { ordem: 'asc' } });
   const exemplosAtivos = depoimentos.filter((d) => d.ativo && ehDepoimentoDeExemplo(d.avatar)).length;
+  const uploadDisponivel = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 
   return (
     <>
@@ -143,7 +159,7 @@ export default async function Depoimentos({ searchParams }: Props) {
               Editar
             </summary>
             <div style={{ marginTop: 16 }}>
-              <Formulario d={d} />
+              <Formulario d={d} uploadDisponivel={uploadDisponivel} />
             </div>
           </details>
         </Painel>
@@ -151,7 +167,7 @@ export default async function Depoimentos({ searchParams }: Props) {
       })}
 
       <Painel titulo="Novo depoimento">
-        <Formulario d={{ ativo: true, nota: 5, ordem: depoimentos.length + 1 }} novo />
+        <Formulario d={{ ativo: true, nota: 5, ordem: depoimentos.length + 1 }} novo uploadDisponivel={uploadDisponivel} />
       </Painel>
     </>
   );

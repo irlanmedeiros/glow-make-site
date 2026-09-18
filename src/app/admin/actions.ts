@@ -11,6 +11,7 @@ import { cancelarPedido, recusarCancelamentoPedido, ErroCancelamento } from '@/l
 import { PREFIXO_AVATAR_EXEMPLO } from '@/lib/conteudo';
 import { codigoLivre, validarCupom } from '@/lib/cupom';
 import { erroDePreco, tipoValido } from '@/lib/produto';
+import { IMAGEM_PADRAO_PRODUTO, enderecoDeImagemValido } from '@/lib/imagem';
 
 /**
  * Toda ação confere o login por conta própria. O layout do admin já barra a
@@ -176,6 +177,9 @@ export async function salvarKit(fd: FormData) {
 
   const erroPreco = erroDePreco(tipo, Number.isFinite(preco) ? preco : null);
   if (erroPreco) voltar('/admin/kits', erroPreco, 'erro');
+  if (imagem && !enderecoDeImagemValido(imagem)) {
+    voltar('/admin/kits', 'Endereço da foto inválido. Envie a foto ou cole um link https.', 'erro');
+  }
 
   const codigoBarras = texto(fd, 'codigoBarras', 60) || null;
 
@@ -187,7 +191,7 @@ export async function salvarKit(fd: FormData) {
     itens,
     codigoBarras,
     preco: new Prisma.Decimal(preco.toFixed(2)),
-    imagem: imagem || '/assets/kits/kit-1.jpg',
+    imagem: imagem || IMAGEM_PADRAO_PRODUTO,
     estoqueBaixo: Number.isInteger(estoqueBaixo) && estoqueBaixo >= 0 ? estoqueBaixo : 10,
     ordem: Number.isInteger(ordem) ? ordem : 0,
     ativo,
@@ -400,6 +404,9 @@ export async function salvarBanner(fd: FormData) {
   if (!dados.titulo || !dados.imagem) {
     voltar('/admin/banners', 'Título e imagem são obrigatórios.', 'erro');
   }
+  if (!enderecoDeImagemValido(dados.imagem)) {
+    voltar('/admin/banners', 'Endereço da arte inválido. Envie a imagem ou cole um link https.', 'erro');
+  }
 
   if (id) await prisma.banner.update({ where: { id }, data: dados });
   else await prisma.banner.create({ data: dados });
@@ -435,6 +442,9 @@ export async function salvarDepoimento(fd: FormData) {
   };
   if (!dados.nome || !dados.texto) {
     voltar('/admin/depoimentos', 'Nome e depoimento são obrigatórios.', 'erro');
+  }
+  if (dados.avatar && !enderecoDeImagemValido(dados.avatar)) {
+    voltar('/admin/depoimentos', 'Endereço da foto inválido. Envie a foto ou cole um link https.', 'erro');
   }
 
   if (id) await prisma.depoimento.update({ where: { id }, data: dados });

@@ -907,3 +907,17 @@ th.num{text-align:right}
 .cupom-ok{color:var(--ok)}
 .cupom-erro{color:#A5342A}
 .tot-desconto{color:var(--ok);font-weight:600}
+
+/* ---------- campo de foto do admin ----------
+   Previa, envio e colar endereco. Mobile-first: o admin tambem e usado no
+   celular, entao o botao tem 44px e a previa ocupa a largura toda. */
+.campo-imagem{display:grid;gap:10px}
+.campo-imagem-previa{width:100%;max-width:280px;aspect-ratio:1/1;border-radius:14px;border:1px solid var(--line);background:var(--rose-50);object-fit:cover}
+.campo-imagem-previa.banner{max-width:100%;aspect-ratio:20/9;object-fit:contain}
+.campo-imagem-previa.avatar{max-width:120px;border-radius:50%}
+.campo-imagem-previa.vazia{display:grid;place-items:center;color:var(--muted);font-size:13px}
+.campo-imagem-acoes{display:flex;gap:8px;flex-wrap:wrap}
+.campo-imagem-acoes .btn{min-height:44px}
+.campo-imagem-barra{height:6px;border-radius:999px;background:var(--rose-100);overflow:hidden}
+.campo-imagem-barra span{display:block;height:100%;background:var(--rose);transition:width .2s}
+.campo-imagem-erro{color:#A5342A}
