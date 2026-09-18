@@ -88,7 +88,9 @@ export default async function Home() {
   });
 
   const kits = kitsDb.map(paraPublico);
-  const box = boxDb ? paraPublico(boxDb) : null;
+  // Desligada, a BOX e o contrato nem saem do servidor: escondidos so no CSS
+  // continuariam legiveis no codigo da pagina, com preco e estoque.
+  const box = assinatura && boxDb ? paraPublico(boxDb) : null;
 
   const banners: BannerPublico[] = bannersDb.map((b) => ({
     id: b.id,
@@ -115,7 +117,7 @@ export default async function Home() {
   }));
 
   const config: ConfigPublica = {
-    contratoTexto: configDb?.contratoTexto ?? '',
+    contratoTexto: assinatura ? (configDb?.contratoTexto ?? '') : '',
     contratoVersao: configDb?.contratoVersao ?? 'v1',
     metaPixelId: configDb?.metaPixelId ?? '',
     avisos: avisosPublicaveis(configDb?.avisos ?? [], { assinaturaAtiva: assinatura }),
