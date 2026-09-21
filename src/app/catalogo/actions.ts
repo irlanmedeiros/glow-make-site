@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { podeVerCatalogo, sessaoAtual } from '@/lib/auth';
-import { devolverEstoque } from '@/lib/estoque';
+import { baixarEstoque, devolverEstoque, EstoqueInsuficiente } from '@/lib/estoque';
 import {
   registrarVenda,
   cancelarVenda as cancelar,
@@ -210,26 +210,18 @@ export async function registrarPerda(
   const eu = await sessaoAtual();
   const kit = await prisma.kit.findUnique({ where: { id } });
   if (!kit) return { erro: 'Produto não encontrado.' };
-  if (kit.entradas - kit.saidas < qtd) {
-    return { erro: `Só há ${kit.entradas - kit.saidas} em estoque.` };
-  }
 
-  await prisma.$transaction(async (tx) => {
-    const atualizado = await tx.kit.update({
-      where: { id },
-      data: { saidas: { increment: qtd } },
+  // A conferência de saldo é a do baixarEstoque, na mesma instrução SQL que
+  // grava (docs/DECISOES.md #1). Conferir aqui em JS deixaria a venda no
+  // balcão e a baixa por perda tirarem a mesma última unidade ao mesmo tempo.
+  try {
+    await prisma.$transaction(async (tx) => {
+      await baixarEstoque(tx, [{ kitId: id, qtd }], `Baixa sem venda (${motivo}) — ${eu?.nome ?? 'sessão encerrada'}`);
     });
-    await tx.movimentacao.create({
-      data: {
-        sku: atualizado.sku,
-        nome: atualizado.nome,
-        tipo: 'SAIDA',
-        qtd,
-        origem: `Baixa sem venda (${motivo}) — ${eu?.nome ?? 'sessão encerrada'}`,
-        saldoApos: atualizado.entradas - atualizado.saidas,
-      },
-    });
-  });
+  } catch (e) {
+    if (e instanceof EstoqueInsuficiente) return { erro: `Só há ${e.disponivel} em estoque.` };
+    throw e;
+  }
 
   revalidatePath('/');
   revalidatePath('/catalogo');
