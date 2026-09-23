@@ -1,4 +1,5 @@
 import 'server-only';
+import { SERVICO_MOTOBOY } from './entrega';
 
 /**
  * Cálculo de frete.
@@ -12,6 +13,12 @@ import 'server-only';
  * dos Correios e da Jadlog pelo peso e pela distância. Cobrar o preço real
  * evita os dois erros caros: cobrar de menos e bancar a diferença, ou cobrar
  * de mais e perder a venda no último passo.
+ *
+ * Regra 3 — João Pessoa e vizinhas ganham a opção de MOTOBOY, entregue no
+ * mesmo dia. O valor não sai daqui: quem mora ao lado da loja e quem mora do
+ * outro lado do rio pagam diferente, e o motoboy cobra por corrida. A cliente
+ * fecha a compra dos produtos e combina a entrega pelo WhatsApp. Pelo Melhor
+ * Envio essa mesma entrega sairia cara e levaria dias.
  */
 
 const VIACEP = 'https://viacep.com.br/ws';
@@ -28,7 +35,40 @@ export type OpcaoFrete = {
   valor: number;
   prazoDias: number | null;
   gratis: boolean;
+  /** Entrega cujo valor é combinado fora do site (motoboy). Não é frete grátis. */
+  combinar?: boolean;
 };
+
+
+/**
+ * Atendidas pelo motoboy da loja. A comparação é pela CIDADE do ViaCEP, não
+ * por faixa de CEP, pela mesma razão de sempre: os Correios remanejam faixas
+ * (Bayeux trocou a dela), e uma faixa desatualizada mandaria motoboy para
+ * outro município ou negaria a quem mora ao lado.
+ */
+const CIDADES_MOTOBOY = ['joao pessoa', 'bayeux', 'santa rita', 'cabedelo'];
+
+const semAcento = (t: string) =>
+  t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+
+export function temMotoboy(destino: Endereco | null): boolean {
+  if (!destino || semAcento(destino.uf) !== 'pb') return false;
+  return CIDADES_MOTOBOY.includes(semAcento(destino.cidade));
+}
+
+function opcaoMotoboy(): OpcaoFrete {
+  return {
+    servico: SERVICO_MOTOBOY,
+    transportadora: 'Glow Make',
+    valor: 0,
+    prazoDias: null,
+    // gratis: false de propósito. Zero aqui quer dizer "ainda não cobrado",
+    // e a tela mostra "a combinar" — dizer "grátis" seria prometer entrega
+    // de graça que a loja não tem como bancar.
+    gratis: false,
+    combinar: true,
+  };
+}
 
 export function melhorEnvioConfigurado(): boolean {
   return Boolean(process.env.MELHOR_ENVIO_TOKEN);
@@ -164,18 +204,25 @@ export async function calcularFrete(params: {
     return { opcoes: [], destino: null, aviso: 'CEP não encontrado. Confira o número.' };
   }
 
+  // Entra primeiro na lista: na região da loja é a entrega mais rápida e a
+  // mais barata para a cliente, e é o que a loja quer oferecer por lá.
+  const daRegiao: OpcaoFrete[] = temMotoboy(destino) ? [opcaoMotoboy()] : [];
+
   const comReserva = (motivo: string): ResultadoFrete => {
     if (!(params.freteReserva > 0)) {
       return {
         destino,
-        opcoes: [],
-        aviso: `${motivo} Vamos combinar o valor do frete com você antes de enviar.`,
+        opcoes: daRegiao,
+        aviso: daRegiao.length
+          ? motivo
+          : `${motivo} Vamos combinar o valor do frete com você antes de enviar.`,
       };
     }
     return {
       destino,
       aviso: `${motivo} Aplicamos o frete padrão da loja.`,
       opcoes: [
+        ...daRegiao,
         {
           servico: 'Frete padrão',
           transportadora: 'Glow Make',
@@ -201,7 +248,7 @@ export async function calcularFrete(params: {
     });
 
     if (!opcoes.length) return comReserva('Nenhuma transportadora cotou para esse CEP.');
-    return { destino, opcoes };
+    return { destino, opcoes: [...daRegiao, ...opcoes] };
   } catch (e) {
     // Transportadora fora do ar não derruba a venda, mas também não vira
     // frete grátis: entra o frete padrão e o aviso fica registrado.

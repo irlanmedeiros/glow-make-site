@@ -1,23 +1,17 @@
 import { describe, it, expect } from 'vitest';
 import {
-  PRECO_MINIMO_INDIVIDUAL,
+  MINIMO_CARRINHO_INDIVIDUAIS,
   erroDePreco,
+  erroDoCarrinho,
   lerTipo,
-  precoMinimo,
   tipoValido,
 } from './produto';
 
 describe('erroDePreco', () => {
-  it('produto individual: R$ 50 passa, R$ 49,99 não', () => {
-    expect(erroDePreco('INDIVIDUAL', PRECO_MINIMO_INDIVIDUAL)).toBeNull();
-    expect(erroDePreco('INDIVIDUAL', 50.01)).toBeNull();
-    expect(erroDePreco('INDIVIDUAL', 49.99)).toMatch(/não pode custar menos/);
-    expect(erroDePreco('INDIVIDUAL', 35)).toMatch(/não pode custar menos/);
-  });
-
-  it('kit e box podem custar menos de R$ 50', () => {
+  it('o cadastro aceita qualquer preço: a vitrine tem produto barato', () => {
+    expect(erroDePreco('INDIVIDUAL', 19.9)).toBeNull();
+    expect(erroDePreco('INDIVIDUAL', 50)).toBeNull();
     expect(erroDePreco('KIT', 35)).toBeNull();
-    expect(erroDePreco('KIT', 45)).toBeNull();
     expect(erroDePreco('BOX', 39.9)).toBeNull();
   });
 
@@ -31,11 +25,31 @@ describe('erroDePreco', () => {
   });
 });
 
-describe('precoMinimo', () => {
-  it('só o individual tem piso', () => {
-    expect(precoMinimo('INDIVIDUAL')).toBe(50);
-    expect(precoMinimo('KIT')).toBe(0);
-    expect(precoMinimo('BOX')).toBe(0);
+describe('erroDoCarrinho', () => {
+  const avulso = (qtd = 1) => ({ tipo: 'INDIVIDUAL' as const, qtd });
+
+  it('só avulsos: R$ 50 fecha, R$ 49,99 não', () => {
+    expect(erroDoCarrinho([avulso()], MINIMO_CARRINHO_INDIVIDUAIS)).toBeNull();
+    expect(erroDoCarrinho([avulso()], 60)).toBeNull();
+    expect(erroDoCarrinho([avulso()], 49.99)).toMatch(/a partir de R\$ 50/);
+  });
+
+  it('diz quanto falta', () => {
+    expect(erroDoCarrinho([avulso()], 35)).toMatch(/Faltam 15,00/);
+  });
+
+  it('kit no carrinho tira o mínimo, mesmo somando pouco', () => {
+    expect(erroDoCarrinho([{ tipo: 'KIT', qtd: 1 }], 35)).toBeNull();
+    expect(erroDoCarrinho([{ tipo: 'KIT', qtd: 1 }, avulso()], 40)).toBeNull();
+  });
+
+  it('a assinatura não é barrada pelo mínimo', () => {
+    expect(erroDoCarrinho([{ tipo: 'BOX', qtd: 1 }], 39.9)).toBeNull();
+  });
+
+  it('item com quantidade zero não conta como carrinho', () => {
+    expect(erroDoCarrinho([avulso(0)], 0)).toMatch(/vazio/);
+    expect(erroDoCarrinho([], 0)).toMatch(/vazio/);
   });
 });
 

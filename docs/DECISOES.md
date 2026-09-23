@@ -77,6 +77,28 @@ não dá para editar o cookie e virar admin, nem virar outra pessoa.
 - `equipe` → só `/catalogo`. Sessão de 30 dias, porque a vendedora usa o
   celular no balcão o dia inteiro e relogar toda hora atrapalharia.
 
+## 4B. Entrega: motoboy na região, transportadora no resto
+
+`src/lib/frete.ts`
+
+Não existe frete grátis na compra avulsa — grátis é benefício de quem assina a
+Glow Box. Fora isso:
+
+- **João Pessoa, Bayeux, Santa Rita e Cabedelo** veem a opção de **motoboy**,
+  que aparece primeiro. O valor **não sai do site**: a corrida varia com a
+  distância, e quem mora ao lado da loja não paga o mesmo de quem mora do
+  outro lado do rio. A cliente paga os produtos, e o valor da entrega é
+  combinado pelo WhatsApp — botão dentro do pedido, em Meus pedidos.
+  `valor: 0` com `combinar: true`, **nunca** `gratis: true`: a tela precisa
+  dizer "a combinar", e não prometer entrega de graça.
+- Quem decide se tem motoboy é a **cidade do ViaCEP**, não a faixa de CEP. Os
+  Correios remanejam faixas (Bayeux trocou a dela); uma faixa velha mandaria
+  motoboy para outro município.
+- **Mínimo de R$ 50 no carrinho só de avulsos** (`erroDoCarrinho`). Não é piso
+  de cadastro: a vitrine tem produto de R$ 20, ele só não sai sozinho, porque
+  frete e embalagem comem a venda. Com kit no carrinho não há mínimo. A tela
+  avisa antes, mas quem barra é o servidor, no checkout.
+
 ## 5. Chaves de terceiros só no servidor
 
 `src/lib/asaas.ts` e `src/lib/frete.ts` têm `import 'server-only'` no topo.

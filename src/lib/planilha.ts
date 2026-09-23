@@ -1,6 +1,6 @@
 import 'server-only';
 import ExcelJS from 'exceljs';
-import { erroDePreco, lerTipo, PRECO_MINIMO_INDIVIDUAL, type TipoProduto } from './produto';
+import { erroDePreco, lerTipo, type TipoProduto } from './produto';
 
 /**
  * Leitura da planilha de produtos.
@@ -173,11 +173,6 @@ export async function lerPlanilha(buffer: ArrayBuffer, nomeArquivo: string): Pro
     // A caixa da assinatura e unica e tem fluxo proprio; criar outra por
     // planilha quebraria a assinatura sem ninguem perceber.
     if (tipo === 'BOX') erros.push('a caixa da assinatura não se cadastra por planilha');
-    if (tipo === 'INDIVIDUAL' && preco !== null) {
-      const e = erroDePreco(tipo, preco);
-      if (e) erros.push(`produto individual não pode custar menos de R$ ${PRECO_MINIMO_INDIVIDUAL},00`);
-    }
-
     const estoque = lerNumero(pega('estoque'));
     if (estoque !== null && (estoque < 0 || !Number.isInteger(estoque))) {
       erros.push('estoque precisa ser inteiro e não negativo');
@@ -274,7 +269,7 @@ export async function gerarModelo(): Promise<Buffer> {
     ['ordem', 'não', 'Posição na vitrine. Menor aparece primeiro.'],
     ['ativo', 'não', 'sim ou nao. Em branco mantém como está.'],
     ['codigo de barras', 'não', 'EAN da embalagem. É o que o leitor do balcão lê para achar o produto na hora da venda.'],
-    ['tipo', 'não', `kit ou individual. Produto individual não pode custar menos de R$ ${PRECO_MINIMO_INDIVIDUAL},00; kit pode. Em branco mantém como está (produto novo nasce kit).`],
+    ['tipo', 'não', 'kit ou individual. Em branco mantém como está (produto novo nasce kit).'],
   ].forEach(([c, o, d]) => ajuda.addRow({ c, o, d }));
 
   const buf = await wb.xlsx.writeBuffer();

@@ -6,7 +6,7 @@ import './globals.css';
 // Titulo e descricao vao para o Google e para a previa de link no WhatsApp:
 // com a assinatura oculta, nao podem continuar anunciando a Glow Box.
 export async function generateMetadata(): Promise<Metadata> {
-  const comAssinatura = assinaturaAtiva();
+  const comAssinatura = await assinaturaAtiva();
   const description = comAssinatura
     ? 'Kits de maquiagem selecionados e a Glow Box mensal entregue na sua casa. Compre avulso ou assine sem fidelidade.'
     : 'Kits de maquiagem selecionados, montados um a um e prontos para presentear.';

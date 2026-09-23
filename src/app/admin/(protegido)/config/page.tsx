@@ -1,8 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { num } from '@/lib/format';
 import { asaasConfigurado } from '@/lib/asaas';
-import { assinaturaAtiva } from '@/lib/recursos';
-import { salvarConfig } from '../../actions';
+import { salvarConfig, alternarAssinatura } from '../../actions';
 import { Aviso, Cabecalho, Painel, Pill, mensagens } from '@/components/admin/Ui';
 
 export const dynamic = 'force-dynamic';
@@ -14,6 +13,7 @@ const brl = (v: number) => v.toFixed(2).replace('.', ',');
 export default async function Configuracoes({ searchParams }: Props) {
   const { ok, erro } = mensagens(await searchParams);
   const config = await prisma.config.findUnique({ where: { id: 'config' } });
+  const vendendoAssinatura = config?.assinaturaAtiva ?? false;
 
   const ambiente = process.env.ASAAS_ENV === 'producao' ? 'Produção' : 'Sandbox (teste)';
   const webhookPronto = Boolean(process.env.ASAAS_WEBHOOK_TOKEN);
@@ -151,18 +151,23 @@ export default async function Configuracoes({ searchParams }: Props) {
         </div>
       </Painel>
 
-      <Painel titulo="Assinatura (Glow Box)" descricao="Ligada por variável de ambiente">
+      <Painel titulo="Assinatura (Glow Box)" descricao="Você liga e desliga por aqui">
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
-          <Pill cor={assinaturaAtiva() ? 'ok' : 'info'}>
-            {assinaturaAtiva() ? 'Oferecida no site' : 'Oculta para o público'}
+          <Pill cor={vendendoAssinatura ? 'ok' : 'info'}>
+            {vendendoAssinatura ? 'Oferecida no site' : 'Oculta para o público'}
           </Pill>
         </div>
-        <div className="note">
+        <div className="note" style={{ marginBottom: 14 }}>
           Oculta, a assinatura some da página inicial, do menu, do rodapé e dos avisos, e ninguém
           consegue assinar. Nada é apagado: quem já assina continua vendo e cancelando em Meus
-          pedidos. Para lançar, defina <code>SUBSCRIPTION_ENABLED</code> como <code>true</code>{' '}
-          na Vercel e faça um Redeploy.
+          pedidos, e esta tela e a de Assinantes seguem funcionando. A mudança vale na hora, sem
+          publicar nada.
         </div>
+        <form action={alternarAssinatura}>
+          <button className={`btn ${vendendoAssinatura ? 'btn-ghost' : 'btn-primary'}`}>
+            {vendendoAssinatura ? 'Ocultar a assinatura do site' : 'Passar a oferecer a assinatura'}
+          </button>
+        </form>
       </Painel>
 
       <Painel titulo="Pagamento (Asaas)" descricao="Configurado por variáveis de ambiente, não por esta tela">

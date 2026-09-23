@@ -682,6 +682,34 @@ export async function excluirUsuario(fd: FormData) {
    Configurações
    ============================================================ */
 
+/**
+ * Liga e desliga a venda da assinatura. Fica fora do formulário grande de
+ * Configurações de propósito: é um botão só, e salvar o formulário inteiro
+ * para mudar uma chave convidaria a mexer sem querer no frete e no contrato.
+ */
+export async function alternarAssinatura() {
+  await exigirLogin();
+  const atual = await prisma.config.findUnique({
+    where: { id: 'config' },
+    select: { assinaturaAtiva: true },
+  });
+  const novo = !(atual?.assinaturaAtiva ?? false);
+  await prisma.config.upsert({
+    where: { id: 'config' },
+    update: { assinaturaAtiva: novo },
+    create: { id: 'config', assinaturaAtiva: novo, avisos: [] },
+  });
+  // A home e o layout são estáticos por rota: sem revalidar, a mudança só
+  // apareceria para quem chegasse depois do próximo build.
+  revalidatePath('/', 'layout');
+  voltar(
+    '/admin/config',
+    novo
+      ? 'A assinatura passou a ser oferecida no site.'
+      : 'A assinatura saiu do site. Quem já assina continua com a dela.'
+  );
+}
+
 export async function salvarConfig(fd: FormData) {
   await exigirLogin();
   const freteValor = decimal(fd, 'freteValor');

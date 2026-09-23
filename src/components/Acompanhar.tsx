@@ -8,6 +8,7 @@ import {
   type PedidoDaCliente,
   type ResultadoConsulta,
 } from '@/lib/acompanhamento';
+import { ehMotoboy } from '@/lib/entrega';
 
 /* format.ts importa o Prisma; num componente de cliente isso arrastaria a
    biblioteca para o navegador. Os dois formatadores sao pequenos o bastante
@@ -187,6 +188,30 @@ function CardPedido({ p, chamar, ...props }: { p: PedidoDaCliente; chamar: Chama
       )}
 
       {p.codigoRastreio && <Rastreio p={p} />}
+
+      {/* Motoboy: a entrega e o valor da corrida se combinam por fora do site,
+          entao o lugar de continuar a conversa fica dentro do pedido. */}
+      {ehMotoboy(p.freteServico) && p.status !== 'CANCELADO' && (
+        <div className="note" style={{ marginTop: 12 }}>
+          <b>Entrega por motoboy.</b> Combine o valor da corrida e o horário com a loja
+          {props.linkWhatsapp ? (
+            <>
+              {' '}
+              no{' '}
+              <a
+                href={`${props.linkWhatsapp}?text=${encodeURIComponent(`Olá! Sou do pedido #${p.numero} e quero combinar a entrega por motoboy.`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                WhatsApp {props.whatsapp}
+              </a>
+              .
+            </>
+          ) : (
+            ' pelos nossos canais de atendimento.'
+          )}
+        </div>
+      )}
 
       {p.invoiceUrl && (
         <div className="note alerta" style={{ marginTop: 12 }}>

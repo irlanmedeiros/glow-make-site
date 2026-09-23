@@ -1,16 +1,19 @@
 /**
- * Tipo de produto e piso de preco.
+ * Tipo de produto e minimo de compra.
  *
- * Regra comercial da loja: produto vendido sozinho nao sai por menos de
- * R$ 50. Kit pode — e a graca do kit e justamente montar algo de R$ 35.
+ * Regra comercial da loja: a loja nao despacha uma compra de produtos avulsos
+ * por menos de R$ 50 — o frete e a embalagem comem a venda. O minimo vale no
+ * CARRINHO, nao no cadastro: a vitrine tem produto de R$ 20, ele so nao sai
+ * sozinho. Carrinho com kit nao tem minimo, porque kit ja passa disso.
  *
- * O piso vale no CADASTRO, nao na venda: cupom de indicacao e desconto do
- * balcao continuam livres para derrubar o valor pago (decisao do dono).
+ * O minimo olha o subtotal dos produtos, antes do cupom: o desconto da
+ * indicacao pode derrubar o valor pago, e isso e de proposito (decisao do
+ * dono). Venda no balcao nao passa por aqui — la a cliente leva na hora.
  */
 
 export type TipoProduto = 'KIT' | 'BOX' | 'INDIVIDUAL';
 
-export const PRECO_MINIMO_INDIVIDUAL = 50;
+export const MINIMO_CARRINHO_INDIVIDUAIS = 50;
 
 /** A caixa da assinatura nao e escolhida no formulario: ela e unica. */
 export const TIPOS_EDITAVEIS: TipoProduto[] = ['KIT', 'INDIVIDUAL'];
@@ -42,20 +45,29 @@ export function lerTipo(bruto: string): TipoProduto | null {
   return null;
 }
 
-export function precoMinimo(tipo: TipoProduto): number {
-  return tipo === 'INDIVIDUAL' ? PRECO_MINIMO_INDIVIDUAL : 0;
-}
-
-/**
- * Mensagem de erro do preco, ou null se estiver bom. R$ 50,00 e permitido;
- * R$ 49,99 nao.
- */
-export function erroDePreco(tipo: TipoProduto, preco: number | null): string | null {
+/** Mensagem de erro do preco no cadastro, ou null se estiver bom. */
+export function erroDePreco(_tipo: TipoProduto, preco: number | null): string | null {
   if (preco === null || !Number.isFinite(preco) || preco <= 0) {
     return 'Preço inválido. Use o formato 129,90.';
   }
-  if (tipo === 'INDIVIDUAL' && preco < PRECO_MINIMO_INDIVIDUAL) {
-    return `Produto individual não pode custar menos de R$ ${PRECO_MINIMO_INDIVIDUAL},00. Se for um conjunto, cadastre como kit.`;
+  return null;
+}
+
+/**
+ * O carrinho pode fechar? Recebe o que esta no carrinho e o subtotal.
+ * Devolve a mensagem para a cliente, ou null quando esta liberado.
+ */
+export function erroDoCarrinho(
+  itens: { tipo: TipoProduto; qtd: number }[],
+  subtotal: number
+): string | null {
+  const comQtd = itens.filter((i) => i.qtd > 0);
+  if (!comQtd.length) return 'Seu carrinho está vazio.';
+
+  const soIndividuais = comQtd.every((i) => i.tipo === 'INDIVIDUAL');
+  if (soIndividuais && subtotal < MINIMO_CARRINHO_INDIVIDUAIS) {
+    const falta = MINIMO_CARRINHO_INDIVIDUAIS - subtotal;
+    return `Compra só de produtos avulsos a partir de R$ ${MINIMO_CARRINHO_INDIVIDUAIS},00. Faltam ${falta.toFixed(2).replace('.', ',')} — ou junte um kit ao carrinho.`;
   }
   return null;
 }

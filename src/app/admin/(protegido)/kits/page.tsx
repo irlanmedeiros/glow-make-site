@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { real, num } from '@/lib/format';
-import { PRECO_MINIMO_INDIVIDUAL, ROTULO_TIPO, TIPOS_EDITAVEIS, type TipoProduto } from '@/lib/produto';
+import { MINIMO_CARRINHO_INDIVIDUAIS, ROTULO_TIPO, TIPOS_EDITAVEIS, type TipoProduto } from '@/lib/produto';
 import { salvarKit, alternarKit, excluirKit } from '../../actions';
 import { Aviso, Cabecalho, Painel, Pill, mensagens } from '@/components/admin/Ui';
 import CampoImagem from '@/components/admin/CampoImagem';
@@ -80,7 +80,8 @@ function Formulario({
           <label>Preço</label>
           <input name="preco" defaultValue={k.preco != null ? k.preco.toFixed(2).replace('.', ',') : ''} required />
           <small>
-            Produto individual: mínimo R$ {PRECO_MINIMO_INDIVIDUAL},00. Kit pode custar menos.
+            Qualquer valor. No site, a compra só de produtos avulsos fecha a partir de R${' '}
+            {MINIMO_CARRINHO_INDIVIDUAIS},00; com kit no carrinho não há mínimo.
           </small>
           <small>Use vírgula: 129,90</small>
         </div>

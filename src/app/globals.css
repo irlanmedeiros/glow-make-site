@@ -340,6 +340,7 @@ footer.site{background:#FFF9FB;border-top:1px solid var(--line);padding:58px 0 2
 .adm-side .sep{margin-top:auto;padding-top:14px;border-top:1px solid var(--line)}
 /* Quem esta logado. No celular a barra lateral vira faixa e nao ha espaco. */
 .adm-quem{display:none}
+.adm-contador{margin-left:auto;min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--rose);color:#fff;font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
 @media(min-width:1001px){.adm-quem{display:block;font-size:12.5px;color:var(--muted);padding:0 12px 8px;overflow-wrap:anywhere}}
 .adm-main{padding:30px 34px 60px;min-width:0}
 .adm-hd{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:26px}

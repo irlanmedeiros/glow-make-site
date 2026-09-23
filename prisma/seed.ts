@@ -237,7 +237,6 @@ async function main() {
       avisos: [
         // Sem aviso de frete gratis: deixou de ser regra geral, so a assinatura
         // tem frete incluso.
-        'Parcele em até 6x sem juros no cartão',
         'Assine a Glow Box até dia 10 e receba a edição deste mês',
       ],
     },

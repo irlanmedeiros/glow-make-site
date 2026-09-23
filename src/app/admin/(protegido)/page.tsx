@@ -18,6 +18,7 @@ export default async function PainelAdmin() {
     pedidosRecentes,
     assinantesAtivos,
     aguardando,
+    paraSeparar,
     box,
     ultimasMovimentacoes,
   ] = await Promise.all([
@@ -29,6 +30,7 @@ export default async function PainelAdmin() {
     prisma.pedido.findMany({ orderBy: { criadoEm: 'desc' }, take: 6, include: { itens: true } }),
     prisma.assinante.count({ where: { status: 'ATIVA' } }),
     prisma.pedido.count({ where: { status: 'AGUARDANDO_PAGAMENTO' } }),
+    prisma.pedido.count({ where: { status: 'PAGO' } }),
     prisma.kit.findFirst({ where: { tipo: 'BOX' } }),
     prisma.movimentacao.findMany({ orderBy: { criadoEm: 'desc' }, take: 8 }),
   ]);
@@ -57,6 +59,18 @@ export default async function PainelAdmin() {
           year: 'numeric',
         })}`}
       />
+
+      {/* Enquanto nao houver aviso por e-mail ou WhatsApp, e aqui que a dona
+          descobre que entrou pedido. Primeira coisa da tela, de proposito. */}
+      {paraSeparar > 0 && (
+        <div className="note ok" style={{ marginBottom: 20 }}>
+          <b>
+            {paraSeparar} pedido{paraSeparar === 1 ? '' : 's'} pago
+            {paraSeparar === 1 ? '' : 's'} esperando separação.
+          </b>{' '}
+          <Link href="/admin/pedidos">Ver os pedidos</Link>
+        </div>
+      )}
 
       {!asaasConfigurado() && (
         <div className="note alerta" style={{ marginBottom: 20 }}>

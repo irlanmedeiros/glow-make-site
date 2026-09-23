@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
+import { prisma } from '@/lib/prisma';
 import { sessaoAtual } from '@/lib/auth';
 import { sair } from '../actions';
 import {
@@ -54,6 +55,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const eu = await sessaoAtual();
   if (eu?.papel !== 'admin') redirect('/admin/login');
 
+  // Pedido pago e ainda nao separado aparece como numero ao lado do menu: sem
+  // aviso por e-mail ou WhatsApp, o painel precisa dizer que chegou venda.
+  const paraSeparar = await prisma.pedido.count({ where: { status: 'PAGO' } });
+
   return (
     <div className="adm">
       <aside className="adm-side">
@@ -70,6 +75,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <Link className="adm-nav" href={href} key={href}>
               <Icone />
               {rotulo}
+              {href === '/admin/pedidos' && paraSeparar > 0 && (
+                <span className="adm-contador">{paraSeparar}</span>
+              )}
             </Link>
           ))}
         </nav>

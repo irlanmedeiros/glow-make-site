@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, beforeAll } from 'vitest';
 import { PrismaClient } from '@prisma/client';
 
 /**
@@ -9,11 +9,23 @@ delete process.env.ASAAS_API_KEY;
 
 const prisma = new PrismaClient();
 const EMAIL = 'teste-int-assinatura-oculta@glowmake.test';
-const original = process.env.SUBSCRIPTION_ENABLED;
+
+/** A chave agora mora no banco, em Config, e quem liga e a dona no admin. */
+async function ligarAssinatura(ativa: boolean) {
+  await prisma.config.upsert({
+    where: { id: 'config' },
+    update: { assinaturaAtiva: ativa },
+    create: { id: 'config', assinaturaAtiva: ativa, avisos: [] },
+  });
+}
+
+let comoEstava = false;
+beforeAll(async () => {
+  comoEstava = (await prisma.config.findUnique({ where: { id: 'config' } }))?.assinaturaAtiva ?? false;
+});
 
 afterEach(async () => {
-  if (original === undefined) delete process.env.SUBSCRIPTION_ENABLED;
-  else process.env.SUBSCRIPTION_ENABLED = original;
+  await ligarAssinatura(comoEstava);
   await prisma.assinante.deleteMany({ where: { email: EMAIL } });
 });
 
@@ -36,8 +48,8 @@ const cliente = {
 };
 
 describe('assinatura oculta', () => {
-  it('sem a variavel, recusa e nao grava nada nem mexe na caixa', async () => {
-    delete process.env.SUBSCRIPTION_ENABLED;
+  it('desligada no admin, recusa e nao grava nada nem mexe na caixa', async () => {
+    await ligarAssinatura(false);
     const box = await prisma.kit.findFirst({ where: { tipo: 'BOX' } });
     const r = await assinar({ cliente, aceitouContrato: true });
     expect(r.status).toBe(404);
@@ -50,7 +62,7 @@ describe('assinatura oculta', () => {
   });
 
   it('ligada, a rota volta a funcionar (aqui para na validacao do corpo vazio)', async () => {
-    process.env.SUBSCRIPTION_ENABLED = 'true';
+    await ligarAssinatura(true);
     const r = await assinar({});
     expect(r.status).toBe(400);
     expect(r.corpo.erro).not.toMatch(/ainda não está disponível/);

@@ -1,9 +1,12 @@
+import type { TipoProduto } from '@/lib/produto';
+
 /** Formatos que atravessam a fronteira servidor → cliente.
  *  Decimal do Prisma não é serializável, então preço sempre vira number aqui. */
 
 export type KitPublico = {
   id: string;
   sku: string;
+  tipo: TipoProduto;
   nome: string;
   descricao: string;
   itens: string[];

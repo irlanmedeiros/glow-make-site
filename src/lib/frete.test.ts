@@ -1,18 +1,16 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { calcularFrete, melhorEnvioConfigurado, cotarMelhorEnvio } from './frete';
+import { calcularFrete, melhorEnvioConfigurado, cotarMelhorEnvio, temMotoboy } from './frete';
+import { SERVICO_MOTOBOY } from './entrega';
 
 /**
- * A regra de frete grátis é por NOME DE CIDADE, não por faixa de CEP
- * (docs/DECISOES.md). Errar a comparação aqui significa dar frete grátis para
- * outra cidade ou cobrar de quem mora ao lado da loja.
+ * Quem é atendido por motoboy é decidido por NOME DE CIDADE, não por faixa de
+ * CEP (docs/DECISOES.md). Errar a comparação aqui significa mandar motoboy
+ * para outro município ou negar a entrega rápida a quem mora ao lado da loja.
  */
 
-const JP = { cep: '58013420', cidade: 'João Pessoa', uf: 'PB' };
-
 describe('calcularFrete — não existe frete grátis na compra avulsa', () => {
-  const viaCep = {
-    cep: '58056-030', localidade: 'João Pessoa', uf: 'PB',
-  };
+  // Destino fora da área do motoboy: aqui se prova o frete cobrado.
+  const viaCep = { cep: '50030-230', localidade: 'Recife', uf: 'PE' };
 
   function respostas(destino: unknown, cotacao: unknown | Error) {
     return vi.fn(async (url: string) => {
@@ -30,23 +28,33 @@ describe('calcularFrete — não existe frete grátis na compra avulsa', () => {
   });
 
   const params = {
-    cepDestino: '58056030',
+    cepDestino: '50030230',
     cepOrigem: '58056030',
     pesoKg: 0.7,
     valorSegurado: 100,
     freteReserva: 24.9,
   };
 
-  it('a cidade da loja paga frete como qualquer outra', async () => {
+  it('cobra o que a transportadora cotou, sem opção grátis', async () => {
     process.env.MELHOR_ENVIO_TOKEN = 'tok';
     vi.stubGlobal(
       'fetch',
       respostas(viaCep, [{ id: 1, name: 'PAC', price: '40.16', delivery_time: 8, company: { name: 'Correios' } }])
     );
     const r = await calcularFrete(params);
-    expect(r.destino?.cidade).toBe('João Pessoa');
+    expect(r.destino?.cidade).toBe('Recife');
     expect(r.opcoes.map((o) => [o.servico, o.valor, o.gratis])).toEqual([['PAC', 40.16, false]]);
     expect(r.opcoes.some((o) => o.gratis)).toBe(false);
+  });
+
+  it('fora da região não aparece motoboy', async () => {
+    process.env.MELHOR_ENVIO_TOKEN = 'tok';
+    vi.stubGlobal(
+      'fetch',
+      respostas(viaCep, [{ id: 1, name: 'PAC', price: '40.16', delivery_time: 8, company: { name: 'Correios' } }])
+    );
+    const r = await calcularFrete(params);
+    expect(r.opcoes.some((o) => o.combinar)).toBe(false);
   });
 
   it('sem cotação entra o frete padrão, nunca zero', async () => {
@@ -87,6 +95,79 @@ describe('calcularFrete — não existe frete grátis na compra avulsa', () => {
     expect(r.destino).toBeNull();
     expect(r.opcoes).toEqual([]);
     expect(r.aviso).toMatch(/CEP não encontrado/);
+  });
+});
+
+describe('motoboy — João Pessoa e região', () => {
+  function respostas(destino: unknown, cotacao: unknown | Error) {
+    return vi.fn(async (url: string) => {
+      if (String(url).includes('viacep')) {
+        return { ok: true, json: async () => destino } as unknown as Response;
+      }
+      if (cotacao instanceof Error) throw cotacao;
+      return { ok: true, json: async () => cotacao } as unknown as Response;
+    });
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    delete process.env.MELHOR_ENVIO_TOKEN;
+  });
+
+  const params = {
+    cepDestino: '58056030',
+    cepOrigem: '58056030',
+    pesoKg: 0.7,
+    valorSegurado: 100,
+    freteReserva: 24.9,
+  };
+
+  it('atende as cidades combinadas e ninguém mais', () => {
+    for (const cidade of ['João Pessoa', 'joao pessoa', 'BAYEUX', 'Santa Rita', 'Cabedelo']) {
+      expect(temMotoboy({ cep: '58000000', cidade, uf: 'PB' })).toBe(true);
+    }
+    for (const fora of ['Recife', 'Campina Grande', 'Natal', 'Conde']) {
+      expect(temMotoboy({ cep: '58000000', cidade: fora, uf: 'PB' })).toBe(false);
+    }
+    expect(temMotoboy(null)).toBe(false);
+  });
+
+  it('cidade homônima em outro estado não entra', () => {
+    // Santa Rita existe em vários estados; o motoboy é o da Paraíba.
+    expect(temMotoboy({ cep: '13650000', cidade: 'Santa Rita', uf: 'SP' })).toBe(false);
+  });
+
+  it('aparece primeiro, com valor a combinar e sem dizer que é grátis', async () => {
+    process.env.MELHOR_ENVIO_TOKEN = 'tok';
+    vi.stubGlobal(
+      'fetch',
+      respostas({ cep: '58056-030', localidade: 'João Pessoa', uf: 'PB' }, [
+        { id: 1, name: 'SEDEX', price: '16.00', delivery_time: 2, company: { name: 'Correios' } },
+      ])
+    );
+    const r = await calcularFrete(params);
+    expect(r.opcoes[0]).toMatchObject({ servico: SERVICO_MOTOBOY, valor: 0, gratis: false, combinar: true });
+    expect(r.opcoes[1]?.servico).toBe('SEDEX');
+  });
+
+  it('continua disponível quando a cotação falha — é entrega da própria loja', async () => {
+    process.env.MELHOR_ENVIO_TOKEN = 'tok';
+    vi.stubGlobal(
+      'fetch',
+      respostas({ cep: '58110-000', localidade: 'Bayeux', uf: 'PB' }, new Error('fora do ar'))
+    );
+    const r = await calcularFrete({ ...params, freteReserva: 0 });
+    expect(r.opcoes.map((o) => o.servico)).toEqual([SERVICO_MOTOBOY]);
+  });
+
+  it('com frete padrão, motoboy vem antes dele', async () => {
+    process.env.MELHOR_ENVIO_TOKEN = 'tok';
+    vi.stubGlobal(
+      'fetch',
+      respostas({ cep: '58100-000', localidade: 'Cabedelo', uf: 'PB' }, new Error('fora do ar'))
+    );
+    const r = await calcularFrete(params);
+    expect(r.opcoes.map((o) => o.servico)).toEqual([SERVICO_MOTOBOY, 'Frete padrão']);
   });
 });
 

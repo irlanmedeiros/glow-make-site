@@ -3,7 +3,6 @@ import { num } from '@/lib/format';
 import { linkWhatsapp } from '@/lib/acompanhamento';
 import { avisosPublicaveis, ehDepoimentoDeExemplo, iniciais, semPromocaoEncerrada } from '@/lib/conteudo';
 import { TIPOS_NA_VITRINE } from '@/lib/produto';
-import { assinaturaAtiva } from '@/lib/recursos';
 import Hero from '@/components/Hero';
 import { Reveal } from '@/components/Enfeites';
 import Consentimento from '@/components/Consentimento';
@@ -63,9 +62,6 @@ const PALAVRAS = ['Pronto para presentear', 'Embalagem inclusa', 'Amor em cada d
 const PALAVRAS_ASSINATURA = ['Sem fidelidade', 'Curadoria mensal'];
 
 export default async function Home() {
-  // Assinatura pronta e escondida ate o lancamento (src/lib/recursos.ts).
-  const assinatura = assinaturaAtiva();
-  const palavras = assinatura ? [...PALAVRAS, ...PALAVRAS_ASSINATURA] : PALAVRAS;
   const [kitsDb, boxDb, bannersDb, depoimentosDb, configDb] = await Promise.all([
     // Kits e produtos individuais dividem a mesma vitrine; a BOX tem fluxo proprio.
     prisma.kit.findMany({ where: { ativo: true, tipo: { in: TIPOS_NA_VITRINE } }, orderBy: { ordem: 'asc' } }),
@@ -75,9 +71,14 @@ export default async function Home() {
     prisma.config.findUnique({ where: { id: 'config' } }),
   ]);
 
+  // Assinatura escondida ate a dona ligar em Configuracoes (src/lib/recursos.ts).
+  const assinatura = configDb?.assinaturaAtiva ?? false;
+  const palavras = assinatura ? [...PALAVRAS, ...PALAVRAS_ASSINATURA] : PALAVRAS;
+
   const paraPublico = (k: (typeof kitsDb)[number]): KitPublico => ({
     id: k.id,
     sku: k.sku,
+    tipo: k.tipo,
     nome: k.nome,
     descricao: k.descricao,
     itens: k.itens,
@@ -159,7 +160,7 @@ export default async function Home() {
           <div className="perk">
             <i><Cartao /></i>
             <div>
-              <b>Até 6x sem juros</b>
+              <b>Pague como preferir</b>
               <span>PIX, boleto ou cartão</span>
             </div>
           </div>

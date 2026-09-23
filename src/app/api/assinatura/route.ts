@@ -12,7 +12,7 @@ export const runtime = 'nodejs';
 export async function POST(req: Request) {
   // Oculta tambem no servidor: esconder o botao nao impede chamar a rota
   // direto, e ninguem pode assinar algo que a loja ainda nao lancou.
-  if (!assinaturaAtiva()) {
+  if (!(await assinaturaAtiva())) {
     return NextResponse.json({ erro: 'A assinatura ainda não está disponível.' }, { status: 404 });
   }
 

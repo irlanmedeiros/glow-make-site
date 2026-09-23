@@ -9,10 +9,10 @@ import {
   useRef,
   useState,
 } from 'react';
+import { erroDoCarrinho } from '@/lib/produto';
 import type { ConfigPublica, KitPublico } from './tipos';
 import { Busca, Carrinho, Check, Menu, Seta } from './Icones';
 import { evento } from './Consentimento';
-import { a } from 'vitest/dist/chunks/suite.d.FvehnV49.js';
 
 /** Lê o código do afiliado que o middleware guardou no cookie. */
 function refDoCookie(): string {
@@ -408,7 +408,6 @@ export function GradeKits() {
               </ul>
               <div className="price">
                 <b>{real(k.preco)}</b>
-                <small>ou 6x de {real(k.preco / 6)} sem juros</small>
               </div>
               {k.saldo <= 0 ? (
                 <button className="btn btn-primary btn-block" disabled>
@@ -504,6 +503,14 @@ function Gaveta({ aberta }: { aberta: boolean }) {
   const { itens, kitPorId, mudarQtd, remover, subtotal, frete, total, fechar, abrirCheckout, config } =
     useLoja();
 
+  // Mesma regra que o servidor refaz no checkout: compra só de produtos
+  // avulsos tem mínimo. Aqui ela aparece antes, para ninguém preencher o
+  // endereço inteiro e só então descobrir que falta produto.
+  const bloqueio = erroDoCarrinho(
+    itens.map((i) => ({ tipo: kitPorId(i.id)?.tipo ?? 'KIT', qtd: i.qtd })),
+    subtotal
+  );
+
   return (
     <>
       <div className={`overlay${aberta ? ' on' : ''}`} onClick={fechar} />
@@ -578,7 +585,12 @@ function Gaveta({ aberta }: { aberta: boolean }) {
                 <span>Subtotal</span>
                 <span>{real(subtotal)}</span>
               </div>
-              <button className="btn btn-primary btn-block" onClick={() => abrirCheckout('carrinho')}>
+              {itens.length > 0 && bloqueio && <div className="note alerta">{bloqueio}</div>}
+              <button
+                className="btn btn-primary btn-block"
+                onClick={() => abrirCheckout('carrinho')}
+                disabled={Boolean(bloqueio)}
+              >
                 Finalizar compra
               </button>
             </>
@@ -599,6 +611,7 @@ type OpcaoFrete = {
   valor: number;
   prazoDias: number | null;
   gratis: boolean;
+  combinar?: boolean;
 };
 
 type DadosPagamento = {
@@ -1089,9 +1102,11 @@ function Checkout({ modo, aoLimpar }: { modo: Modo | null; aoLimpar: () => void 
                           {cotando
                             ? 'calculando...'
                             : opcaoAtual
-                              ? opcaoAtual.gratis
-                                ? 'Grátis'
-                                : real(opcaoAtual.valor)
+                              ? opcaoAtual.combinar
+                                ? 'a combinar'
+                                : opcaoAtual.gratis
+                                  ? 'Grátis'
+                                  : real(opcaoAtual.valor)
                               : 'informe o CEP'}
                         </span>
                       </div>
@@ -1269,11 +1284,24 @@ function Checkout({ modo, aoLimpar }: { modo: Modo | null; aoLimpar: () => void 
                           />
                           <span className="of-nome">
                             <b>{f.servico}</b>
-                            {f.prazoDias ? <small>até {f.prazoDias} dias úteis</small> : null}
+                            {f.combinar ? (
+                              <small>você combina valor e horário pelo WhatsApp</small>
+                            ) : f.prazoDias ? (
+                              <small>até {f.prazoDias} dias úteis</small>
+                            ) : null}
                           </span>
-                          <b className="of-valor">{f.gratis ? 'Grátis' : real(f.valor)}</b>
+                          <b className="of-valor">
+                            {f.combinar ? 'a combinar' : f.gratis ? 'Grátis' : real(f.valor)}
+                          </b>
                         </label>
                       ))}
+                    </div>
+                  )}
+
+                  {opcaoAtual?.combinar && (
+                    <div className="note">
+                      Você paga agora só os produtos. Assim que o pedido entrar, falamos com você no
+                      WhatsApp para combinar o valor da corrida e o horário da entrega.
                     </div>
                   )}
 

@@ -5,11 +5,12 @@ import { baixarEstoque, EstoqueInsuficiente } from '@/lib/estoque';
 import { asaasConfigurado, criarOuBuscarCliente, criarCobranca, buscarQrCodePix } from '@/lib/asaas';
 import { validarCliente, type DadosCliente } from '@/lib/validacao';
 import { calcularFrete } from '@/lib/frete';
+import { ehMotoboy } from '@/lib/entrega';
 import { afiliadoPorCodigo, gerarComissaoPedido } from '@/lib/afiliado';
 import { marcarConvertido } from '@/lib/lead';
 import { num } from '@/lib/format';
 import { aplicarCupom, type CupomAplicado } from '@/lib/cupom';
-import { TIPOS_NA_VITRINE } from '@/lib/produto';
+import { erroDoCarrinho, TIPOS_NA_VITRINE, type TipoProduto } from '@/lib/produto';
 
 export const runtime = 'nodejs';
 
@@ -63,6 +64,15 @@ export async function POST(req: Request) {
   });
 
   const subtotal = linhas.reduce((s, l) => s.add(l.valor), new Prisma.Decimal(0));
+
+  /* Mínimo de compra só de produtos avulsos. A tela já avisa, mas a conta é
+     refeita aqui: o carrinho vem do navegador e nada impede alguém de chamar
+     esta rota direto. */
+  const erroMinimo = erroDoCarrinho(
+    linhas.map((l) => ({ tipo: l.kit.tipo as TipoProduto, qtd: l.qtd })),
+    Number(subtotal.toString())
+  );
+  if (erroMinimo) return NextResponse.json({ erro: erroMinimo }, { status: 400 });
 
   /* Cupom: o navegador manda so o codigo. Se vale, se a cliente ainda pode usar
      e quanto desconta e decidido aqui, e o desconto nunca passa dos produtos.
@@ -141,7 +151,11 @@ export async function POST(req: Request) {
           cupomCodigo: cupomAplicado?.codigo ?? null,
           freteServico,
           afiliadoId: afiliado?.id ?? null,
-          observacao: escolhida ? null : cotacao.aviso ?? 'Frete a combinar com o cliente.',
+          observacao: ehMotoboy(freteServico)
+            ? 'Entrega por motoboy: combinar valor e horário pelo WhatsApp.'
+            : escolhida
+              ? null
+              : cotacao.aviso ?? 'Frete a combinar com o cliente.',
           pagamento: cliente.pagamento,
           itens: {
             create: linhas.map((l) => ({

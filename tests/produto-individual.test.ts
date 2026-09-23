@@ -3,9 +3,10 @@ import { PrismaClient, Prisma } from '@prisma/client';
 import { TIPOS_NA_VITRINE } from '@/lib/produto';
 
 /**
- * Produto individual (>= R$ 50) e kit (livre) dividem a mesma vitrine e o
- * mesmo checkout. Sem Asaas o pedido e gravado sem cobranca (DECISOES #6),
- * que e o suficiente para provar o que interessa aqui.
+ * Produto individual e kit dividem a mesma vitrine e o mesmo checkout. O
+ * minimo de R$ 50 vale para o CARRINHO so de avulsos, e a conta que decide e
+ * a do servidor. Sem Asaas o pedido e gravado sem cobranca (DECISOES #6), que
+ * e o suficiente para provar o que interessa aqui.
  */
 delete process.env.ASAAS_API_KEY;
 delete process.env.MELHOR_ENVIO_TOKEN;
@@ -40,7 +41,7 @@ beforeAll(async () => {
   const ind = await prisma.kit.create({
     data: {
       sku: SKU_IND, nome: 'Batom Teste', slug: 'batom-teste', descricao: 'teste', itens: [],
-      preco: new Prisma.Decimal('50.00'), imagem: '/assets/kits/kit-1.jpg', entradas: 5,
+      preco: new Prisma.Decimal('19.90'), imagem: '/assets/kits/kit-1.jpg', entradas: 5,
       ativo: true, tipo: 'INDIVIDUAL',
     },
   });
@@ -84,17 +85,41 @@ describe('produto individual na loja', () => {
     expect(vitrine.every((v) => v.tipo !== 'BOX')).toBe(true);
   });
 
-  it('pode ser comprado no checkout, junto com um kit de R$ 35', async () => {
+  it('sozinho e barato, o avulso nao fecha: o servidor barra pelo minimo', async () => {
+    const antes = await prisma.kit.findUniqueOrThrow({ where: { id: idIndividual } });
+    const r = await checkout({ cliente, itens: [{ kitId: idIndividual, qtd: 2 }] });
+    expect(r.status).toBe(400);
+    expect(r.corpo.erro).toMatch(/a partir de R\$ 50/);
+
+    // Barrado significa barrado: nada de pedido gravado nem estoque baixado.
+    expect(await prisma.pedido.count({ where: { email: EMAIL } })).toBe(0);
+    const depois = await prisma.kit.findUniqueOrThrow({ where: { id: idIndividual } });
+    expect(depois.saidas).toBe(antes.saidas);
+  });
+
+  it('tres unidades do mesmo avulso ja passam de R$ 50 e fecham', async () => {
+    const r = await checkout({ cliente, itens: [{ kitId: idIndividual, qtd: 3 }] });
+    expect(r.status).toBe(200);
+    const pedido = await prisma.pedido.findFirstOrThrow({
+      where: { email: EMAIL }, orderBy: { criadoEm: 'desc' },
+    });
+    expect(pedido.subtotal.toFixed(2)).toBe('59.70');
+    await prisma.pedidoItem.deleteMany({ where: { pedidoId: pedido.id } });
+    await prisma.pedido.delete({ where: { id: pedido.id } });
+  });
+
+  it('com kit no carrinho nao ha minimo, mesmo somando pouco', async () => {
     const r = await checkout({ cliente, itens: [{ kitId: idIndividual, qtd: 1 }, { kitId: idKit, qtd: 1 }] });
     expect(r.status).toBe(200);
 
     const pedido = await prisma.pedido.findFirstOrThrow({
       where: { email: EMAIL }, orderBy: { criadoEm: 'desc' }, include: { itens: true },
     });
-    expect(pedido.subtotal.toFixed(2)).toBe('85.00');
+    expect(pedido.subtotal.toFixed(2)).toBe('54.90');
     expect(pedido.itens.map((i) => i.sku).sort()).toEqual([SKU_KIT, SKU_IND].sort());
 
     const ind = await prisma.kit.findUniqueOrThrow({ where: { id: idIndividual } });
-    expect(ind.saidas).toBe(1);
+    // 3 do teste anterior + 1 deste: o estoque baixou em cada compra fechada.
+    expect(ind.saidas).toBe(4);
   });
 });

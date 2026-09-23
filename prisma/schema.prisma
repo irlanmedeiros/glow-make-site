@@ -302,6 +302,12 @@ model Config {
   // Marketing
   metaPixelId String @default("")
 
+  // Liga/desliga a venda da assinatura, por Configuracoes no admin. Era so a
+  // variavel SUBSCRIPTION_ENABLED, que exigia mexer na Vercel e publicar de
+  // novo para lancar; agora a dona decide o momento. A variavel continua
+  // valendo como valor inicial enquanto nao existir linha de Config.
+  assinaturaAtiva Boolean @default(false)
+
   // Contrato da assinatura
   contratoVersao String @default("v1")
   contratoTexto  String @default("")

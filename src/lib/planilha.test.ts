@@ -262,7 +262,7 @@ describe('gerarModelo — a planilha que o lojista baixa', () => {
   });
 });
 
-describe('coluna tipo — produto individual tem piso de R$ 50', () => {
+describe('coluna tipo', () => {
   it('entende kit e individual, e em branco não mexe no tipo', async () => {
     const r = await lerPlanilha(
       csv('sku;nome;preco;tipo\nGM-A;Kit A;35,00;kit\nGM-B;Batom;50,00;individual\nGM-C;Kit C;40,00;'),
@@ -272,18 +272,13 @@ describe('coluna tipo — produto individual tem piso de R$ 50', () => {
     expect(r.linhas.every((l) => l.erros.length === 0)).toBe(true);
   });
 
-  it('kit pode custar menos de R$ 50; individual não', async () => {
+  it('produto barato entra: o mínimo de R$ 50 é do carrinho, não do cadastro', async () => {
     const r = await lerPlanilha(
-      csv('sku;nome;preco;tipo\nGM-A;Kit A;35,00;kit\nGM-B;Batom;49,99;individual'),
+      csv('sku;nome;preco;tipo\nGM-A;Kit A;35,00;kit\nGM-B;Batom;19,90;individual'),
       'p.csv'
     );
     expect(r.linhas[0].erros).toEqual([]);
-    expect(r.linhas[1].erros.join(' ')).toMatch(/individual não pode custar menos/);
-  });
-
-  it('R$ 50 exatos passam', async () => {
-    const r = await lerPlanilha(csv('sku;nome;preco;tipo\nGM-B;Batom;50,00;individual'), 'p.csv');
-    expect(r.linhas[0].erros).toEqual([]);
+    expect(r.linhas[1].erros).toEqual([]);
   });
 
   it('tipo desconhecido vira erro em vez de virar kit em silêncio', async () => {
