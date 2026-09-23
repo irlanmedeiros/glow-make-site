@@ -22,6 +22,7 @@ import {
   IcVendas,
   IcCupons,
   IcUsuarios,
+  IcConferencia,
 } from '@/components/Icones';
 
 export const dynamic = 'force-dynamic';
@@ -32,6 +33,7 @@ const MENU = [
   { href: '/catalogo', rotulo: 'Catálogo da loja', Icone: IcCatalogo },
   { href: '/admin/kits', rotulo: 'Kits e produtos', Icone: IcKits },
   { href: '/admin/vendas', rotulo: 'Vendas da loja', Icone: IcVendas },
+  { href: '/admin/conferencia', rotulo: 'Conferência da maquininha', Icone: IcConferencia },
   { href: '/admin/pedidos', rotulo: 'Pedidos', Icone: IcPedidos },
   { href: '/admin/entregas', rotulo: 'Entregas', Icone: IcEntregas },
   { href: '/admin/assinantes', rotulo: 'Assinantes', Icone: IcAssinantes },

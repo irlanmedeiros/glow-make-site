@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import { real, dataHora, num } from '@/lib/format';
 import { ehCartao, ROTULO_FORMA, type FormaPagamento } from '@/lib/pdv';
@@ -25,7 +26,10 @@ export default async function VendasLoja({ searchParams }: Props) {
     }),
     prisma.vendaLoja.findMany({
       where: { criadoEm: { gte: inicioMes }, cancelada: false },
-      select: { total: true, formaPagamento: true, criadoEm: true, codigoMaquineta: true },
+      select: {
+        total: true, formaPagamento: true, criadoEm: true,
+        codigoMaquineta: true, conferidaEm: true, taxaMaquineta: true,
+      },
     }),
     prisma.caixa.findMany({ orderBy: { abertoEm: 'desc' }, take: 15 }),
   ]);
@@ -42,6 +46,8 @@ export default async function VendasLoja({ searchParams }: Props) {
   const semComprovante = noCartao.filter((v) => !v.codigoMaquineta);
   const totalCartao = noCartao.reduce((s, v) => s + num(v.total), 0);
   const totalSemComprovante = semComprovante.reduce((s, v) => s + num(v.total), 0);
+  const conferidas = noCartao.filter((v) => v.conferidaEm);
+  const taxaDoMes = conferidas.reduce((s, v) => s + num(v.taxaMaquineta ?? 0), 0);
 
   const porForma = (['DINHEIRO', 'PIX', 'DEBITO', 'CREDITO'] as FormaPagamento[]).map((f) => ({
     forma: f,
@@ -88,12 +94,17 @@ export default async function VendasLoja({ searchParams }: Props) {
               ? `${semComprovante.length} sem comprovante · ${real(totalSemComprovante)}`
               : 'Todas com comprovante'}
           </Pill>
+          <Pill cor={conferidas.length === noCartao.length && noCartao.length > 0 ? 'ok' : 'info'}>
+            {conferidas.length} conferida(s) com o extrato
+          </Pill>
+          {taxaDoMes > 0 && <Pill cor="info">Taxa da maquininha: {real(taxaDoMes)}</Pill>}
         </div>
         <div className="note">
           A maquininha <b>não conversa com o site</b>: a integração da PagBank exige um aplicativo
-          rodando na própria máquina. Para conferir, compare este total com o extrato da PagBank no
-          mesmo período. O <b>código do comprovante</b> (NSU) é o que identifica cada venda nos dois
-          lados — a equipe digita na hora, e o que faltar pode ser preenchido na lista abaixo.
+          rodando na própria máquina. Suba o extrato em{' '}
+          <Link href="/admin/conferencia">Conferência da maquininha</Link> que o sistema casa cada
+          transação com a venda. O <b>código do comprovante</b> (NSU) é o que identifica a venda nos
+          dois lados — a equipe digita na hora, e o que faltar pode ser preenchido na lista abaixo.
         </div>
       </Painel>
 

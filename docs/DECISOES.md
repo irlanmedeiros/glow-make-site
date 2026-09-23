@@ -160,6 +160,20 @@ travar a venda por causa de um número seria o erro caro.
 Dinheiro e PIX não guardam código nenhum: número digitado ali só sujaria a
 conferência.
 
+A conferência é por **arquivo**: a dona exporta o extrato no painel da PagBank
+e sobe em Admin > Conferência da maquininha (`src/lib/extrato.ts` e
+`src/lib/conciliacao.ts`). O cruzamento tem duas passadas, da mais confiável
+para a menos: **comprovante** primeiro, que é identidade; depois **valor igual
+e horário próximo** (90 min de tolerância, porque o relógio da maquininha não
+é o do sistema). A tela mostra COMO cada par casou em vez de fingir certeza, e
+grava só depois de a pessoa conferir — pelo mesmo motivo da importação de
+planilha (#12).
+
+Transação cancelada no extrato fica **fora** do cruzamento: casaria com uma
+venda boa de mesmo valor. As duas sobras é que interessam, e a pior é
+transação sem venda — o estoque não baixou, e o site segue vendendo peça que
+já saiu da loja.
+
 ## 9. Venda é venda; perda é perda
 
 O balcão tem dois caminhos separados: **venda** (com valor e forma de

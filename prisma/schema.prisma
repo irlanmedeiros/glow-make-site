@@ -433,6 +433,13 @@ model VendaLoja {
   // liga a venda daqui com a transacao de la na hora de conferir o extrato.
   codigoMaquineta String?
 
+  // Resultado da conferencia com o extrato da PagBank (Admin > Conferencia).
+  // A taxa so existe aqui: o painel mostrava R$ 100 de venda e a maquininha
+  // deposita menos, e essa diferenca nao aparecia em lugar nenhum.
+  taxaMaquineta    Decimal?  @db.Decimal(10, 2)
+  liquidoMaquineta Decimal?  @db.Decimal(10, 2)
+  conferidaEm      DateTime?
+
   subtotal Decimal @db.Decimal(10, 2)
   desconto Decimal @db.Decimal(10, 2) @default(0)
   total    Decimal @db.Decimal(10, 2)

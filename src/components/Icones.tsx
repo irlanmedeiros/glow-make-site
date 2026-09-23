@@ -232,3 +232,10 @@ export const IcUsuarios = ({ size = 17 }: P) => (
     <circle cx="12" cy="15.5" r="1.5" />
   </svg>
 );
+export const IcConferencia = ({ size = 17 }: P) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" {...adm}>
+    <rect x="5" y="3" width="14" height="18" rx="2" />
+    <path d="M9 8h6M9 12h6" />
+    <path d="M9 16.2l1.6 1.6L14 14.6" />
+  </svg>
+);

@@ -44,7 +44,7 @@ const COLUNAS: Record<string, string[]> = {
   tipo: ['tipo', 'tipo de produto', 'categoria'],
 };
 
-function normalizar(s: string): string {
+export function normalizar(s: string): string {
   return s
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')  // tira acentos
@@ -90,7 +90,7 @@ function lerBooleano(v: unknown): boolean | null {
   return null;
 }
 
-function celula(v: unknown): string {
+export function celula(v: unknown): string {
   if (v === null || v === undefined) return '';
   // Célula com fórmula ou rich text vem como objeto no ExcelJS.
   if (typeof v === 'object') {
