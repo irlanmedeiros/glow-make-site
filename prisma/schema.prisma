@@ -427,6 +427,12 @@ model VendaLoja {
   vendedora      String
   formaPagamento FormaPagamentoLoja
 
+  // Codigo do comprovante da maquininha (NSU/autorizacao), so em debito e
+  // credito. A maquininha PagBank nao conversa com o site — a integracao dela
+  // exige aplicativo Android rodando na propria maquina. Este campo e o que
+  // liga a venda daqui com a transacao de la na hora de conferir o extrato.
+  codigoMaquineta String?
+
   subtotal Decimal @db.Decimal(10, 2)
   desconto Decimal @db.Decimal(10, 2) @default(0)
   total    Decimal @db.Decimal(10, 2)

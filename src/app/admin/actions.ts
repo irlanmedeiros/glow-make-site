@@ -17,6 +17,7 @@ import {
 import { autenticarUsuario } from '@/lib/usuarios';
 import { erroDeLogin, erroDeSenha, gerarHash, normalizarLogin } from '@/lib/senha';
 import { devolverEstoque } from '@/lib/estoque';
+import { ehCartao, normalizarCodigoMaquineta, type FormaPagamento } from '@/lib/pdv';
 import { cancelarAssinatura as cancelarNoAsaas, asaasConfigurado } from '@/lib/asaas';
 import { cancelarPedido, recusarCancelamentoPedido, ErroCancelamento } from '@/lib/cancelamento';
 import { PREFIXO_AVATAR_EXEMPLO } from '@/lib/conteudo';
@@ -923,6 +924,29 @@ export async function excluirLead(fd: FormData) {
 /* ============================================================
    Vendas da loja (PDV)
    ============================================================ */
+
+/**
+ * Preenche ou corrige o código do comprovante da maquininha numa venda que já
+ * foi registrada. Existe porque no balcão, com cliente esperando, o número é
+ * justamente o que se pula — e sem ele não dá para casar a venda com a linha
+ * do extrato da PagBank.
+ */
+export async function salvarCodigoMaquineta(fd: FormData) {
+  await exigirLogin();
+  const id = texto(fd, 'id');
+  const venda = await prisma.vendaLoja.findUnique({ where: { id } });
+  if (!venda) voltar('/admin/vendas', 'Venda não encontrada.', 'erro');
+  if (!ehCartao(venda.formaPagamento as FormaPagamento)) {
+    voltar('/admin/vendas', 'Só venda no cartão tem comprovante de maquininha.', 'erro');
+  }
+
+  const codigo = normalizarCodigoMaquineta(fd.get('codigoMaquineta'));
+  await prisma.vendaLoja.update({ where: { id }, data: { codigoMaquineta: codigo } });
+  voltar(
+    '/admin/vendas',
+    codigo ? `Venda #${venda.numero}: comprovante ${codigo}.` : `Venda #${venda.numero}: comprovante apagado.`
+  );
+}
 
 export async function cancelarVendaAdmin(fd: FormData) {
   await exigirLogin();

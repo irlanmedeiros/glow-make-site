@@ -232,6 +232,7 @@ function AbaVender({
   const [busca, setBusca] = useState('');
   const [vendedora, setVendedora] = useState('');
   const [forma, setForma] = useState('DINHEIRO');
+  const [codigoMaquineta, setCodigoMaquineta] = useState('');
   const [desconto, setDesconto] = useState('');
   const [aviso, setAviso] = useState('');
   const campoCodigo = useRef<HTMLInputElement>(null);
@@ -257,6 +258,7 @@ function AbaVender({
     if (resultado?.ok) {
       setCarrinho([]);
       setDesconto('');
+      setCodigoMaquineta('');
       aoVender();
       campoCodigo.current?.focus();
       if (resultado.pix && resultado.id) {
@@ -354,6 +356,7 @@ function AbaVender({
   const subtotal = carrinho.reduce((s, i) => s + (porId.get(i.id)?.preco ?? 0) * i.qtd, 0);
   const descontoNum = Math.max(0, Number(desconto.replace(',', '.')) || 0);
   const total = Math.max(0, subtotal - descontoNum);
+  const ehCartao = forma === 'DEBITO' || forma === 'CREDITO';
 
   const lista = produtos.filter(
     (p) =>
@@ -510,6 +513,26 @@ function AbaVender({
             </label>
           )}
           <input type="hidden" name="gerarQrPix" value={forma === 'PIX' && pedirQr ? 'sim' : 'nao'} />
+
+          {/* A maquininha nao conversa com o site: a integracao da PagBank
+              exige aplicativo rodando na propria maquina. O numero do
+              comprovante e o que liga esta venda a transacao do extrato. */}
+          {ehCartao && (
+            <div className="field">
+              <label htmlFor="nsu">Código do comprovante (opcional)</label>
+              <input
+                id="nsu"
+                name="codigoMaquineta"
+                value={codigoMaquineta}
+                onChange={(e) => setCodigoMaquineta(e.target.value.toUpperCase())}
+                placeholder="NSU da maquininha"
+                maxLength={20}
+                inputMode="numeric"
+                autoComplete="off"
+              />
+              <small>Sai no comprovante da maquininha. Serve para conferir o extrato depois — dá para preencher mais tarde, no painel.</small>
+            </div>
+          )}
 
           <div className="field">
             <label htmlFor="vend">Quem está vendendo</label>

@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { real, dataHora, num } from '@/lib/format';
-import { ROTULO_FORMA, type FormaPagamento } from '@/lib/pdv';
-import { cancelarVendaAdmin } from '../../actions';
+import { ehCartao, ROTULO_FORMA, type FormaPagamento } from '@/lib/pdv';
+import { cancelarVendaAdmin, salvarCodigoMaquineta } from '../../actions';
 import { Aviso, Cabecalho, Painel, Pill, Vazio, mensagens } from '@/components/admin/Ui';
 
 export const dynamic = 'force-dynamic';
@@ -25,7 +25,7 @@ export default async function VendasLoja({ searchParams }: Props) {
     }),
     prisma.vendaLoja.findMany({
       where: { criadoEm: { gte: inicioMes }, cancelada: false },
-      select: { total: true, formaPagamento: true, criadoEm: true },
+      select: { total: true, formaPagamento: true, criadoEm: true, codigoMaquineta: true },
     }),
     prisma.caixa.findMany({ orderBy: { abertoEm: 'desc' }, take: 15 }),
   ]);
@@ -34,6 +34,14 @@ export default async function VendasLoja({ searchParams }: Props) {
   const deHoje = doMes.filter((v) => v.criadoEm >= hoje);
   const totalHoje = deHoje.reduce((s, v) => s + num(v.total), 0);
   const ticket = doMes.length ? totalMes / doMes.length : 0;
+
+  // Conferencia da maquininha: a PagBank nao conversa com o site, entao o que
+  // se faz e casar estas linhas com o extrato dela. Sem o comprovante, nao ha
+  // como saber qual venda daqui e qual transacao de la.
+  const noCartao = doMes.filter((v) => ehCartao(v.formaPagamento as FormaPagamento));
+  const semComprovante = noCartao.filter((v) => !v.codigoMaquineta);
+  const totalCartao = noCartao.reduce((s, v) => s + num(v.total), 0);
+  const totalSemComprovante = semComprovante.reduce((s, v) => s + num(v.total), 0);
 
   const porForma = (['DINHEIRO', 'PIX', 'DEBITO', 'CREDITO'] as FormaPagamento[]).map((f) => ({
     forma: f,
@@ -69,6 +77,25 @@ export default async function VendasLoja({ searchParams }: Props) {
           <b>{caixas.length}</b>
         </div>
       </div>
+
+      <Painel titulo="Conferência da maquininha" descricao="No mês corrente">
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
+          <Pill cor="info">
+            {noCartao.length} venda(s) no cartão · {real(totalCartao)}
+          </Pill>
+          <Pill cor={semComprovante.length ? 'low' : 'ok'}>
+            {semComprovante.length
+              ? `${semComprovante.length} sem comprovante · ${real(totalSemComprovante)}`
+              : 'Todas com comprovante'}
+          </Pill>
+        </div>
+        <div className="note">
+          A maquininha <b>não conversa com o site</b>: a integração da PagBank exige um aplicativo
+          rodando na própria máquina. Para conferir, compare este total com o extrato da PagBank no
+          mesmo período. O <b>código do comprovante</b> (NSU) é o que identifica cada venda nos dois
+          lados — a equipe digita na hora, e o que faltar pode ser preenchido na lista abaixo.
+        </div>
+      </Painel>
 
       <Painel titulo="Entrada por forma de pagamento" descricao="No mês corrente" flush>
         <div className="tbl-scroll">
@@ -153,6 +180,7 @@ export default async function VendasLoja({ searchParams }: Props) {
                   <th>Itens</th>
                   <th>Quem vendeu</th>
                   <th>Pagamento</th>
+                  <th>Comprovante</th>
                   <th className="num">Desconto</th>
                   <th className="num">Total</th>
                   <th>Quando</th>
@@ -168,6 +196,23 @@ export default async function VendasLoja({ searchParams }: Props) {
                     </td>
                     <td>{v.vendedora}</td>
                     <td>{ROTULO_FORMA[v.formaPagamento as FormaPagamento]}</td>
+                    <td>
+                      {!ehCartao(v.formaPagamento as FormaPagamento) ? (
+                        <span style={{ color: 'var(--muted)' }}>—</span>
+                      ) : (
+                        <form action={salvarCodigoMaquineta} style={{ display: 'flex', gap: 6 }}>
+                          <input type="hidden" name="id" value={v.id} />
+                          <input
+                            name="codigoMaquineta"
+                            defaultValue={v.codigoMaquineta ?? ''}
+                            placeholder="NSU"
+                            maxLength={20}
+                            style={{ width: 110 }}
+                          />
+                          <button className="btn btn-ghost btn-sm">Salvar</button>
+                        </form>
+                      )}
+                    </td>
                     <td className="num">{num(v.desconto) > 0 ? real(v.desconto) : '—'}</td>
                     <td className="num"><b>{real(v.total)}</b></td>
                     <td style={{ color: 'var(--muted)', fontSize: 13, whiteSpace: 'nowrap' }}>

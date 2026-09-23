@@ -161,12 +161,24 @@ export async function caixaAberto() {
   });
 }
 
+/** Comprovante da maquininha: so letras e numeros, como sai impresso. */
+export function normalizarCodigoMaquineta(bruto: unknown): string | null {
+  const limpo = String(bruto ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 20);
+  return limpo || null;
+}
+
+export function ehCartao(forma: FormaPagamento): boolean {
+  return forma === 'DEBITO' || forma === 'CREDITO';
+}
+
 export async function registrarVenda(params: {
   itens: ItemVenda[];
   vendedora: string;
   formaPagamento: FormaPagamento;
   desconto: number;
   observacao?: string;
+  /** NSU do comprovante, so faz sentido em cartao. */
+  codigoMaquineta?: string;
   /** PIX com QR na tela. Sem isto, PIX segue como rótulo, cobrado por fora. */
   gerarQrPix?: boolean;
 }): Promise<ResultadoVenda> {
@@ -218,6 +230,11 @@ export async function registrarVenda(params: {
         data: {
           vendedora,
           formaPagamento: params.formaPagamento,
+          // Em dinheiro ou PIX nao existe comprovante de maquininha: guardar
+          // um numero digitado ali so sujaria a conferencia do extrato.
+          codigoMaquineta: ehCartao(params.formaPagamento)
+            ? normalizarCodigoMaquineta(params.codigoMaquineta)
+            : null,
           statusPagamento: esperaPix ? 'AGUARDANDO_PIX' : 'CONFIRMADA',
           subtotal,
           desconto,

@@ -226,6 +226,49 @@ describe('registrarVenda — PDV do balcão', () => {
     expect(await saldoDe()).toBe(8);
   });
 
+  it('venda no cartao guarda o comprovante da maquininha, limpo e em maiusculas', async () => {
+    const r = await registrarVenda({
+      itens: [{ kitId, qtd: 1 }],
+      vendedora: 'TESTE-INT Ana',
+      formaPagamento: 'CREDITO',
+      desconto: 0,
+      codigoMaquineta: ' nsu-1234 56 ',
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const venda = await prisma.vendaLoja.findUniqueOrThrow({ where: { id: r.id } });
+    expect(venda.codigoMaquineta).toBe('NSU123456');
+  });
+
+  it('dinheiro e PIX nao guardam comprovante, mesmo se vier preenchido', async () => {
+    for (const forma of ['DINHEIRO', 'PIX'] as const) {
+      const r = await registrarVenda({
+        itens: [{ kitId, qtd: 1 }],
+        vendedora: 'TESTE-INT Ana',
+        formaPagamento: forma,
+        desconto: 0,
+        codigoMaquineta: '998877',
+      });
+      expect(r.ok).toBe(true);
+      if (!r.ok) return;
+      const venda = await prisma.vendaLoja.findUniqueOrThrow({ where: { id: r.id } });
+      expect(venda.codigoMaquineta).toBeNull();
+    }
+  });
+
+  it('cartao sem comprovante segue valendo: a venda nao pode travar no balcao', async () => {
+    const r = await registrarVenda({
+      itens: [{ kitId, qtd: 1 }],
+      vendedora: 'TESTE-INT Ana',
+      formaPagamento: 'DEBITO',
+      desconto: 0,
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const venda = await prisma.vendaLoja.findUniqueOrThrow({ where: { id: r.id } });
+    expect(venda.codigoMaquineta).toBeNull();
+  });
+
   it('aplica desconto sobre o subtotal', async () => {
     const r = await registrarVenda({
       itens: [{ kitId, qtd: 2 }],

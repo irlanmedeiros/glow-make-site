@@ -62,6 +62,7 @@ export async function fecharVenda(
   const r = await registrarVenda({
     itens,
     vendedora: String(fd.get('vendedora') ?? ''),
+    codigoMaquineta: String(fd.get('codigoMaquineta') ?? ''),
     formaPagamento: String(fd.get('formaPagamento') ?? 'DINHEIRO') as FormaPagamento,
     desconto,
     observacao: String(fd.get('observacao') ?? ''),

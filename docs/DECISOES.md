@@ -142,6 +142,24 @@ estoque duas vezes.
 Somar tudo é o erro clássico que faz o fechamento nunca bater e ninguém
 entender por quê. PIX e cartão não passam pela gaveta.
 
+## 8B. Maquininha: comprovante digitado, não integração
+
+`src/lib/pdv.ts`, `VendaLoja.codigoMaquineta`
+
+A loja passa cartão na **Moderninha Smart 2** da PagBank. Ela **não conversa
+com o site**: a integração da PagBank (PlugPagService) é para um aplicativo
+Android instalado na própria maquininha, e página no navegador não alcança
+isso. Fingir integração seria pior do que não ter.
+
+O que existe no lugar: a venda no cartão guarda o **código do comprovante**
+(NSU), digitado pela equipe ou preenchido depois no admin. É esse número que
+liga a venda daqui à transação do extrato da PagBank; sem ele, conferir o dia
+vira adivinhação. O campo é **opcional de propósito** — com cliente na frente,
+travar a venda por causa de um número seria o erro caro.
+
+Dinheiro e PIX não guardam código nenhum: número digitado ali só sujaria a
+conferência.
+
 ## 9. Venda é venda; perda é perda
 
 O balcão tem dois caminhos separados: **venda** (com valor e forma de
