@@ -925,3 +925,49 @@ th.num{text-align:right}
 .campo-imagem-barra{height:6px;border-radius:999px;background:var(--rose-100);overflow:hidden}
 .campo-imagem-barra span{display:block;height:100%;background:var(--rose);transition:width .2s}
 .campo-imagem-erro{color:#A5342A}
+
+/* ------------------------------------------------------------
+   Formulário da assinante (etapa "Seu perfil" do checkout)
+
+   Mobile-first: a base é o celular, onde quase toda assinante
+   preenche isso, e cresce com min-width. As cápsulas são alvo de
+   dedo — 44px de altura mínima — e quebram em várias linhas em
+   vez de rolar na horizontal, que esconde opção.
+   ------------------------------------------------------------ */
+.perfil{display:flex;flex-direction:column;gap:18px}
+.perfil-intro{margin:0;font-size:14px;color:var(--muted);line-height:1.6}
+.perfil-intro b{color:var(--ink)}
+
+.perfil-bloco{border:0;padding:0;margin:0;min-width:0}
+.perfil-bloco legend{padding:0;margin-bottom:9px;font-size:14px;font-weight:600;color:var(--ink)}
+.perfil-ajuda{margin:-4px 0 9px;font-size:12.5px;color:var(--muted)}
+
+.perfil-opcoes{display:flex;flex-wrap:wrap;gap:8px}
+.perfil-chip{display:inline-flex;align-items:center;gap:6px;min-height:44px;
+  padding:9px 16px;border:1px solid var(--line);border-radius:999px;background:#fff;
+  font-size:14px;color:var(--ink);text-align:left;transition:border-color .18s,background .18s}
+.perfil-chip:hover{border-color:var(--rose-300)}
+.perfil-chip.on{border-color:var(--rose);background:var(--rose-50);font-weight:600;color:var(--rose-dark)}
+.perfil-ordem{display:inline-grid;place-items:center;min-width:22px;height:22px;padding:0 5px;
+  border-radius:999px;background:var(--rose);color:#fff;font-size:11px;font-weight:700}
+
+/* Lista longa (18 itens): uma coluna no celular, duas quando couber. */
+.perfil-marcar{display:grid;grid-template-columns:1fr;gap:4px}
+.perfil-marca{display:flex;align-items:center;gap:10px;min-height:44px;padding:7px 11px;
+  border-radius:10px;font-size:14px;color:var(--ink);cursor:pointer;transition:background .18s}
+.perfil-marca:hover{background:var(--rose-50)}
+.perfil-marca.on{background:var(--rose-50);font-weight:600}
+.perfil-marca input{width:auto;flex:none;margin:0}
+
+@media (min-width:480px){
+  .perfil-marcar{grid-template-columns:1fr 1fr}
+}
+
+/* Perfil da assinante no admin: rótulo e valor, uma coluna no celular. */
+.perfil-adm{display:grid;grid-template-columns:1fr;gap:2px 14px;margin:10px 0 0;font-size:13px}
+.perfil-adm dt{color:var(--muted)}
+.perfil-adm dd{margin:0 0 7px;color:var(--ink)}
+@media (min-width:480px){
+  .perfil-adm{grid-template-columns:max-content 1fr;align-items:baseline}
+  .perfil-adm dd{margin-bottom:2px}
+}

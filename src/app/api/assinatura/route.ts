@@ -6,6 +6,7 @@ import { validarCliente } from '@/lib/validacao';
 import { afiliadoPorCodigo, gerarComissaoAssinatura } from '@/lib/afiliado';
 import { marcarConvertido } from '@/lib/lead';
 import { assinaturaAtiva } from '@/lib/recursos';
+import { validarPerfil, perfilVazio } from '@/lib/perfil';
 
 export const runtime = 'nodejs';
 
@@ -16,7 +17,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ erro: 'A assinatura ainda não está disponível.' }, { status: 404 });
   }
 
-  let corpo: { cliente?: unknown; aceitouContrato?: boolean; ref?: string };
+  let corpo: { cliente?: unknown; aceitouContrato?: boolean; ref?: string; perfil?: unknown };
   try {
     corpo = await req.json();
   } catch {
@@ -35,6 +36,11 @@ export async function POST(req: Request) {
       { status: 400 }
     );
   }
+
+  /* Validado fora da transação porque não depende do banco, e nunca recusa:
+     preferência malformada vira campo vazio, não erro na cara de quem está
+     assinando. */
+  const perfil = validarPerfil(corpo.perfil);
 
   const box = await prisma.kit.findFirst({ where: { tipo: 'BOX' } });
   if (!box) {
@@ -68,6 +74,9 @@ export async function POST(req: Request) {
     // Cada assinatura reserva uma caixa da edição do mês.
     const assinante = await prisma.$transaction(async (tx) => {
       await baixarEstoque(tx, [{ kitId: box.id, qtd: 1 }], `Assinatura de ${cliente.nome}`);
+      /* O perfil entra na MESMA transação da assinante: se gravar depois e
+         falhar, a caixa do mês sai genérica sem ninguém perceber. Perfil sem
+         nenhuma resposta não vira linha — ver src/lib/perfil.ts. */
       return tx.assinante.create({
         data: {
           nome: cliente.nome,
@@ -86,6 +95,27 @@ export async function POST(req: Request) {
           contratoIp: ip,
           afiliadoId: afiliado?.id ?? null,
           valor: box.preco,
+          ...(perfilVazio(perfil)
+            ? {}
+            : {
+                perfil: {
+                  create: {
+                    dataNascimento: perfil.dataNascimento
+                      ? new Date(`${perfil.dataNascimento}T12:00:00Z`)
+                      : null,
+                    tipoPele: perfil.tipoPele,
+                    tomPele: perfil.tomPele,
+                    subtom: perfil.subtom,
+                    preferenciaCategorias: perfil.preferenciaCategorias,
+                    itensFavoritos: perfil.itensFavoritos,
+                    itensOutros: perfil.itensOutros,
+                    cores: perfil.cores,
+                    naoEnviar: perfil.naoEnviar,
+                    alergias: perfil.alergias,
+                    sonhoCaixa: perfil.sonhoCaixa,
+                  },
+                },
+              }),
         },
       });
     });

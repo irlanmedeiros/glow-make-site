@@ -14,8 +14,8 @@ datasource db {
 }
 
 enum TipoProduto {
-  KIT        // conjunto montado; pode custar menos de R$ 50
-  BOX        // a caixa da assinatura
+  KIT // conjunto montado; pode custar menos de R$ 50
+  BOX // a caixa da assinatura
   INDIVIDUAL // produto vendido sozinho; preco minimo de R$ 50 (src/lib/produto.ts)
 }
 
@@ -42,21 +42,21 @@ enum FormaPagamentoLoja {
 }
 
 enum StatusVendaLoja {
-  CONFIRMADA      // dinheiro na mão, ou PIX já confirmado pelo Asaas
-  AGUARDANDO_PIX  // QR na tela, esperando a cliente pagar
+  CONFIRMADA // dinheiro na mão, ou PIX já confirmado pelo Asaas
+  AGUARDANDO_PIX // QR na tela, esperando a cliente pagar
 }
 
 enum EtapaLead {
-  CARRINHO       // montou o carrinho e parou
-  DADOS          // começou a preencher o checkout
-  CONTRATO       // leu o contrato da assinatura e não aceitou
+  CARRINHO // montou o carrinho e parou
+  DADOS // começou a preencher o checkout
+  CONTRATO // leu o contrato da assinatura e não aceitou
 }
 
 enum StatusComissao {
-  PENDENTE   // venda feita, pagamento ainda não confirmado
-  APROVADA   // pagamento confirmado, comissão devida
+  PENDENTE // venda feita, pagamento ainda não confirmado
+  APROVADA // pagamento confirmado, comissão devida
   PAGA
-  CANCELADA  // pedido cancelado ou estornado
+  CANCELADA // pedido cancelado ou estornado
 }
 
 enum StatusAssinante {
@@ -72,23 +72,23 @@ enum TipoDesconto {
 }
 
 model Kit {
-  id          String      @id @default(cuid())
-  sku         String      @unique
-  nome        String
-  slug        String      @unique
-  descricao   String
-  itens       String[]
-  preco       Decimal     @db.Decimal(10, 2)
-  imagem      String
-  tipo        TipoProduto @default(KIT)
-  entradas    Int         @default(0)
-  saidas      Int         @default(0)
-  estoqueBaixo Int        @default(10)
-  codigoBarras String?    @unique   // EAN da embalagem, para o leitor do balcão
-  ativo       Boolean     @default(true)
-  ordem       Int         @default(0)
-  criadoEm    DateTime    @default(now())
-  atualizadoEm DateTime   @updatedAt
+  id           String      @id @default(cuid())
+  sku          String      @unique
+  nome         String
+  slug         String      @unique
+  descricao    String
+  itens        String[]
+  preco        Decimal     @db.Decimal(10, 2)
+  imagem       String
+  tipo         TipoProduto @default(KIT)
+  entradas     Int         @default(0)
+  saidas       Int         @default(0)
+  estoqueBaixo Int         @default(10)
+  codigoBarras String?     @unique // EAN da embalagem, para o leitor do balcão
+  ativo        Boolean     @default(true)
+  ordem        Int         @default(0)
+  criadoEm     DateTime    @default(now())
+  atualizadoEm DateTime    @updatedAt
 
   itensPedido PedidoItem[]
   itensVenda  VendaLojaItem[]
@@ -97,59 +97,59 @@ model Kit {
 }
 
 model Movimentacao {
-  id       String           @id @default(cuid())
-  sku      String
-  nome     String
-  tipo     TipoMovimentacao
-  qtd      Int
-  origem   String
+  id        String           @id @default(cuid())
+  sku       String
+  nome      String
+  tipo      TipoMovimentacao
+  qtd       Int
+  origem    String
   saldoApos Int
-  criadoEm DateTime         @default(now())
+  criadoEm  DateTime         @default(now())
 
   @@index([criadoEm])
   @@index([sku])
 }
 
 model Pedido {
-  id       String       @id @default(cuid())
-  numero   Int          @unique @default(autoincrement())
-  nome     String
-  email    String
+  id        String @id @default(cuid())
+  numero    Int    @unique @default(autoincrement())
+  nome      String
+  email     String
   documento String
-  telefone String
+  telefone  String
 
   // Endereço de entrega. Antes só existia o CEP, e não se entrega em um CEP.
   // Campos com default "" para a migração não quebrar pedidos antigos.
   cep            String
-  endereco       String  @default("")
-  enderecoNumero String  @default("")   // numero da casa; "numero" ja e o numero do pedido
-  complemento String  @default("")
-  bairro      String  @default("")
-  cidade      String  @default("")
-  uf          String  @default("")
+  endereco       String @default("")
+  enderecoNumero String @default("") // numero da casa; "numero" ja e o numero do pedido
+  complemento    String @default("")
+  bairro         String @default("")
+  cidade         String @default("")
+  uf             String @default("")
 
-  subtotal Decimal      @db.Decimal(10, 2)
-  frete    Decimal      @db.Decimal(10, 2)
-  total    Decimal      @db.Decimal(10, 2)
+  subtotal Decimal @db.Decimal(10, 2)
+  frete    Decimal @db.Decimal(10, 2)
+  total    Decimal @db.Decimal(10, 2)
 
   // Desconto de cupom, ja abatido do total. O codigo fica copiado no pedido
   // porque o cupom pode ser editado ou apagado depois, e o pedido precisa
   // continuar dizendo com qual codigo foi feito.
-  desconto    Decimal @db.Decimal(10, 2) @default(0)
-  cupomId     String?
-  cupom       Cupom?  @relation(fields: [cupomId], references: [id], onDelete: SetNull)
-  cupomCodigo String?
-  pagamento String
-  status   StatusPedido @default(AGUARDANDO_PAGAMENTO)
-  asaasPaymentId String?
-  invoiceUrl     String?
-  observacao     String?
-  estoqueDevolvido Boolean @default(false)
+  desconto         Decimal      @default(0) @db.Decimal(10, 2)
+  cupomId          String?
+  cupom            Cupom?       @relation(fields: [cupomId], references: [id], onDelete: SetNull)
+  cupomCodigo      String?
+  pagamento        String
+  status           StatusPedido @default(AGUARDANDO_PAGAMENTO)
+  asaasPaymentId   String?
+  invoiceUrl       String?
+  observacao       String?
+  estoqueDevolvido Boolean      @default(false)
 
   // Origem da venda
-  afiliadoId     String?
-  afiliado       Afiliado? @relation(fields: [afiliadoId], references: [id], onDelete: SetNull)
-  freteServico   String?   // "PAC", "SEDEX", "Grátis João Pessoa"
+  afiliadoId   String?
+  afiliado     Afiliado? @relation(fields: [afiliadoId], references: [id], onDelete: SetNull)
+  freteServico String? // "PAC", "SEDEX", "Grátis João Pessoa"
 
   // Logística
   transportadora String?
@@ -166,8 +166,8 @@ model Pedido {
   cancelamentoRespondidoEm DateTime?
   cancelamentoResposta     String?
 
-  criadoEm DateTime     @default(now())
-  atualizadoEm DateTime  @updatedAt
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
 
   itens PedidoItem[]
 
@@ -191,7 +191,7 @@ model PedidoItem {
 }
 
 model Assinante {
-  id        String          @id @default(cuid())
+  id        String @id @default(cuid())
   nome      String
   email     String
   documento String
@@ -215,23 +215,66 @@ model Assinante {
   afiliadoId String?
   afiliado   Afiliado? @relation(fields: [afiliadoId], references: [id], onDelete: SetNull)
 
-  valor     Decimal         @db.Decimal(10, 2)
-  status    StatusAssinante @default(AGUARDANDO_PAGAMENTO)
-  asaasCustomerId     String?
-  asaasSubscriptionId String?
-  invoiceUrl          String?
-  canceladaEm DateTime?
+  valor                      Decimal         @db.Decimal(10, 2)
+  status                     StatusAssinante @default(AGUARDANDO_PAGAMENTO)
+  asaasCustomerId            String?
+  asaasSubscriptionId        String?
+  invoiceUrl                 String?
+  canceladaEm                DateTime?
   // Quem cancelou e, quando foi a propria assinante, de onde e sob qual versao
   // do contrato. E a mesma prova guardada no aceite: um cancelamento sem ela
   // nao se sustenta se a cobranca for contestada depois.
-  canceladaPor               String?   // CLIENTE | ADMIN | ASAAS
+  canceladaPor               String? // CLIENTE | ADMIN | ASAAS
   cancelamentoIp             String?
   cancelamentoContratoVersao String?
-  criadoEm  DateTime        @default(now())
-  atualizadoEm DateTime     @updatedAt
+  criadoEm                   DateTime        @default(now())
+  atualizadoEm               DateTime        @updatedAt
+
+  perfil PerfilAssinante?
 
   @@index([status])
   @@index([criadoEm])
+}
+
+/**
+ * O formulario que a assinante preenche ao assinar, para a caixa do mes sair
+ * com a cara dela.
+ * Fica em tabela separada de propósito: `Assinante` guarda o que a loja
+ * precisa para COBRAR e ENTREGAR, e isto aqui e o que ela precisa para
+ * MONTAR. Misturar os dois faria o cadastro que sustenta a cobranca crescer a
+ * cada pergunta nova de preferencia.
+ * Nada aqui e obrigatorio — ver src/lib/perfil.ts. Em branco significa "nao
+ * respondeu", e o admin simplesmente nao mostra a linha.
+ * `alergias` e dado de SAUDE, sensivel para a LGPD: so existe porque evita
+ * mandar um produto que faz mal, e some junto com a assinante (onDelete
+ * Cascade). Nao use para outra coisa.
+ */
+model PerfilAssinante {
+  id          String    @id @default(cuid())
+  assinanteId String    @unique
+  assinante   Assinante @relation(fields: [assinanteId], references: [id], onDelete: Cascade)
+
+  dataNascimento DateTime?
+
+  // Guardados como texto validado contra lista, nao enum: a dona vai querer
+  // acrescentar um tom ou um item sem migracao de schema.
+  tipoPele String?
+  tomPele  String?
+  subtom   String?
+
+  // Ordem importa: 1o, 2o e 3o lugar da preferencia.
+  preferenciaCategorias String[]
+
+  itensFavoritos String[]
+  itensOutros    String   @default("")
+  cores          String[]
+
+  naoEnviar  String @default("")
+  alergias   String @default("")
+  sonhoCaixa String @default("")
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
 }
 
 model Banner {
@@ -263,41 +306,41 @@ model Depoimento {
 }
 
 model Foto {
-  id     String  @id @default(cuid())
-  url    String
-  ordem  Int     @default(0)
-  ativo  Boolean @default(true)
+  id    String  @id @default(cuid())
+  url   String
+  ordem Int     @default(0)
+  ativo Boolean @default(true)
 
   @@index([ativo, ordem])
 }
 
 // Linha única (id = "config") com os ajustes gerais da loja.
 model Config {
-  id               String  @id @default("config")
+  id               String   @id @default("config")
   // Frete padrao: entra quando a cotacao automatica nao vem, para a falha de
   // um terceiro nao virar entrega de graca.
-  freteValor       Decimal @db.Decimal(10, 2) @default(24.90)
+  freteValor       Decimal  @default(24.90) @db.Decimal(10, 2)
   // MORTO: regra antiga de "frete gratis acima de X". Nao e lido por nada.
-  freteGratisAcima Decimal @db.Decimal(10, 2) @default(199.00)
+  freteGratisAcima Decimal  @default(199.00) @db.Decimal(10, 2)
   avisos           String[]
-  whatsapp         String  @default("(00) 00000-0000")
-  email            String  @default("contato@glowmake.com.br")
-  instagram        String  @default("@glowmake")
-  cnpj             String  @default("00.000.000/0001-00")
+  whatsapp         String   @default("(00) 00000-0000")
+  email            String   @default("contato@glowmake.com.br")
+  instagram        String   @default("@glowmake")
+  cnpj             String   @default("00.000.000/0001-00")
 
   // Frete
   // LEGADO: estes dois nomes vem de quando a cidade da loja tinha frete
   // gratis. Hoje frete gratis e so da assinatura, e eles sobraram apenas
   // para dizer onde a loja fica (endereco e foro nos Termos de Uso).
-  cidadeFreteGratis String  @default("João Pessoa")
-  ufFreteGratis     String  @default("PB")
-  cepOrigem         String  @default("58000-000")
-  pesoPadraoKit     Decimal @db.Decimal(10, 3) @default(0.700)  // kg por kit
+  cidadeFreteGratis  String  @default("João Pessoa")
+  ufFreteGratis      String  @default("PB")
+  cepOrigem          String  @default("58000-000")
+  pesoPadraoKit      Decimal @default(0.700) @db.Decimal(10, 3) // kg por kit
   // Dimensões da caixa padrão em cm, usadas na cotação do Melhor Envio.
   // Antes ficavam fixas em frete.ts, apesar do comentário mandar ajustar aqui.
-  caixaAlturaCm      Int @default(11)
-  caixaLarguraCm     Int @default(20)
-  caixaComprimentoCm Int @default(25)
+  caixaAlturaCm      Int     @default(11)
+  caixaLarguraCm     Int     @default(20)
+  caixaComprimentoCm Int     @default(25)
 
   // Marketing
   metaPixelId String @default("")
@@ -312,26 +355,25 @@ model Config {
   contratoVersao String @default("v1")
   contratoTexto  String @default("")
 
-  atualizadoEm     DateTime @updatedAt
+  atualizadoEm DateTime @updatedAt
 }
-
 
 // ============================================================
 //  Afiliados — influenciadores que vendem por link próprio
 // ============================================================
 model Afiliado {
-  id        String  @id @default(cuid())
+  id        String @id @default(cuid())
   nome      String
-  codigo    String  @unique   // vira www.glowmake10.com/?ref=CODIGO
+  codigo    String @unique // vira www.glowmake10.com/?ref=CODIGO
   email     String
-  telefone  String  @default("")
-  instagram String  @default("")
-  documento String  @default("")
-  chavePix  String  @default("")
+  telefone  String @default("")
+  instagram String @default("")
+  documento String @default("")
+  chavePix  String @default("")
 
   // Percentual por afiliado, não fixo no código: dá para negociar caso a caso
   // e para reduzir depois sem mexer em quem já está com o combinado antigo.
-  percentual Decimal @db.Decimal(5, 2) @default(50.00)
+  percentual Decimal @default(50.00) @db.Decimal(5, 2)
 
   // Comissão da assinatura em todo mês de recorrência, e não só na adesão.
   recorrente Boolean @default(true)
@@ -352,7 +394,7 @@ model Comissao {
   afiliadoId String
   afiliado   Afiliado @relation(fields: [afiliadoId], references: [id], onDelete: Cascade)
 
-  origem      String   // "Pedido #12" ou "Assinatura de Fulana — agosto/2026"
+  origem      String // "Pedido #12" ou "Assinatura de Fulana — agosto/2026"
   pedidoId    String?
   assinanteId String?
 
@@ -377,17 +419,17 @@ model Comissao {
 //  Leads — quem começou a comprar e não terminou
 // ============================================================
 model Lead {
-  id       String    @id @default(cuid())
-  etapa    EtapaLead @default(CARRINHO)
+  id    String    @id @default(cuid())
+  etapa EtapaLead @default(CARRINHO)
 
   nome     String @default("")
   email    String
   telefone String @default("")
   cep      String @default("")
 
-  itens          Json     // o que estava no carrinho quando parou
-  valorEstimado  Decimal  @db.Decimal(10, 2) @default(0)
-  queriaAssinar  Boolean  @default(false)
+  itens         Json // o que estava no carrinho quando parou
+  valorEstimado Decimal @default(0) @db.Decimal(10, 2)
+  queriaAssinar Boolean @default(false)
 
   // Sem esse aceite não se manda WhatsApp nem e-mail de remarketing.
   consentiuContato Boolean   @default(false)
@@ -408,7 +450,6 @@ model Lead {
   @@unique([email])
   @@index([convertido, criadoEm])
 }
-
 
 // ============================================================
 //  PDV — vendas feitas no balcão da loja física
@@ -441,12 +482,12 @@ model VendaLoja {
   conferidaEm      DateTime?
 
   subtotal Decimal @db.Decimal(10, 2)
-  desconto Decimal @db.Decimal(10, 2) @default(0)
+  desconto Decimal @default(0) @db.Decimal(10, 2)
   total    Decimal @db.Decimal(10, 2)
 
-  observacao  String?
-  cancelada   Boolean   @default(false)
-  canceladaEm DateTime?
+  observacao         String?
+  cancelada          Boolean   @default(false)
+  canceladaEm        DateTime?
   motivoCancelamento String?
 
   // Dinheiro, débito e crédito nascem CONFIRMADA: o dinheiro já está na mão da
@@ -489,12 +530,14 @@ model VendaLojaItem {
   @@index([vendaId])
 }
 
-/** Sessão de caixa: da abertura ao fechamento do dia. */
+/**
+ * Sessão de caixa: da abertura ao fechamento do dia.
+ */
 model Caixa {
-  id         String    @id @default(cuid())
-  abertoEm   DateTime  @default(now())
-  abertoPor  String
-  trocoInicial Decimal @db.Decimal(10, 2) @default(0)
+  id           String   @id @default(cuid())
+  abertoEm     DateTime @default(now())
+  abertoPor    String
+  trocoInicial Decimal  @default(0) @db.Decimal(10, 2)
 
   fechadoEm  DateTime?
   fechadoPor String?

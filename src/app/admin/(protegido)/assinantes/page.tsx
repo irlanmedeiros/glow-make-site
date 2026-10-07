@@ -1,7 +1,12 @@
+import { Fragment } from 'react';
 import { prisma } from '@/lib/prisma';
 import { real, dataHora, num, ROTULO_ASSINANTE, corAssinante } from '@/lib/format';
 import { cancelarAssinante, reativarAssinante } from '../../actions';
 import { Aviso, Cabecalho, Painel, Pill, Vazio, mensagens } from '@/components/admin/Ui';
+import {
+  TIPOS_PELE, TONS_PELE, SUBTONS, CATEGORIAS, ITENS, CORES, rotulo, rotulos,
+} from '@/lib/perfil';
+import { data } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,7 +16,7 @@ export default async function Assinantes({ searchParams }: Props) {
   const { ok, erro } = mensagens(await searchParams);
 
   const [assinantes, box] = await Promise.all([
-    prisma.assinante.findMany({ orderBy: { criadoEm: 'desc' }, take: 200 }),
+    prisma.assinante.findMany({ orderBy: { criadoEm: 'desc' }, take: 200, include: { perfil: true } }),
     prisma.kit.findFirst({ where: { tipo: 'BOX' } }),
   ]);
 
@@ -72,7 +77,8 @@ export default async function Assinantes({ searchParams }: Props) {
               </thead>
               <tbody>
                 {assinantes.map((a) => (
-                  <tr key={a.id}>
+                  <Fragment key={a.id}>
+                  <tr>
                     <td>
                       <b>{a.nome}</b>
                       {a.asaasSubscriptionId && (
@@ -122,6 +128,8 @@ export default async function Assinantes({ searchParams }: Props) {
                       )}
                     </td>
                   </tr>
+                  {a.perfil && <LinhaPerfil perfil={a.perfil} />}
+                  </Fragment>
                 ))}
               </tbody>
             </table>
@@ -135,5 +143,90 @@ export default async function Assinantes({ searchParams }: Props) {
         também no painel do Asaas, senão a cobrança continua rodando por lá.
       </div>
     </>
+  );
+}
+
+/* ============================================================
+   Perfil da assinante, numa linha que abre
+
+   Fica fechado por padrão: a lista existe para acompanhar cobrança, e o
+   perfil só interessa na hora de montar a caixa daquela pessoa. Aberto por
+   padrão, empurraria todo o resto para fora da tela.
+   ============================================================ */
+
+function LinhaPerfil({
+  perfil,
+}: {
+  perfil: {
+    dataNascimento: Date | null;
+    tipoPele: string | null;
+    tomPele: string | null;
+    subtom: string | null;
+    preferenciaCategorias: string[];
+    itensFavoritos: string[];
+    itensOutros: string;
+    cores: string[];
+    naoEnviar: string;
+    alergias: string;
+    sonhoCaixa: string;
+  };
+}) {
+  const linhas: [string, string][] = [];
+  const por = (r: string, v: string) => v && linhas.push([r, v]);
+
+  if (perfil.dataNascimento) por('Nascimento', data(perfil.dataNascimento));
+  por('Pele', rotulo(perfil.tipoPele, TIPOS_PELE));
+  por('Tom', rotulo(perfil.tomPele, TONS_PELE));
+  por('Subtom', rotulo(perfil.subtom, SUBTONS));
+  por(
+    'Prefere',
+    rotulos(perfil.preferenciaCategorias, CATEGORIAS)
+      .map((r, i) => `${i + 1}º ${r}`)
+      .join(' · ')
+  );
+  por(
+    'Ama',
+    [...rotulos(perfil.itensFavoritos, ITENS), perfil.itensOutros].filter(Boolean).join(', ')
+  );
+  por('Cores', rotulos(perfil.cores, CORES).join(', '));
+  por('Não enviar', perfil.naoEnviar);
+  por('Sonha receber', perfil.sonhoCaixa);
+
+  return (
+    <tr>
+      <td colSpan={7} style={{ padding: 0, borderTop: 0 }}>
+        <details style={{ padding: '0 14px 12px' }}>
+          <summary
+            style={{ cursor: 'pointer', color: 'var(--rose)', fontSize: 13, fontWeight: 600 }}
+          >
+            Perfil para montar a caixa
+          </summary>
+
+          {/* Alergia é dado de saúde: fica em destaque e separado do resto,
+              porque errar nela não é "caixa menos personalizada", é mandar
+              algo que faz mal. */}
+          {perfil.alergias && (
+            <div className="note alerta" style={{ marginTop: 10 }}>
+              <b>Alergia ou sensibilidade:</b> {perfil.alergias}
+            </div>
+          )}
+
+          <dl className="perfil-adm">
+            {linhas.map(([r, v]) => (
+              <Fragment key={r}>
+                <dt>{r}</dt>
+                <dd>{v}</dd>
+              </Fragment>
+            ))}
+          </dl>
+
+          {!linhas.length && !perfil.alergias && (
+            <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: 8 }}>
+              Ela não respondeu nenhuma preferência.
+            </p>
+          )}
+        </details>
+      </td>
+    </tr>
   );
 }
