@@ -13,6 +13,9 @@ import { erroDoCarrinho } from '@/lib/produto';
 import type { ConfigPublica, KitPublico } from './tipos';
 import { Busca, Carrinho, Check, Menu, Seta } from './Icones';
 import { evento } from './Consentimento';
+import {
+  TIPOS_PELE, TONS_PELE, SUBTONS, CATEGORIAS, ITENS, CORES, DECLARACAO,
+} from '@/lib/perfil';
 
 /** Lê o código do afiliado que o middleware guardou no cookie. */
 function refDoCookie(): string {
@@ -200,6 +203,242 @@ export function Loja({
         {aviso}
       </div>
     </LojaCtx.Provider>
+  );
+}
+
+/* ============================================================
+   Formulário da assinante
+
+   Serve para a caixa do mês sair com a cara de quem vai receber. Nada aqui é
+   obrigatório de propósito: barrar a assinatura porque alguém não escolheu o
+   subtom seria perder venda para ganhar um dado que dá para perguntar depois.
+   Por isso o botão diz "Continuar" e não "Salvar", e não existe validação que
+   impeça seguir.
+   ============================================================ */
+
+function FormularioPerfil({
+  perfil,
+  mudar,
+  aoVoltar,
+  aoSeguir,
+}: {
+  perfil: PerfilForm;
+  mudar: (p: PerfilForm) => void;
+  aoVoltar: () => void;
+  aoSeguir: () => void;
+}) {
+  const campo = <K extends keyof PerfilForm>(k: K, v: PerfilForm[K]) =>
+    mudar({ ...perfil, [k]: v });
+
+  /* Alterna um item de lista múltipla mantendo a ordem de clique — é ela que
+     vira a ordem de preferência das categorias. */
+  const alternar = (k: 'preferenciaCategorias' | 'itensFavoritos' | 'cores', v: string, limite = 99) => {
+    const atual = perfil[k];
+    if (atual.includes(v)) return campo(k, atual.filter((x) => x !== v));
+    if (atual.length >= limite) return;
+    campo(k, [...atual, v]);
+  };
+
+  return (
+    <div className="perfil">
+      <p className="perfil-intro">
+        Quanto mais a gente souber de você, mais a sua caixinha tem a sua cara.
+        <b> Responda só o que quiser</b> — nada aqui é obrigatório.
+      </p>
+
+      <div className="field">
+        <label htmlFor="nasc">Data de nascimento</label>
+        <input
+          id="nasc"
+          type="date"
+          value={perfil.dataNascimento}
+          onChange={(e) => campo('dataNascimento', e.target.value)}
+        />
+        <small>Para a gente lembrar de você no seu mês.</small>
+      </div>
+
+      <Escolha
+        titulo="Como você define sua pele?"
+        opcoes={TIPOS_PELE}
+        valor={perfil.tipoPele}
+        aoEscolher={(v) => campo('tipoPele', perfil.tipoPele === v ? '' : v)}
+      />
+      <Escolha
+        titulo="Qual o seu tom de pele?"
+        opcoes={TONS_PELE}
+        valor={perfil.tomPele}
+        aoEscolher={(v) => campo('tomPele', perfil.tomPele === v ? '' : v)}
+      />
+      <Escolha
+        titulo="Qual o seu subtom?"
+        opcoes={SUBTONS}
+        valor={perfil.subtom}
+        aoEscolher={(v) => campo('subtom', perfil.subtom === v ? '' : v)}
+      />
+
+      <fieldset className="perfil-bloco">
+        <legend>O que você prefere receber</legend>
+        <p className="perfil-ajuda">
+          Toque na ordem da sua preferência. A primeira que você tocar vira a 1ª.
+        </p>
+        <div className="perfil-opcoes">
+          {CATEGORIAS.map((o) => {
+            const pos = perfil.preferenciaCategorias.indexOf(o.v);
+            return (
+              <button
+                key={o.v}
+                type="button"
+                className={`perfil-chip${pos >= 0 ? ' on' : ''}`}
+                aria-pressed={pos >= 0}
+                onClick={() => alternar('preferenciaCategorias', o.v, 3)}
+              >
+                {pos >= 0 && <span className="perfil-ordem">{pos + 1}º</span>}
+                {o.r}
+              </button>
+            );
+          })}
+        </div>
+      </fieldset>
+
+      <Marcacao
+        titulo="Quais itens você mais ama?"
+        ajuda="Marque quantos quiser."
+        opcoes={ITENS}
+        marcados={perfil.itensFavoritos}
+        aoMarcar={(v) => alternar('itensFavoritos', v)}
+      />
+
+      <div className="field">
+        <label htmlFor="outros">Outro item que você ama</label>
+        <input
+          id="outros"
+          value={perfil.itensOutros}
+          onChange={(e) => campo('itensOutros', e.target.value)}
+          maxLength={160}
+          placeholder="Que não está na lista acima"
+        />
+      </div>
+
+      <Marcacao
+        titulo="Cores que você mais usa"
+        opcoes={CORES}
+        marcados={perfil.cores}
+        aoMarcar={(v) => alternar('cores', v)}
+      />
+
+      <div className="field">
+        <label htmlFor="nao">Tem algum produto que você NÃO quer receber?</label>
+        <textarea
+          id="nao"
+          rows={2}
+          value={perfil.naoEnviar}
+          onChange={(e) => campo('naoEnviar', e.target.value)}
+          maxLength={400}
+        />
+      </div>
+
+      <div className="field">
+        <label htmlFor="alergia">Tem alguma alergia ou sensibilidade?</label>
+        <textarea
+          id="alergia"
+          rows={2}
+          value={perfil.alergias}
+          onChange={(e) => campo('alergias', e.target.value)}
+          maxLength={400}
+        />
+        <small>
+          Só usamos para não te mandar algo que te faça mal. Pode deixar em branco.
+        </small>
+      </div>
+
+      <div className="field">
+        <label htmlFor="sonho">Conte o que você sonha receber na sua caixinha</label>
+        <textarea
+          id="sonho"
+          rows={3}
+          value={perfil.sonhoCaixa}
+          onChange={(e) => campo('sonhoCaixa', e.target.value)}
+          maxLength={600}
+        />
+      </div>
+
+      <div className="note">{DECLARACAO}</div>
+
+      <div className="row-end">
+        <button className="btn btn-ghost" type="button" onClick={aoVoltar}>
+          Voltar
+        </button>
+        <button className="btn btn-primary" type="button" onClick={aoSeguir}>
+          Continuar
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Uma escolha só, em cápsulas. Tocar de novo na escolhida desmarca. */
+function Escolha({
+  titulo,
+  opcoes,
+  valor,
+  aoEscolher,
+}: {
+  titulo: string;
+  opcoes: readonly { v: string; r: string }[];
+  valor: string;
+  aoEscolher: (v: string) => void;
+}) {
+  return (
+    <fieldset className="perfil-bloco">
+      <legend>{titulo}</legend>
+      <div className="perfil-opcoes">
+        {opcoes.map((o) => (
+          <button
+            key={o.v}
+            type="button"
+            className={`perfil-chip${valor === o.v ? ' on' : ''}`}
+            aria-pressed={valor === o.v}
+            onClick={() => aoEscolher(o.v)}
+          >
+            {o.r}
+          </button>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
+/** Várias escolhas. Caixa de marcar de verdade, para leitor de tela anunciar. */
+function Marcacao({
+  titulo,
+  ajuda,
+  opcoes,
+  marcados,
+  aoMarcar,
+}: {
+  titulo: string;
+  ajuda?: string;
+  opcoes: readonly { v: string; r: string }[];
+  marcados: string[];
+  aoMarcar: (v: string) => void;
+}) {
+  return (
+    <fieldset className="perfil-bloco">
+      <legend>{titulo}</legend>
+      {ajuda && <p className="perfil-ajuda">{ajuda}</p>}
+      <div className="perfil-marcar">
+        {opcoes.map((o) => (
+          <label key={o.v} className={`perfil-marca${marcados.includes(o.v) ? ' on' : ''}`}>
+            <input
+              type="checkbox"
+              checked={marcados.includes(o.v)}
+              onChange={() => aoMarcar(o.v)}
+            />
+            <span>{o.r}</span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
   );
 }
 
@@ -614,6 +853,34 @@ type OpcaoFrete = {
   combinar?: boolean;
 };
 
+type PerfilForm = {
+  dataNascimento: string;
+  tipoPele: string;
+  tomPele: string;
+  subtom: string;
+  preferenciaCategorias: string[];
+  itensFavoritos: string[];
+  itensOutros: string;
+  cores: string[];
+  naoEnviar: string;
+  alergias: string;
+  sonhoCaixa: string;
+};
+
+const PERFIL_VAZIO: PerfilForm = {
+  dataNascimento: '',
+  tipoPele: '',
+  tomPele: '',
+  subtom: '',
+  preferenciaCategorias: [],
+  itensFavoritos: [],
+  itensOutros: '',
+  cores: [],
+  naoEnviar: '',
+  alergias: '',
+  sonhoCaixa: '',
+};
+
 type DadosPagamento = {
   pedido?: number;
   pedidoId?: string;
@@ -641,7 +908,8 @@ const INTERVALO_CONFERE_PIX = 3000;
 function Checkout({ modo, aoLimpar }: { modo: Modo | null; aoLimpar: () => void }) {
   const { itens, kitPorId, subtotal, box, fechar, avisar, config } = useLoja();
 
-  const [etapa, setEtapa] = useState<'dados' | 'contrato' | 'pagamento'>('dados');
+  const [etapa, setEtapa] = useState<'dados' | 'perfil' | 'contrato' | 'pagamento'>('dados');
+  const [perfil, setPerfil] = useState<PerfilForm>(PERFIL_VAZIO);
   const [pagamento, setPagamento] = useState<DadosPagamento | null>(null);
   const [copiado, setCopiado] = useState(false);
   const [pago, setPago] = useState(false);
@@ -684,6 +952,7 @@ function Checkout({ modo, aoLimpar }: { modo: Modo | null; aoLimpar: () => void 
     setEtapa('dados');
     setErro('');
     setAceitouContrato(false);
+    setPerfil(PERFIL_VAZIO);
     setPagamento(null);
     setPago(false);
     setCopiado(false);
@@ -854,7 +1123,7 @@ function Checkout({ modo, aoLimpar }: { modo: Modo | null; aoLimpar: () => void 
     guardarLead(campos, consentiu);
 
     if (assinatura) {
-      setEtapa('contrato');
+      setEtapa('perfil');
       return;
     }
     concluir({ ...campos });
@@ -866,7 +1135,7 @@ function Checkout({ modo, aoLimpar }: { modo: Modo | null; aoLimpar: () => void 
 
     const rota = assinatura ? '/api/assinatura' : '/api/checkout';
     const corpo = assinatura
-      ? { cliente: campos, aceitouContrato: true, ref: refDoCookie() }
+      ? { cliente: campos, aceitouContrato: true, ref: refDoCookie(), perfil }
       : {
           cliente: campos,
           itens: itens.map((i) => ({ kitId: i.id, qtd: i.qtd })),
@@ -954,9 +1223,14 @@ function Checkout({ modo, aoLimpar }: { modo: Modo | null; aoLimpar: () => void 
           <div className="modal-body">
             {assinatura && (
               <div className="passos">
-                <span className={etapa === 'dados' ? 'on' : 'feito'}>1. Seus dados</span>
-                <span className={etapa === 'contrato' ? 'on' : ''}>2. Contrato</span>
-                <span>3. Pagamento</span>
+                <span className={etapa === 'dados' ? 'on' : 'feito'}>1. Dados</span>
+                <span className={etapa === 'perfil' ? 'on' : etapa === 'dados' ? '' : 'feito'}>
+                  2. Seu perfil
+                </span>
+                <span className={etapa === 'contrato' ? 'on' : etapa === 'pagamento' ? 'feito' : ''}>
+                  3. Contrato
+                </span>
+                <span className={etapa === 'pagamento' ? 'on' : ''}>4. Pagamento</span>
               </div>
             )}
 
@@ -1030,6 +1304,13 @@ function Checkout({ modo, aoLimpar }: { modo: Modo | null; aoLimpar: () => void 
                   </>
                 )}
               </div>
+            ) : etapa === 'perfil' ? (
+              <FormularioPerfil
+                perfil={perfil}
+                mudar={setPerfil}
+                aoVoltar={() => setEtapa('dados')}
+                aoSeguir={() => setEtapa('contrato')}
+              />
             ) : etapa === 'contrato' ? (
               <>
                 <div className="contrato" tabIndex={0}>
