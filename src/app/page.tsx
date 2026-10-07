@@ -327,7 +327,7 @@ export default async function Home() {
             <div className="news">
               <h3>Indique um amigo e ganhe um brinde</h3>
               <p>
-                Quem você indicar ganha um cupom de desconto na primeira compra.{' '}
+                Indicou um amigo e ele realizou uma compra? Na sua próxima compra, você ganha um brinde especial!{' '}
                 {whatsappIndicacao
                   ? 'Peça o seu código de indicação pelo WhatsApp.'
                   : 'Peça o seu código de indicação à nossa equipe.'}
