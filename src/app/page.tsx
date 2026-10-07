@@ -72,7 +72,7 @@ export default async function Home() {
   ]);
 
   // Assinatura escondida ate a dona ligar em Configuracoes (src/lib/recursos.ts).
-  const assinatura = configDb?.assinaturaAtiva ?? false;
+  const assinatura = (configDb as { assinaturaAtiva?: boolean } | null)?.assinaturaAtiva ?? false;
   const palavras = assinatura ? [...PALAVRAS, ...PALAVRAS_ASSINATURA] : PALAVRAS;
 
   const paraPublico = (k: (typeof kitsDb)[number]): KitPublico => ({

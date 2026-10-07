@@ -124,7 +124,7 @@ nav.main a:hover::after{right:0}
    de proposito: centralizado ficou pior, decisao do dono. */
 .perks-g{display:grid;grid-template-columns:1fr;gap:14px;padding-block:20px}
 @media(min-width:480px){.perks-g{grid-template-columns:1fr 1fr;gap:18px;padding-block:26px}}
-@media(min-width:1001px){.perks-g{grid-template-columns:repeat(4,1fr)}}
+@media(min-width:1001px){.perks-g{grid-template-columns:repeat(3,1fr)}}
 .perk{display:flex;align-items:center;gap:13px;transition:transform .25s}
 .perk:hover{transform:translateY(-3px)}
 .perk i{width:44px;height:44px;border-radius:13px;background:var(--rose-50);display:grid;place-items:center;flex-shrink:0;transition:.25s}
