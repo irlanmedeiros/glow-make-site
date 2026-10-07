@@ -165,13 +165,6 @@ export default async function Home() {
             </div>
           </div>
           <div className="perk">
-            <i><Coracao /></i>
-            <div>
-              <b>Cruelty free</b>
-              <span>Não testamos em animais</span>
-            </div>
-          </div>
-          <div className="perk">
             <i><Troca /></i>
             <div>
               <b>Troca fácil</b>
