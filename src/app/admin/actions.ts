@@ -22,7 +22,7 @@ import { cancelarAssinatura as cancelarNoAsaas, asaasConfigurado } from '@/lib/a
 import { cancelarPedido, recusarCancelamentoPedido, ErroCancelamento } from '@/lib/cancelamento';
 import { PREFIXO_AVATAR_EXEMPLO } from '@/lib/conteudo';
 import { codigoLivre, validarCupom } from '@/lib/cupom';
-import { erroDePreco, tipoValido } from '@/lib/produto';
+import { erroDePreco, tipoValido, categoriaValida } from '@/lib/produto';
 import { IMAGEM_PADRAO_PRODUTO, enderecoDeImagemValido } from '@/lib/imagem';
 
 /**
@@ -209,6 +209,7 @@ export async function salvarKit(fd: FormData) {
   }
 
   const codigoBarras = texto(fd, 'codigoBarras', 60) || null;
+  const categoria = categoriaValida(fd.get('categoria'));
 
   const dados = {
     nome,
@@ -217,6 +218,7 @@ export async function salvarKit(fd: FormData) {
     descricao,
     itens,
     codigoBarras,
+    categoria,
     preco: new Prisma.Decimal(preco.toFixed(2)),
     imagem: imagem || IMAGEM_PADRAO_PRODUTO,
     estoqueBaixo: Number.isInteger(estoqueBaixo) && estoqueBaixo >= 0 ? estoqueBaixo : 10,

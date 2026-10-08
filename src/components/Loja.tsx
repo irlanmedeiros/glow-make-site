@@ -614,13 +614,103 @@ export function GradeKits() {
       k.descricao.toLowerCase().includes(busca)
   );
 
+  /* Kit primeiro, avulso depois — e em formatos diferentes de propósito. O kit
+     é o que a loja quer vender: ocupa a grade inteira. O avulso é complemento,
+     e num carrossel ele convida a passear sem empurrar o kit para fora da
+     primeira tela. */
+  const kitsDaVez = lista.filter((k) => k.tipo !== 'INDIVIDUAL');
+  const individuais = lista.filter((k) => k.tipo === 'INDIVIDUAL');
+
   if (!lista.length) {
-    return <div className="empty">Nenhum kit encontrado com esse nome.</div>;
+    return <div className="empty">Nenhum produto encontrado com esse nome.</div>;
   }
 
   return (
+    <>
+      {kitsDaVez.length > 0 && <Grade produtos={kitsDaVez} />}
+      {individuais.length > 0 && <CarrosselProdutos produtos={individuais} />}
+    </>
+  );
+}
+
+/* ============================================================
+   Carrossel de produtos avulsos — 4 por vez
+
+   Paginado em vez de rolagem livre: com rolagem, quem está no celular não
+   descobre que existe mais coisa à direita. Com páginas e pontinhos, o
+   próprio controle conta quantos faltam.
+   ============================================================ */
+
+function CarrosselProdutos({ produtos }: { produtos: KitPublico[] }) {
+  const POR_VEZ = 4;
+  const [pagina, setPagina] = useState(0);
+  const paginas = Math.ceil(produtos.length / POR_VEZ);
+  const atual = Math.min(pagina, paginas - 1);
+  const visiveis = produtos.slice(atual * POR_VEZ, atual * POR_VEZ + POR_VEZ);
+
+  return (
+    <section className="avulsos">
+      <div className="avulsos-topo">
+        <div>
+          <h3>Produtos individuais</h3>
+          <p>Para completar o kit, ou levar só o que faltou.</p>
+        </div>
+        <div className="avulsos-nav">
+          {paginas > 1 && (
+            <>
+              <button
+                type="button"
+                className="avulsos-seta"
+                onClick={() => setPagina(atual - 1)}
+                disabled={atual === 0}
+                aria-label="Produtos anteriores"
+              >
+                ‹
+              </button>
+              <button
+                type="button"
+                className="avulsos-seta"
+                onClick={() => setPagina(atual + 1)}
+                disabled={atual >= paginas - 1}
+                aria-label="Próximos produtos"
+              >
+                ›
+              </button>
+            </>
+          )}
+          <a className="btn btn-ghost btn-sm" href="/produtos">
+            Ver todos
+          </a>
+        </div>
+      </div>
+
+      <Grade produtos={visiveis} />
+
+      {paginas > 1 && (
+        <div className="avulsos-pontos" role="tablist" aria-label="Páginas de produtos">
+          {Array.from({ length: paginas }, (_, i) => (
+            <button
+              key={i}
+              type="button"
+              role="tab"
+              aria-selected={i === atual}
+              aria-label={`Página ${i + 1} de ${paginas}`}
+              className={i === atual ? 'on' : ''}
+              onClick={() => setPagina(i)}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+/** A grade de cartões, usada pelos kits e pelo carrossel. */
+export function Grade({ produtos }: { produtos: KitPublico[] }) {
+  const { itens, adicionar, mudarQtd, abrirCarrinho } = useLoja();
+  return (
     <div className="grid-kits">
-      {lista.map((k) => {
+      {produtos.map((k) => {
         const tag = tagEstoque(k.saldo, k.estoqueBaixo);
         const noCarrinho = itens.find((i) => i.id === k.id)?.qtd ?? 0;
         return (

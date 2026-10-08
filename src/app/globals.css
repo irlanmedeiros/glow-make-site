@@ -1003,3 +1003,55 @@ th.num{text-align:right}
   .frete-sim .field{flex:1;min-width:150px;margin:0}
   .frete-sim .btn{width:auto}
 }
+
+/* ------------------------------------------------------------
+   Produtos individuais na home, em carrossel de 4
+
+   Paginado em vez de rolagem livre: com rolagem, quem esta no
+   celular nao descobre que existe mais coisa a direita.
+   Mobile-first.
+   ------------------------------------------------------------ */
+.avulsos{margin-top:40px}
+.avulsos-topo{display:flex;flex-direction:column;gap:12px;margin-bottom:18px}
+.avulsos-topo h3{margin:0;font-size:20px;color:var(--ink)}
+.avulsos-topo p{margin:3px 0 0;font-size:13.5px;color:var(--muted)}
+.avulsos-nav{display:flex;align-items:center;gap:8px}
+.avulsos-seta{width:40px;height:40px;flex:none;border:1px solid var(--line);border-radius:999px;
+  background:#fff;color:var(--rose);font-size:20px;line-height:1;display:grid;place-items:center;
+  transition:border-color .18s,opacity .18s}
+.avulsos-seta:hover:not(:disabled){border-color:var(--rose)}
+.avulsos-seta:disabled{opacity:.35}
+.avulsos-pontos{display:flex;justify-content:center;gap:7px;margin-top:18px}
+.avulsos-pontos button{width:8px;height:8px;padding:0;border-radius:999px;border:0;
+  background:var(--line);transition:background .2s,width .2s}
+.avulsos-pontos button.on{width:22px;background:var(--rose)}
+@media (min-width:641px){
+  .avulsos-topo{flex-direction:row;align-items:flex-end;justify-content:space-between}
+}
+
+/* ------------------------------------------------------------
+   Pagina /produtos: filtro por categoria e paginacao
+   Mobile-first; as categorias rolam na horizontal no celular,
+   que e o padrao que a pessoa ja conhece de loja no telefone.
+   ------------------------------------------------------------ */
+.prod-pagina{padding-block:28px 48px}
+.prod-cabeca h1{margin:0;font-size:26px;color:var(--ink)}
+.prod-cabeca p{margin:5px 0 0;font-size:13.5px;color:var(--muted)}
+.prod-filtros{display:flex;flex-direction:column;gap:9px;margin:20px 0 14px}
+.prod-filtros input,.prod-filtros select{width:100%}
+.prod-filtros .btn{width:100%;justify-content:center}
+.prod-cats{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:22px;
+  scrollbar-width:none}
+.prod-cats::-webkit-scrollbar{display:none}
+.prod-cat{flex:none;padding:9px 16px;border:1px solid var(--line);border-radius:999px;
+  background:#fff;font-size:13.5px;color:var(--ink);white-space:nowrap;transition:.18s}
+.prod-cat:hover{border-color:var(--rose-300)}
+.prod-cat.on{border-color:var(--rose);background:var(--rose-50);color:var(--rose-dark);font-weight:600}
+.prod-paginas{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;
+  margin-top:28px;font-size:13px;color:var(--muted)}
+@media (min-width:641px){
+  .prod-filtros{flex-direction:row;align-items:center}
+  .prod-filtros input{flex:1}
+  .prod-filtros select,.prod-filtros .btn{width:auto}
+  .prod-cats{flex-wrap:wrap;overflow:visible}
+}

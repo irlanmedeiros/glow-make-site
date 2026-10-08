@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { real, num } from '@/lib/format';
-import { MINIMO_CARRINHO_INDIVIDUAIS, ROTULO_TIPO, TIPOS_EDITAVEIS, type TipoProduto, tipoValido } from '@/lib/produto';
+import { MINIMO_CARRINHO_INDIVIDUAIS, ROTULO_TIPO, TIPOS_EDITAVEIS, type TipoProduto, tipoValido, CATEGORIAS } from '@/lib/produto';
 import { salvarKit, alternarKit, excluirKit, excluirKitsEmMassa } from '../../actions';
 import { Aviso, Cabecalho, Painel, Pill, mensagens } from '@/components/admin/Ui';
 import CampoImagem from '@/components/admin/CampoImagem';
@@ -26,6 +26,7 @@ type Campos = {
   ativo?: boolean;
   tipo?: TipoProduto;
   codigoBarras?: string | null;
+  categoria?: string | null;
 };
 
 function Formulario({
@@ -98,6 +99,19 @@ function Formulario({
           <label>Ordem no site</label>
           <input type="number" name="ordem" defaultValue={k.ordem ?? 0} />
         </div>
+      </div>
+
+      <div className="field">
+        <label>Categoria na vitrine</label>
+        <select name="categoria" defaultValue={k.categoria ?? ''}>
+          <option value="">Sem categoria</option>
+          {CATEGORIAS.map((c) => (
+            <option key={c.v} value={c.v}>
+              {c.r}
+            </option>
+          ))}
+        </select>
+        <small>É por ela que a cliente filtra em Produtos. Kits não precisam.</small>
       </div>
 
       <div className="field">
@@ -314,6 +328,7 @@ export default async function Kits({ searchParams }: Props) {
                     ativo: p.ativo,
                     tipo: p.tipo,
                     codigoBarras: p.codigoBarras,
+                    categoria: p.categoria,
                   }}
                 />
                 {p._count.itensPedido > 0 && p.tipo !== 'BOX' && (
