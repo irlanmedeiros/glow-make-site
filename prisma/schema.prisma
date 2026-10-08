@@ -620,3 +620,27 @@ model Usuario {
   criadoEm     DateTime  @default(now())
   atualizadoEm DateTime  @updatedAt
 }
+
+/**
+ * Enderecos de CEP que a loja ja consultou.
+ * O ViaCEP e gratuito e fica no caminho critico da compra: toda cotacao de
+ * frete, e portanto todo checkout, espera por ele. No teste de carga em
+ * producao a cotacao desabou com 12 compras simultaneas — 7 de 24 falharam,
+ * com p95 de 60 segundos — enquanto a mesma loja servia 58 paginas por segundo
+ * sem suar. O gargalo nao era nosso; era a dependencia externa.
+ * CEP e dado que praticamente nao muda, entao a primeira consulta serve todas
+ * as seguintes. Guardar aqui tira o terceiro do caminho a partir da segunda
+ * cliente que mora naquela rua.
+ * Nao guardamos CEP inexistente de proposito: os Correios criam CEP novo, e
+ * gravar "nao existe" transformaria um erro de hoje em erro permanente.
+ */
+model CepConsultado {
+  cep        String @id // 8 digitos, sem mascara
+  logradouro String @default("")
+  bairro     String @default("")
+  cidade     String
+  uf         String
+
+  consultadoEm DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+}

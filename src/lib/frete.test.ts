@@ -1,4 +1,19 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+
+/* Teste unitario: nao fala com banco. `consultarCep` passou a procurar o CEP
+   no banco antes de chamar o ViaCEP, e sem este mock o resultado dependeria do
+   que ja estiver guardado no banco de desenvolvimento — um CEP consultado
+   ontem faria o teste de "CEP inexistente" passar hoje e falhar amanha.
+   O cache tem teste proprio, de integracao, em tests/cep-cache.test.ts. */
+vi.mock('./prisma', () => ({
+  prisma: {
+    cepConsultado: {
+      findUnique: async () => null,
+      upsert: async () => ({}),
+    },
+  },
+}));
+
 import { calcularFrete, melhorEnvioConfigurado, cotarMelhorEnvio, temMotoboy } from './frete';
 import { SERVICO_MOTOBOY } from './entrega';
 
