@@ -85,6 +85,10 @@ model Kit {
   saidas       Int         @default(0)
   estoqueBaixo Int         @default(10)
   codigoBarras String?     @unique // EAN da embalagem, para o leitor do balcão
+  // Categoria da vitrine (batom, base, skincare...). Texto validado contra
+  // lista em src/lib/produto.ts, nao enum: a dona vai querer acrescentar uma
+  // categoria sem migracao. Nulo = "sem categoria", aparece em "Todos".
+  categoria    String?
   ativo        Boolean     @default(true)
   ordem        Int         @default(0)
   criadoEm     DateTime    @default(now())

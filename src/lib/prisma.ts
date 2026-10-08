@@ -26,6 +26,22 @@ export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
     log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error'],
+
+    /* O padrao do Prisma e 5s por transacao interativa, e isso nao aguenta
+       pico de acesso: no teste de carga com 30 compras simultaneas, METADE dos
+       checkouts morria com P2028 "Transaction already closed" — o pedido
+       voltava 500 para a cliente com o carrinho cheio.
+
+       Nao era lentidao de consulta: a baixa de estoque faz varias idas ao
+       banco dentro da transacao (UPDATE condicional, leitura do saldo,
+       movimentacao) e, com a fila de conexoes disputada, a soma passa de 5s.
+       O banco fica em sa-east-1; cada ida custa dezenas de ms mesmo saudavel.
+
+       15s da folga para o pico sem deixar transacao presa para sempre.
+       `maxWait` e quanto esperar por uma conexao livre antes de desistir — sem
+       ele, o pico vira erro imediato em vez de fila.
+       Vale para TODAS as transacoes (checkout, assinatura, PDV, admin). */
+    transactionOptions: { timeout: 15_000, maxWait: 10_000 },
   });
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;

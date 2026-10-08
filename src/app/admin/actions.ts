@@ -22,7 +22,7 @@ import { cancelarAssinatura as cancelarNoAsaas, asaasConfigurado } from '@/lib/a
 import { cancelarPedido, recusarCancelamentoPedido, ErroCancelamento } from '@/lib/cancelamento';
 import { PREFIXO_AVATAR_EXEMPLO } from '@/lib/conteudo';
 import { codigoLivre, validarCupom } from '@/lib/cupom';
-import { erroDePreco, tipoValido } from '@/lib/produto';
+import { erroDePreco, tipoValido, categoriaValida } from '@/lib/produto';
 import { IMAGEM_PADRAO_PRODUTO, enderecoDeImagemValido } from '@/lib/imagem';
 
 /**
@@ -209,6 +209,7 @@ export async function salvarKit(fd: FormData) {
   }
 
   const codigoBarras = texto(fd, 'codigoBarras', 60) || null;
+  const categoria = categoriaValida(fd.get('categoria'));
 
   const dados = {
     nome,
@@ -217,6 +218,7 @@ export async function salvarKit(fd: FormData) {
     descricao,
     itens,
     codigoBarras,
+    categoria,
     preco: new Prisma.Decimal(preco.toFixed(2)),
     imagem: imagem || IMAGEM_PADRAO_PRODUTO,
     estoqueBaixo: Number.isInteger(estoqueBaixo) && estoqueBaixo >= 0 ? estoqueBaixo : 10,
@@ -249,6 +251,60 @@ export async function alternarKit(fd: FormData) {
   await prisma.kit.update({ where: { id }, data: { ativo: !kit.ativo } });
   revalidatePath('/');
   voltar('/admin/kits', kit.ativo ? `${kit.nome} saiu do site.` : `${kit.nome} voltou ao site.`);
+}
+
+/**
+ * Exclusão de vários produtos de uma vez.
+ *
+ * Respeita exatamente as mesmas travas da exclusão individual, porque elas não
+ * existem por educação: a Glow Box é única, e produto que já aparece em pedido
+ * carrega o histórico de quem comprou. Apagar em massa seria justamente a hora
+ * de atropelar as duas.
+ *
+ * Nada é excluído sem a confirmação explícita vir no formulário — e ela é
+ * conferida AQUI, não só na tela: server action é endpoint HTTP, dá para
+ * chamar direto sem passar por página nenhuma.
+ *
+ * O que não pôde ser excluído volta como aviso nomeado, em vez de sumir em
+ * silêncio: "apaguei 8 de 10" sem dizer quais é pior do que não apagar.
+ */
+export async function excluirKitsEmMassa(fd: FormData) {
+  await exigirLogin();
+
+  if (texto(fd, 'confirmo') !== 'sim') {
+    voltar('/admin/kits', 'Marque a confirmação antes de excluir.', 'erro');
+  }
+
+  const ids = fd.getAll('ids').map((v) => String(v)).filter(Boolean);
+  if (!ids.length) voltar('/admin/kits', 'Nenhum produto selecionado.', 'erro');
+
+  const kits = await prisma.kit.findMany({
+    where: { id: { in: ids } },
+    include: { _count: { select: { itensPedido: true } } },
+  });
+
+  const protegidos: string[] = [];
+  const apagaveis: string[] = [];
+  for (const k of kits) {
+    if (k.tipo === 'BOX') protegidos.push(`${k.nome} (é a Glow Box)`);
+    else if (k._count.itensPedido > 0) protegidos.push(`${k.nome} (está em ${k._count.itensPedido} pedido(s))`);
+    else apagaveis.push(k.id);
+  }
+
+  if (apagaveis.length) await prisma.kit.deleteMany({ where: { id: { in: apagaveis } } });
+
+  revalidatePath('/');
+  revalidatePath('/admin/kits');
+
+  if (!apagaveis.length) {
+    voltar('/admin/kits', `Nada foi excluído. ${protegidos.join('; ')}.`, 'erro');
+  }
+  voltar(
+    '/admin/kits',
+    protegidos.length
+      ? `${apagaveis.length} produto(s) excluído(s). Mantidos: ${protegidos.join('; ')}.`
+      : `${apagaveis.length} produto(s) excluído(s).`
+  );
 }
 
 export async function excluirKit(fd: FormData) {

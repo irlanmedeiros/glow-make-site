@@ -27,6 +27,42 @@ export const ROTULO_TIPO: Record<TipoProduto, string> = {
   BOX: 'Assinatura',
 };
 
+/**
+ * Categorias da vitrine. Sao o que a cliente usa para filtrar ("quero ver os
+ * batons"), diferente de `tipo`, que diz se o produto e kit ou avulso.
+ *
+ * Texto validado contra lista, nao enum do banco: acrescentar "perfume" nao
+ * pode exigir migracao de schema numa loja em producao.
+ */
+export const CATEGORIAS = [
+  { v: 'BATOM', r: 'Batom' },
+  { v: 'GLOSS', r: 'Gloss' },
+  { v: 'BASE', r: 'Base' },
+  { v: 'CORRETIVO', r: 'Corretivo' },
+  { v: 'PO', r: 'Pó' },
+  { v: 'BLUSH', r: 'Blush' },
+  { v: 'DELINEADOR', r: 'Delineador' },
+  { v: 'MASCARA_CILIOS', r: 'Máscara de cílios' },
+  { v: 'PINCEIS', r: 'Pincéis e esponjas' },
+  { v: 'SKINCARE', r: 'Skincare' },
+  { v: 'CABELO', r: 'Cabelo' },
+  { v: 'ACESSORIOS', r: 'Acessórios' },
+  { v: 'OUTROS', r: 'Outros' },
+] as const;
+
+export type Categoria = (typeof CATEGORIAS)[number]['v'];
+
+export function categoriaValida(bruto: unknown): Categoria | null {
+  if (typeof bruto !== 'string') return null;
+  const t = bruto.trim().toUpperCase();
+  return (CATEGORIAS as readonly { v: string }[]).some((c) => c.v === t) ? (t as Categoria) : null;
+}
+
+export function rotuloCategoria(v: string | null | undefined): string {
+  if (!v) return '';
+  return CATEGORIAS.find((c) => c.v === v)?.r ?? v;
+}
+
 export function tipoValido(bruto: unknown): TipoProduto | null {
   return bruto === 'KIT' || bruto === 'BOX' || bruto === 'INDIVIDUAL' ? bruto : null;
 }
