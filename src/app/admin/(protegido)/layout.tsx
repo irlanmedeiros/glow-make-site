@@ -36,6 +36,7 @@ const MENU = [
   { href: '/admin/conferencia', rotulo: 'Conferência da maquininha', Icone: IcConferencia },
   { href: '/admin/pedidos', rotulo: 'Pedidos', Icone: IcPedidos },
   { href: '/admin/entregas', rotulo: 'Entregas', Icone: IcEntregas },
+  { href: '/admin/frete', rotulo: 'Simulador de frete', Icone: IcEntregas },
   { href: '/admin/assinantes', rotulo: 'Assinantes', Icone: IcAssinantes },
   { href: '/admin/leads', rotulo: 'Carrinhos abandonados', Icone: IcLeads },
   { href: '/admin/afiliados', rotulo: 'Afiliados', Icone: IcAfiliados },
