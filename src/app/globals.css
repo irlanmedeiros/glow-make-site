@@ -971,3 +971,26 @@ th.num{text-align:right}
   .perfil-adm{grid-template-columns:max-content 1fr;align-items:baseline}
   .perfil-adm dd{margin-bottom:2px}
 }
+
+/* Texto só para leitor de tela. */
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+/* ------------------------------------------------------------
+   Admin: busca, filtro, seleção e paginação de produtos
+   Mobile-first: empilha no celular, vira linha quando couber.
+   ------------------------------------------------------------ */
+.kits-filtro{display:flex;flex-direction:column;gap:9px}
+.kits-filtro input,.kits-filtro select{width:100%}
+.kits-filtro .btn{width:100%;justify-content:center}
+.kits-contagem{margin:10px 0 0;font-size:12.5px;color:var(--muted)}
+.kits-marca{display:grid;place-items:center;width:34px;height:34px;flex:none;cursor:pointer}
+.kits-marca input{width:19px;height:19px;margin:0;accent-color:var(--rose)}
+.kits-paginas{display:flex;align-items:center;justify-content:center;gap:12px;
+  flex-wrap:wrap;margin:18px 0 8px;font-size:13px;color:var(--muted)}
+@media (min-width:641px){
+  .kits-filtro{flex-direction:row;align-items:center}
+  .kits-filtro input{flex:1}
+  .kits-filtro select{width:auto}
+  .kits-filtro .btn{width:auto}
+}

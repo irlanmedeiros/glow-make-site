@@ -164,13 +164,6 @@ export default async function Home() {
               <span>PIX, boleto ou cartão</span>
             </div>
           </div>
-          <div className="perk">
-            <i><Troca /></i>
-            <div>
-              <b>Troca fácil</b>
-              <span>7 dias para trocar</span>
-            </div>
-          </div>
         </div>
       </div>
 
