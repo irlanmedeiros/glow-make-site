@@ -1,4 +1,5 @@
 import 'server-only';
+import { prisma } from './prisma';
 import { SERVICO_MOTOBOY } from './entrega';
 
 /**
@@ -80,24 +81,66 @@ function baseMelhorEnvio(): string {
 
 const soDigitos = (cep: string) => cep.replace(/\D/g, '');
 
-/** Descobre cidade e UF de um CEP. Devolve null se o CEP não existir. */
+/**
+ * Descobre cidade e UF de um CEP. Devolve null se o CEP não existir.
+ *
+ * Procura primeiro no banco. O ViaCEP é gratuito e fica no caminho crítico da
+ * compra — toda cotação de frete, e portanto todo checkout, espera por ele. No
+ * teste de carga em produção a cotação desabou com 12 compras simultâneas (7
+ * de 24 falharam, p95 de 60s) enquanto a mesma loja servia 58 páginas por
+ * segundo sem suar. O gargalo era a dependência externa, não a loja.
+ *
+ * Uma leitura indexada no Postgres custa poucos milissegundos; a chamada ao
+ * ViaCEP custou ~800ms medidos. A partir da segunda cliente daquela rua, o
+ * terceiro sai do caminho.
+ */
 export async function consultarCep(cep: string): Promise<Endereco | null> {
   const limpo = soDigitos(cep);
   if (limpo.length !== 8) return null;
 
+  /* Banco indisponível não pode derrubar a cotação: cai para o ViaCEP, que é
+     exatamente o comportamento de antes deste cache existir. */
+  try {
+    const salvo = await prisma.cepConsultado.findUnique({ where: { cep: limpo } });
+    if (salvo) return { cep: limpo, cidade: salvo.cidade, uf: salvo.uf };
+  } catch (e) {
+    console.error('[frete] leitura do cache de CEP falhou:', e);
+  }
+
+  let d: { localidade?: string; uf?: string; logradouro?: string; bairro?: string; erro?: unknown };
   try {
     const r = await fetch(`${VIACEP}/${limpo}/json/`, {
-      // Endereço de CEP praticamente não muda: cachear um dia poupa
-      // chamada e ainda deixa o checkout mais rápido.
+      // O cache do Next continua valendo: evita a ida ao ViaCEP mesmo antes de
+      // o endereço chegar ao banco, na primeira consulta de cada CEP.
       next: { revalidate: 86400 },
     });
     if (!r.ok) return null;
-    const d = await r.json();
+    d = await r.json();
     if (d.erro) return null;
-    return { cep: limpo, cidade: d.localidade ?? '', uf: d.uf ?? '' };
   } catch {
     return null;
   }
+
+  const endereco: Endereco = { cep: limpo, cidade: d.localidade ?? '', uf: d.uf ?? '' };
+
+  /* Grava sem segurar a resposta: a cliente não deve esperar o nosso cache
+     para ver o frete. `upsert` porque duas compras simultâneas do mesmo CEP
+     chegam aqui juntas, e a segunda não pode explodir por chave duplicada. */
+  prisma.cepConsultado
+    .upsert({
+      where: { cep: limpo },
+      update: { cidade: endereco.cidade, uf: endereco.uf },
+      create: {
+        cep: limpo,
+        cidade: endereco.cidade,
+        uf: endereco.uf,
+        logradouro: d.logradouro ?? '',
+        bairro: d.bairro ?? '',
+      },
+    })
+    .catch((e) => console.error('[frete] não consegui guardar o CEP:', e));
+
+  return endereco;
 }
 
 type RespostaMelhorEnvio = {
