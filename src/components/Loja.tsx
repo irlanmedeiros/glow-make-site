@@ -634,7 +634,7 @@ export function GradeKits() {
 }
 
 /* ============================================================
-   Carrossel de produtos avulsos — 4 por vez
+  Carrossel de produtos avulsos — 6 por vez
 
    Paginado em vez de rolagem livre: com rolagem, quem está no celular não
    descobre que existe mais coisa à direita. Com páginas e pontinhos, o
@@ -642,7 +642,7 @@ export function GradeKits() {
    ============================================================ */
 
 function CarrosselProdutos({ produtos }: { produtos: KitPublico[] }) {
-  const POR_VEZ = 4;
+  const POR_VEZ = 6;
   const [pagina, setPagina] = useState(0);
   const paginas = Math.ceil(produtos.length / POR_VEZ);
   const atual = Math.min(pagina, paginas - 1);
