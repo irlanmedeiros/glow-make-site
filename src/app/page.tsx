@@ -148,25 +148,6 @@ export default async function Home() {
 
       <Hero banners={banners} />
 
-      <div className="perks">
-        <div className="wrap perks-g">
-          <div className="perk">
-            <i><Frete /></i>
-            <div>
-              <b>Acompanhe seu pedido</b>
-              <span>Rastreio em Meus pedidos</span>
-            </div>
-          </div>
-          <div className="perk">
-            <i><Cartao /></i>
-            <div>
-              <b>Pague como preferir</b>
-              <span>PIX, boleto ou cartão</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* ---------- KITS ---------- */}
       <section id="kits">
         <div className="wrap">
