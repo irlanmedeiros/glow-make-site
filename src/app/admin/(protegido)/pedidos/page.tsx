@@ -1,7 +1,13 @@
 import { prisma } from '@/lib/prisma';
 import { real, dataHora, ROTULO_PEDIDO, ROTULO_PAGAMENTO, corPedido, num } from '@/lib/format';
+import type { Dinheiro } from '@/lib/format';
 import { mudarStatusPedido, anotarPedido, aprovarCancelamento, recusarCancelamento } from '../../actions';
 import { Aviso, Cabecalho, Painel, Pill, Vazio, mensagens } from '@/components/admin/Ui';
+import {
+  type PedidoParaMensagem,
+  linkClienteWhatsapp,
+  linkLojaWhatsapp,
+} from '@/lib/whatsapp-admin';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,6 +21,45 @@ const STATUS = [
   'ENTREGUE',
   'CANCELADO',
 ] as const;
+
+/** Decimal do Prisma vira number aqui, uma vez, em vez de dentro da mensagem. */
+function paraMensagem(p: {
+  numero: number;
+  status: string;
+  criadoEm: Date;
+  pagamento: string;
+  nome: string;
+  email: string;
+  documento: string;
+  telefone: string;
+  cep: string;
+  endereco: string;
+  enderecoNumero: string;
+  complemento: string;
+  bairro: string;
+  cidade: string;
+  uf: string;
+  itens: { nome: string; qtd: number; preco: Dinheiro }[];
+  subtotal: Dinheiro;
+  frete: Dinheiro;
+  total: Dinheiro;
+  desconto: Dinheiro;
+  cupomCodigo: string | null;
+  freteServico: string | null;
+  transportadora: string | null;
+  codigoRastreio: string | null;
+  observacao: string | null;
+  invoiceUrl: string | null;
+}): PedidoParaMensagem {
+  return {
+    ...p,
+    itens: p.itens.map((i) => ({ nome: i.nome, qtd: i.qtd, preco: num(i.preco) })),
+    subtotal: num(p.subtotal),
+    frete: num(p.frete),
+    total: num(p.total),
+    desconto: num(p.desconto),
+  };
+}
 
 export default async function Pedidos({ searchParams }: Props) {
   const sp = await searchParams;
@@ -40,9 +85,10 @@ export default async function Pedidos({ searchParams }: Props) {
     include: { itens: true },
   });
 
-  const [todos, pendentes] = await Promise.all([
+  const [todos, pendentes, config] = await Promise.all([
     prisma.pedido.findMany({ select: { status: true, total: true } }),
     prisma.pedido.count({ where: pendente }),
+    prisma.config.findFirst({ select: { whatsapp: true } }),
   ]);
   const faturado = todos
     .filter((p) => p.status !== 'CANCELADO')
@@ -114,7 +160,11 @@ export default async function Pedidos({ searchParams }: Props) {
           />
         </Painel>
       ) : (
-        pedidos.map((p) => (
+        pedidos.map((p) => {
+          const msg = paraMensagem(p);
+          const paraCliente = linkClienteWhatsapp(msg);
+          const paraLoja = linkLojaWhatsapp(config?.whatsapp ?? '', msg);
+          return (
           <Painel key={p.id}>
             <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-start' }}>
               <div style={{ flex: '1 1 260px' }}>
@@ -207,6 +257,39 @@ export default async function Pedidos({ searchParams }: Props) {
                     Abrir cobrança
                   </a>
                 )}
+
+                {/* Abrem o WhatsApp com o texto pronto — nao enviam sozinhos.
+                    Envio automatico exige API oficial paga; ate la um clique e
+                    um "enviar" e o caminho mais curto, e deixa reler antes. */}
+                <a
+                  className="btn btn-sm btn-block zap"
+                  style={{ marginTop: 8 }}
+                  href={paraCliente ?? undefined}
+                  aria-disabled={!paraCliente}
+                  title={
+                    paraCliente
+                      ? 'Abre a conversa com a cliente, com a mensagem escrita'
+                      : 'O telefone deste pedido não serve para WhatsApp'
+                  }
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Avisar a cliente
+                </a>
+                <a
+                  className="btn btn-sm btn-block zap zap-fraco"
+                  style={{ marginTop: 6 }}
+                  href={paraLoja ?? undefined}
+                  aria-disabled={!paraLoja}
+                  title="Manda o pedido inteiro para o WhatsApp da loja"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Mandar para a loja
+                </a>
+                <small style={{ display: 'block', marginTop: 6, color: 'var(--muted)', fontSize: 11.5 }}>
+                  Abre o WhatsApp com o texto pronto. Você confere e envia.
+                </small>
               </div>
             </div>
 
@@ -278,7 +361,8 @@ export default async function Pedidos({ searchParams }: Props) {
               </div>
             )}
           </Painel>
-        ))
+          );
+        })
       )}
     </>
   );

@@ -747,6 +747,16 @@ th.num{text-align:right}
 .combinar-btn{width:100%;white-space:normal;line-height:1.25;
   padding-left:14px;padding-right:14px}
 @media (min-width:380px){.combinar-btn{padding-left:26px;padding-right:26px}}
+
+/* Botoes de WhatsApp no painel (Pedidos). Mesmo verde da loja: aqui tambem
+   eles sao uma saida para outro aplicativo, nao mais um botao do admin.
+   `aria-disabled` e usado quando falta telefone — sem href o link ja nao
+   clica, isto so faz parecer o que e. */
+.zap{background:#25D366;color:#fff}
+.zap:hover{background:#1DAF53}
+.zap-fraco{background:#fff;color:#1B6B43;border:1.5px solid #8FD7A9}
+.zap-fraco:hover{background:#F2FCF6;border-color:#25D366}
+.zap[aria-disabled='true']{opacity:.45;cursor:not-allowed;pointer-events:none}
 a.combinar-btn.btn-primary{background:#25D366;color:#fff;box-shadow:0 6px 18px rgba(37,211,102,.3)}
 a.combinar-btn.btn-primary:hover{background:#1DAF53;box-shadow:0 12px 26px rgba(37,211,102,.36)}
 a.combinar-btn.btn-ghost{background:#fff;color:#1B6B43;border-color:#8FD7A9}
