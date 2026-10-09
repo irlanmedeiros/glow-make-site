@@ -10,8 +10,10 @@ import {
   useState,
 } from 'react';
 import { erroDoCarrinho } from '@/lib/produto';
+import { ehMotoboy } from '@/lib/entrega';
+import { linkPedidoWhatsapp } from '@/lib/whatsapp';
 import type { ConfigPublica, KitPublico } from './tipos';
-import { Busca, Carrinho, Check, Menu, Seta } from './Icones';
+import { Busca, Carrinho, Check, Menu, Seta, Whatsapp } from './Icones';
 import { evento } from './Consentimento';
 import {
   TIPOS_PELE, TONS_PELE, SUBTONS, CATEGORIAS, ITENS, CORES, DECLARACAO,
@@ -977,12 +979,44 @@ type DadosPagamento = {
   total?: number;
   invoiceUrl?: string;
   pix?: { payload: string; imagemBase64: string; expiraEm: string | null } | null;
+  /* Link do WhatsApp com a mensagem pronta, montado no sucesso da compra e
+     guardado aqui porque `aoLimpar()` esvazia o carrinho antes desta tela
+     renderizar — depois dele não haveria mais itens para listar. */
+  whatsapp?: string | null;
 };
 
 /* De quanto em quanto tempo a tela pergunta se o PIX caiu. Três segundos é
    rápido o bastante para parecer instantâneo e devagar o bastante para não
    martelar a API enquanto a pessoa procura o celular. */
 const INTERVALO_CONFERE_PIX = 3000;
+
+/**
+ * Botão que leva a conversa da entrega a combinar para o WhatsApp da loja.
+ *
+ * No motoboy o site não cobrou a corrida: falta combinar valor e horário, e
+ * esse passo não tem como ser automático. O que dá para automatizar é não
+ * fazer a cliente digitar de novo o que ela já preencheu — a mensagem vai
+ * pronta, com o número do pedido e o endereço, que é exatamente o que a loja
+ * precisa ter na mão para despachar.
+ */
+function CombinarEntrega({ link, destaque }: { link: string; destaque?: boolean }) {
+  return (
+    <div className="combinar">
+      <p>
+        Falta <b>combinar a entrega</b>. Toque no botão: a mensagem já vai com o seu pedido e o
+        endereço preenchidos.
+      </p>
+      <a
+        className={`btn ${destaque ? 'btn-primary' : 'btn-ghost'} combinar-btn`}
+        href={link}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <Whatsapp /> Combinar entrega no WhatsApp
+      </a>
+    </div>
+  );
+}
 
 /* ============================================================
    Checkout
@@ -1254,7 +1288,34 @@ function Checkout({ modo, aoLimpar }: { modo: Modo | null; aoLimpar: () => void 
       }
 
       evento('Purchase', { value: totalFinal, currency: 'BRL' });
+
+      /* Montado AQUI, antes de `aoLimpar()`: depois dele `itens` está vazio e
+         não haveria mais o que listar na mensagem. Quem manda se a entrega é a
+         combinar é a resposta do servidor, não a opção marcada na tela — a
+         cotação pode ter mudado entre uma coisa e outra. */
+      const linkCombinar =
+        !assinatura && ehMotoboy(resposta.freteServico)
+          ? linkPedidoWhatsapp(config.whatsapp, {
+              numero: resposta.pedido ?? 0,
+              itens: itens.map((i) => {
+                const k = kitPorId(i.id);
+                return { nome: k?.nome ?? '', qtd: i.qtd, preco: k?.preco ?? 0 };
+              }),
+              total: resposta.total ?? totalFinal,
+              nome: campos.nome ?? '',
+              cep: campos.cep ?? '',
+              endereco: campos.endereco ?? '',
+              enderecoNumero: campos.enderecoNumero ?? '',
+              complemento: campos.complemento ?? '',
+              bairro: campos.bairro ?? '',
+              cidade: campos.cidade ?? '',
+              uf: campos.uf ?? '',
+            })
+          : null;
+
       if (!assinatura) aoLimpar();
+
+      const paraTela: DadosPagamento = { ...resposta, whatsapp: linkCombinar };
 
       /* PIX termina AQUI DENTRO: o QR vai na própria tela. Mandar a cliente
          para a página do Asaas no último passo é onde se perde venda — ela sai
@@ -1262,7 +1323,19 @@ function Checkout({ modo, aoLimpar }: { modo: Modo | null; aoLimpar: () => void 
          Asaas continua sendo o caminho, porque ali a página dele faz mais do
          que a nossa faria. */
       if (resposta.pix?.payload) {
-        setPagamento(resposta);
+        setPagamento(paraTela);
+        setEtapa('pagamento');
+        setEnviando(false);
+        return;
+      }
+
+      /* Entrega a combinar é a exceção ao parágrafo acima: no motoboy o site
+         não cobrou a corrida, então a compra só chega de verdade depois da
+         conversa no WhatsApp. Redirecionar para o Asaas aqui tiraria a cliente
+         da tela justamente antes do passo que falta. O link de pagamento
+         continua à mão, como botão principal da nossa própria tela. */
+      if (linkCombinar) {
+        setPagamento(paraTela);
         setEtapa('pagamento');
         setEnviando(false);
         return;
@@ -1298,7 +1371,9 @@ function Checkout({ modo, aoLimpar }: { modo: Modo | null; aoLimpar: () => void 
               {etapa === 'pagamento'
                 ? pago
                   ? 'Pagamento confirmado'
-                  : 'Pague com PIX'
+                  : pagamento?.pix?.payload
+                    ? 'Pague com PIX'
+                    : 'Pedido registrado'
                 : assinatura
                   ? etapa === 'contrato'
                     ? 'Contrato da assinatura'
@@ -1338,6 +1413,10 @@ function Checkout({ modo, aoLimpar }: { modo: Modo | null; aoLimpar: () => void 
                       Recebemos o seu PIX do pedido <b>#{pagamento?.pedido}</b>. Já estamos
                       separando tudo para enviar.
                     </p>
+                    {/* Pago e com motoboy, combinar a entrega passa a ser o
+                        proximo passo real da compra — vem antes do resto. */}
+                    {pagamento?.whatsapp && <CombinarEntrega link={pagamento.whatsapp} destaque />}
+
                     {/* O site ainda nao manda e-mail: sem este link, fechar a tela
                         era perder o caminho de volta para o pedido. */}
                     <a className="btn btn-ghost" href="/meus-pedidos">
@@ -1347,10 +1426,15 @@ function Checkout({ modo, aoLimpar }: { modo: Modo | null; aoLimpar: () => void 
                       Fechar
                     </button>
                   </div>
-                ) : (
+                ) : pagamento?.pix?.payload ? (
                   <>
                     <p className="pix-valor">
-                      <span>Pedido #{pagamento?.pedido}</span>
+                      {/* No motoboy o valor na tela e so dos produtos: dizer isso
+                          aqui evita a cliente achar que a corrida ja esta paga. */}
+                      <span>
+                        Pedido #{pagamento?.pedido}
+                        {pagamento?.whatsapp ? ' — produtos (frete a combinar)' : ''}
+                      </span>
                       <b>{real(pagamento?.total ?? 0)}</b>
                     </p>
 
@@ -1391,6 +1475,58 @@ function Checkout({ modo, aoLimpar }: { modo: Modo | null; aoLimpar: () => void 
                         </a>
                       </p>
                     )}
+
+                    {pagamento?.whatsapp && <CombinarEntrega link={pagamento.whatsapp} />}
+                  </>
+                ) : (
+                  /* Sem QR na tela: ou a cliente escolheu boleto/cartão, ou o
+                     Asaas não está ligado. Antes isso virava redirect ou toast
+                     e a tela sumia; com entrega a combinar ela precisa ficar,
+                     porque é aqui que está o botão do WhatsApp. */
+                  <>
+                    <p className="pix-valor">
+                      {/* No motoboy o valor na tela e so dos produtos: dizer isso
+                          aqui evita a cliente achar que a corrida ja esta paga. */}
+                      <span>
+                        Pedido #{pagamento?.pedido}
+                        {pagamento?.whatsapp ? ' — produtos (frete a combinar)' : ''}
+                      </span>
+                      <b>{real(pagamento?.total ?? 0)}</b>
+                    </p>
+
+                    {erro && <div className="note erro">{erro}</div>}
+
+                    {pagamento?.invoiceUrl ? (
+                      <>
+                        <p className="pix-instrucao">
+                          Pedido registrado. Falta o pagamento dos produtos — o link abre boleto,
+                          cartão e PIX.
+                        </p>
+                        <a
+                          className="btn btn-primary pix-copiar"
+                          href={pagamento.invoiceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Ir para o pagamento
+                        </a>
+                      </>
+                    ) : (
+                      <p className="pix-instrucao">
+                        Pedido registrado. Vamos falar com você para combinar o pagamento.
+                      </p>
+                    )}
+
+                    {pagamento?.whatsapp && (
+                      <CombinarEntrega
+                        link={pagamento.whatsapp}
+                        destaque={!pagamento.invoiceUrl}
+                      />
+                    )}
+
+                    <a className="btn btn-ghost" href="/meus-pedidos">
+                      Acompanhar pedido
+                    </a>
                   </>
                 )}
               </div>

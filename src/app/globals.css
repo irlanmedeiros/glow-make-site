@@ -728,6 +728,31 @@ th.num{text-align:right}
 .pix-ok p{margin:0;font-size:14px;color:var(--muted);max-width:36ch}
 
 /* ------------------------------------------------------------
+   Combinar a entrega (motoboy)
+
+   Verde do WhatsApp em vez do rosa da loja, de proposito: aqui o
+   botao nao e "mais um botao da Glow Make", e a saida para outro
+   aplicativo. Quem reconhece o verde sabe para onde vai antes de
+   tocar, e no motoboy esse toque e o passo que falta para a
+   compra chegar.
+   ------------------------------------------------------------ */
+.combinar{display:flex;flex-direction:column;align-items:center;gap:10px;width:100%;
+  background:#EDFBF2;border:1px solid #BFE8CE;border-radius:12px;padding:14px}
+.combinar p{margin:0;font-size:13px;color:#1B6B43;max-width:34ch;text-align:center}
+.combinar p b{color:#14532D}
+/* `.btn` traz padding 26px e white-space:nowrap. Num rotulo longo como este
+   o texto estourava o botao a 320px (iPhone SE) e saia cortado nas duas
+   pontas. Deixar quebrar resolve para qualquer largura, em vez de depender de
+   o rotulo caber — e o rotulo precisa dizer para onde o botao leva. */
+.combinar-btn{width:100%;white-space:normal;line-height:1.25;
+  padding-left:14px;padding-right:14px}
+@media (min-width:380px){.combinar-btn{padding-left:26px;padding-right:26px}}
+a.combinar-btn.btn-primary{background:#25D366;color:#fff;box-shadow:0 6px 18px rgba(37,211,102,.3)}
+a.combinar-btn.btn-primary:hover{background:#1DAF53;box-shadow:0 12px 26px rgba(37,211,102,.36)}
+a.combinar-btn.btn-ghost{background:#fff;color:#1B6B43;border-color:#8FD7A9}
+a.combinar-btn.btn-ghost:hover{background:#F2FCF6;border-color:#25D366}
+
+/* ------------------------------------------------------------
    QR do PIX no balcão
 
    Cobre a tela inteira: a cliente aponta a câmera para o celular

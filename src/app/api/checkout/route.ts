@@ -180,7 +180,15 @@ export async function POST(req: Request) {
     // Sem Asaas configurado o pedido existe e o estoque já baixou — só não há
     // cobrança. É o modo de demonstração.
     if (!asaasConfigurado()) {
-      return NextResponse.json({ ok: true, demo: true, pedido: pedido.numero });
+      return NextResponse.json({
+        ok: true,
+        demo: true,
+        pedido: pedido.numero,
+        /* Sem o total a tela de "pedido registrado" mostrava R$ 0,00 — o que,
+           para quem acabou de comprar, parece cobranca errada. */
+        total: Number(total.toString()),
+        freteServico,
+      });
     }
 
     try {
@@ -210,6 +218,10 @@ export async function POST(req: Request) {
         pedidoId: pedido.id,
         total: Number(total.toString()),
         pix,
+        /* Quem decide a entrega e o servidor: a cotacao pode ter mudado
+           entre a tela e o POST, e a tela precisa saber se saiu motoboy
+           para oferecer o WhatsApp de combinar a corrida. */
+        freteServico,
       });
     } catch (e) {
       // O pedido ficou registrado com o estoque reservado; só a cobrança falhou.
@@ -224,6 +236,8 @@ export async function POST(req: Request) {
         ok: true,
         demo: true,
         pedido: pedido.numero,
+        total: Number(total.toString()),
+        freteServico,
         aviso: 'Pedido registrado, mas a cobrança não foi gerada. Entraremos em contato.',
       });
     }
