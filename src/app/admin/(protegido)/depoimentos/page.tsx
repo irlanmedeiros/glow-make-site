@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { r2Configurado } from '@/lib/r2';
 import { salvarDepoimento, excluirDepoimento, ocultarDepoimentosDeExemplo } from '../../actions';
 import { ehDepoimentoDeExemplo, iniciais } from '@/lib/conteudo';
 import CampoImagem from '@/components/admin/CampoImagem';
@@ -92,7 +93,7 @@ export default async function Depoimentos({ searchParams }: Props) {
   const { ok, erro } = mensagens(await searchParams);
   const depoimentos = await prisma.depoimento.findMany({ orderBy: { ordem: 'asc' } });
   const exemplosAtivos = depoimentos.filter((d) => d.ativo && ehDepoimentoDeExemplo(d.avatar)).length;
-  const uploadDisponivel = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+  const uploadDisponivel = r2Configurado();
 
   return (
     <>

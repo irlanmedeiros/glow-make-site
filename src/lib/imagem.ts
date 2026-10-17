@@ -54,6 +54,23 @@ export function caminhoPermitido(caminho: string): boolean {
   return /^(produtos|banners|depoimentos)\/[a-z0-9-]{1,60}\.(jpg|png|webp)$/.test(caminho);
 }
 
+/**
+ * Soma um sufixo aleatorio ao nome, no servidor.
+ *
+ * Duas fotos com o mesmo nome nao podem se sobrescrever, e o endereco final
+ * precisa ser imutavel para poder ser cacheado para sempre (lib/r2). O Vercel
+ * Blob fazia isso sozinho com addRandomSuffix; no R2 e por nossa conta.
+ *
+ * O sufixo tem 8 caracteres de a-z0-9, entao o caminho continua passando por
+ * caminhoPermitido: nomeDoArquivo ja corta a base em 50.
+ */
+export function comSufixoAleatorio(caminho: string): string {
+  const bytes = new Uint8Array(8);
+  globalThis.crypto.getRandomValues(bytes);
+  const sufixo = Array.from(bytes, (b) => (b % 36).toString(36)).join('');
+  return caminho.replace(/\.([a-z]+)$/, `-${sufixo}.$1`);
+}
+
 /** Mantem a proporcao e nunca aumenta a foto. */
 export function dimensoesReduzidas(
   largura: number,

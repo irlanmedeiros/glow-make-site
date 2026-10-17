@@ -1,7 +1,6 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { upload } from '@vercel/blob/client';
 import {
   LADO_MAXIMO,
   TIPOS_IMAGEM,
@@ -55,12 +54,12 @@ export default function CampoImagem({
       const corpo = await reduzir(arquivo, LADO_MAXIMO[pasta]);
       setEstado('enviando');
       setProgresso(0);
-      const r = await upload(nomeDoArquivo(pasta, arquivo.name, corpo.type), corpo, {
-        access: 'public',
-        handleUploadUrl: '/api/admin/imagem',
-        onUploadProgress: (p) => setProgresso(Math.round(p.percentage)),
-      });
-      setUrl(r.url);
+      const endereco = await enviar(
+        nomeDoArquivo(pasta, arquivo.name, corpo.type),
+        corpo,
+        setProgresso
+      );
+      setUrl(endereco);
     } catch (falha) {
       const msg = falha instanceof Error ? falha.message : '';
       setErro(
@@ -134,6 +133,45 @@ export default function CampoImagem({
       )}
     </div>
   );
+}
+
+/**
+ * Envia a foto para /api/admin/imagem, que grava no R2.
+ *
+ * XMLHttpRequest em vez de fetch porque o fetch nao reporta progresso de
+ * ENVIO, e sem barra de progresso quem usa o admin acha que travou.
+ */
+function enviar(
+  caminho: string,
+  corpo: Blob,
+  aoProgredir: (pct: number) => void
+): Promise<string> {
+  const form = new FormData();
+  form.append('caminho', caminho);
+  form.append('arquivo', corpo);
+
+  return new Promise((ok, falha) => {
+    const req = new XMLHttpRequest();
+    req.open('POST', '/api/admin/imagem');
+    req.upload.onprogress = (e) => {
+      if (e.lengthComputable) aoProgredir(Math.round((e.loaded / e.total) * 100));
+    };
+    req.onerror = () => falha(new Error('Sem conexão com o servidor.'));
+    req.onload = () => {
+      let corpoResposta: { url?: string; erro?: string } = {};
+      try {
+        corpoResposta = JSON.parse(req.responseText);
+      } catch {
+        /* resposta sem JSON: cai na mensagem genérica abaixo */
+      }
+      if (req.status >= 200 && req.status < 300 && corpoResposta.url) {
+        ok(corpoResposta.url);
+      } else {
+        falha(new Error(corpoResposta.erro ?? `Falha ao enviar (${req.status}).`));
+      }
+    };
+    req.send(form);
+  });
 }
 
 /**
