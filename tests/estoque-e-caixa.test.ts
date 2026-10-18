@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient, Prisma } from '@/generated/prisma/client';
 import { baixarEstoque, devolverEstoque, EstoqueInsuficiente, saldo, statusEstoque } from '@/lib/estoque';
 import { registrarVenda, cancelarVenda, resumoDoCaixa } from '@/lib/pdv';
 

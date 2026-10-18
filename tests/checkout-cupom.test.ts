@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient, Prisma } from '@/generated/prisma/client';
 
 /**
  * Ponta a ponta da rota de checkout com cupom, contra o banco de dev.

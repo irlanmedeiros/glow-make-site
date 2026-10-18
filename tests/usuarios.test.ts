@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@/generated/prisma/client';
 import { autenticarUsuario, TENTATIVAS_ANTES_DE_TRAVAR } from '@/lib/usuarios';
 import { gerarHash } from '@/lib/senha';
 

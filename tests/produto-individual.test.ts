@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient, Prisma } from '@/generated/prisma/client';
 import { TIPOS_NA_VITRINE } from '@/lib/produto';
 
 /**

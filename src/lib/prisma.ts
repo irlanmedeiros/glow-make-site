@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@/generated/prisma/client';
 import { PrismaNeon } from '@prisma/adapter-neon';
 
 /* Aqui havia um `loadEnvConfig(process.cwd())`, para o Prisma enxergar o

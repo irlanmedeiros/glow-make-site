@@ -5,7 +5,13 @@
 // última unidade. Ver src/lib/estoque.ts.
 
 generator client {
-  provider = "prisma-client-js"
+  // Gerador novo do Prisma. O antigo ("prisma-client-js") produz um client
+  // que carrega o motor do DISCO — binario Rust ou query_compiler_bg.wasm —
+  // e no Cloudflare Workers nao existe disco: toda consulta volta 500.
+  // Este gera codigo que importa o compilador como modulo.
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+  runtime  = "workerd"
 }
 
 datasource db {

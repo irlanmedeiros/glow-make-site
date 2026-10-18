@@ -1,5 +1,5 @@
 import { randomInt } from 'node:crypto';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@/generated/prisma/client';
 import { prisma } from './prisma';
 import { documentoValido } from './validacao';
 import { mesmoDocumento, soDigitos } from './acompanhamento';
@@ -30,7 +30,7 @@ export function normalizarCodigo(bruto: unknown): string {
 /** Nunca maior que os produtos: desconto nao abate frete nem vira credito. */
 export function calcularDesconto(
   tipo: TipoDesconto,
-  valor: Prisma.Decimal.Value,
+  valor: Prisma.Decimal | string | number,
   subtotal: Prisma.Decimal
 ): Prisma.Decimal {
   const v = new Prisma.Decimal(valor);
@@ -40,7 +40,7 @@ export function calcularDesconto(
   return Prisma.Decimal.min(arredondado, subtotal);
 }
 
-export function descricaoDesconto(tipo: TipoDesconto, valor: Prisma.Decimal.Value): string {
+export function descricaoDesconto(tipo: TipoDesconto, valor: Prisma.Decimal | string | number): string {
   const v = new Prisma.Decimal(valor);
   return tipo === 'PERCENTUAL'
     ? `${v.toString().replace('.', ',')}% de desconto nos produtos`

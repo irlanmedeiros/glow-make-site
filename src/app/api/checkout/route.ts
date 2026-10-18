@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@/generated/prisma/client';
 import { prisma } from '@/lib/prisma';
 import { baixarEstoque, EstoqueInsuficiente } from '@/lib/estoque';
 import { asaasConfigurado, criarOuBuscarCliente, criarCobranca, buscarQrCodePix } from '@/lib/asaas';

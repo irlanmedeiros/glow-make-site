@@ -1,4 +1,4 @@
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@/generated/prisma/client';
 
 /** Decimal do Prisma nunca deve virar float antes de formatar — vira string. */
 export type Dinheiro = Prisma.Decimal | number | string;

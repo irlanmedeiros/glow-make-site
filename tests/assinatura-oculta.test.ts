@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, beforeAll } from 'vitest';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@/generated/prisma/client';
 
 /**
  * Com a assinatura oculta, a rota recusa antes de fazer qualquer coisa:

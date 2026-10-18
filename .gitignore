@@ -18,3 +18,6 @@ yarn.lock
 
 .open-next
 .wrangler
+
+# client gerado pelo Prisma, recriado no build
+src/generated
