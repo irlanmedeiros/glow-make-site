@@ -1,7 +1,6 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { upload } from '@vercel/blob/client';
 import {
   LADO_MAXIMO,
   TIPOS_IMAGEM,
@@ -55,12 +54,12 @@ export default function CampoImagem({
       const corpo = await reduzir(arquivo, LADO_MAXIMO[pasta]);
       setEstado('enviando');
       setProgresso(0);
-      const r = await upload(nomeDoArquivo(pasta, arquivo.name, corpo.type), corpo, {
-        access: 'public',
-        handleUploadUrl: '/api/admin/imagem',
-        onUploadProgress: (p) => setProgresso(Math.round(p.percentage)),
-      });
-      setUrl(r.url);
+      const endereco = await enviar(
+        nomeDoArquivo(pasta, arquivo.name, corpo.type),
+        corpo,
+        setProgresso
+      );
+      setUrl(endereco);
     } catch (falha) {
       const msg = falha instanceof Error ? falha.message : '';
       setErro(
@@ -137,14 +136,64 @@ export default function CampoImagem({
 }
 
 /**
+ * Envia a foto para /api/admin/imagem, que grava no R2.
+ *
+ * XMLHttpRequest em vez de fetch porque o fetch nao reporta progresso de
+ * ENVIO, e sem barra de progresso quem usa o admin acha que travou.
+ */
+function enviar(
+  caminho: string,
+  corpo: Blob,
+  aoProgredir: (pct: number) => void
+): Promise<string> {
+  const form = new FormData();
+  form.append('caminho', caminho);
+  form.append('arquivo', corpo);
+
+  return new Promise((ok, falha) => {
+    const req = new XMLHttpRequest();
+    req.open('POST', '/api/admin/imagem');
+    req.upload.onprogress = (e) => {
+      if (e.lengthComputable) aoProgredir(Math.round((e.loaded / e.total) * 100));
+    };
+    req.onerror = () => falha(new Error('Sem conexão com o servidor.'));
+    req.onload = () => {
+      let corpoResposta: { url?: string; erro?: string } = {};
+      try {
+        corpoResposta = JSON.parse(req.responseText);
+      } catch {
+        /* resposta sem JSON: cai na mensagem genérica abaixo */
+      }
+      if (req.status >= 200 && req.status < 300 && corpoResposta.url) {
+        ok(corpoResposta.url);
+      } else {
+        falha(new Error(corpoResposta.erro ?? `Falha ao enviar (${req.status}).`));
+      }
+    };
+    req.send(form);
+  });
+}
+
+/**
  * Reduz no navegador ao tamanho que a vitrine usa. Sem cortar: so escala.
- * PNG continua PNG, porque pode ter transparencia; o resto vira JPEG.
+ *
+ * Sai SEMPRE em WebP, e isso nao e preferencia de formato: antes, PNG
+ * continuava PNG, e PNG e sem perdas — o parametro de qualidade do toBlob e
+ * ignorado. Foto de WhatsApp e print de tela chegam em PNG, entao um banner de
+ * 2400px virava um arquivo de varios MB. Com 77 fotos assim, o store passou de
+ * 120 MB e estourou a cota de transferencia, derrubando TODAS as imagens do
+ * site com 403. WebP tem transparencia igual ao PNG e pesa de 10 a 20 vezes
+ * menos numa foto.
+ *
+ * Nao volte a gravar PNG aqui.
  */
 async function reduzir(arquivo: File, ladoMaximo: number): Promise<Blob> {
   const bitmap = await createImageBitmap(arquivo);
   const alvo = dimensoesReduzidas(bitmap.width, bitmap.height, ladoMaximo);
-  const jaCabe = alvo.largura === bitmap.width && arquivo.size <= 1_500_000;
-  if (jaCabe) {
+
+  // Passagem direta so quando ja chega no formato certo, no tamanho certo e
+  // leve. Antes, qualquer PNG de até 1,5 MB passava intacto.
+  if (arquivo.type === 'image/webp' && alvo.largura === bitmap.width && arquivo.size <= 600_000) {
     bitmap.close();
     return arquivo;
   }
@@ -154,20 +203,28 @@ async function reduzir(arquivo: File, ladoMaximo: number): Promise<Blob> {
   canvas.height = alvo.altura;
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Navegador sem suporte a imagem.');
-  const png = arquivo.type === 'image/png';
-  if (!png) {
-    // JPEG nao tem transparencia: fundo branco em vez de preto.
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, alvo.largura, alvo.altura);
-  }
   ctx.drawImage(bitmap, 0, 0, alvo.largura, alvo.altura);
   bitmap.close();
 
-  return new Promise((ok, falha) =>
-    canvas.toBlob(
-      (b) => (b ? ok(b) : falha(new Error('Não consegui preparar a foto.'))),
-      png ? 'image/png' : 'image/jpeg',
-      0.86
-    )
-  );
+  const webp = await codificar(canvas, 'image/webp', 0.82);
+  if (webp?.type === 'image/webp') return webp;
+
+  // Navegador sem WebP cai para JPEG. O toBlob, nesse caso, devolve PNG em vez
+  // de erro, por isso a checagem acima e pelo tipo e nao por null.
+  // destination-over pinta o branco ATRAS do que ja foi desenhado, porque
+  // JPEG nao tem transparencia.
+  ctx.globalCompositeOperation = 'destination-over';
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, alvo.largura, alvo.altura);
+  const jpeg = await codificar(canvas, 'image/jpeg', 0.86);
+  if (!jpeg) throw new Error('Não consegui preparar a foto.');
+  return jpeg;
+}
+
+function codificar(
+  canvas: HTMLCanvasElement,
+  tipo: string,
+  qualidade: number
+): Promise<Blob | null> {
+  return new Promise((ok) => canvas.toBlob(ok, tipo, qualidade));
 }

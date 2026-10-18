@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { r2Configurado } from '@/lib/r2';
 import { real, num } from '@/lib/format';
 import { MINIMO_CARRINHO_INDIVIDUAIS, ROTULO_TIPO, TIPOS_EDITAVEIS, type TipoProduto, tipoValido, CATEGORIAS } from '@/lib/produto';
 import { salvarKit, alternarKit, excluirKit, excluirKitsEmMassa } from '../../actions';
@@ -146,7 +147,7 @@ function Formulario({
 export default async function Kits({ searchParams }: Props) {
   const { ok, erro } = mensagens(await searchParams);
   // Sem a variavel do Blob, o campo de foto so aceita colar endereco.
-  const uploadDisponivel = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+  const uploadDisponivel = r2Configurado();
   /* Busca, filtro e página vivem na URL, não em estado de componente. É o que
      faz os três funcionarem juntos: trocar de página mantém o filtro, e o
      endereço resultante pode ser recarregado ou mandado para outra pessoa. */

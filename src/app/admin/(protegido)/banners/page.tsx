@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { r2Configurado } from '@/lib/r2';
 import { salvarBanner, excluirBanner } from '../../actions';
 import { Aviso, Cabecalho, Painel, Pill, mensagens } from '@/components/admin/Ui';
 import CampoImagem from '@/components/admin/CampoImagem';
@@ -86,7 +87,7 @@ function Formulario({
 
 export default async function Banners({ searchParams }: Props) {
   const { ok, erro } = mensagens(await searchParams);
-  const uploadDisponivel = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+  const uploadDisponivel = r2Configurado();
   const banners = await prisma.banner.findMany({ orderBy: { ordem: 'asc' } });
 
   return (
