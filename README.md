@@ -48,7 +48,17 @@ qualquer teste mexe em pedido e estoque reais.
 | `ASAAS_WEBHOOK_TOKEN` | não | sem ele o webhook recusa tudo, de propósito |
 | `MELHOR_ENVIO_TOKEN` | não | sem ele, frete fora da cidade-sede sai como "a combinar" |
 | `MELHOR_ENVIO_ENV` | não | `sandbox` ou `producao` |
-| `BLOB_READ_WRITE_TOKEN` | não | fotos enviadas pelo admin; sem ela, só dá para colar o endereço |
+| `R2_ACCOUNT_ID` | não | Cloudflare R2: fotos enviadas pelo admin |
+| `R2_ACCESS_KEY_ID` | não | R2, token com Object Read & Write só no bucket |
+| `R2_SECRET_ACCESS_KEY` | não | R2 |
+| `R2_BUCKET` | não | R2 |
+| `R2_PUBLIC_URL` | não | endereço público do bucket, sem barra no fim |
+
+Sem as variáveis `R2_*` o envio de fotos fica desligado e o admin aceita só
+colar o endereço da imagem. **Era Vercel Blob até outubro de 2026** — trocado
+porque no plano gratuito a Vercel suspende o store quando a cota de
+transferência da conta estoura, e suspenso significa 403 em toda imagem do
+site. Aconteceu. Ver `docs/DECISOES.md` #13.
 | `SUBSCRIPTION_ENABLED` | não | legado: só vale enquanto não existir linha de Config. Quem liga e desliga a assinatura é o admin, em Configurações |
 
 O código **degrada em vez de quebrar**: sem Asaas o pedido é gravado sem

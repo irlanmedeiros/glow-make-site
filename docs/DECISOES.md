@@ -212,6 +212,36 @@ vira **ajuste** no histórico em vez de sobrescrever.
 Importação que grava direto é como se perde catálogo: uma coluna trocada de
 lugar e todos os preços viram outra coisa sem ninguém ver.
 
+## 13. Foto enviada pelo admin sai SEMPRE em WebP, e mora no R2
+
+`src/components/admin/CampoImagem.tsx` (funcao `reduzir`) e `src/lib/r2.ts`
+
+O encoder antigo re-salvava PNG como PNG. **PNG e sem perdas**, entao o
+parametro de qualidade do `canvas.toBlob` era silenciosamente ignorado, e um
+banner reduzido a 2400px saia com varios MB. Foto de WhatsApp e print de tela
+chegam em PNG, e eram a maioria.
+
+Resultado medido: 77 fotos somando 121 MB. O limite de transferencia do Vercel
+Blob no plano Hobby e 10 GB/mes — com ~10 MB por visita, cerca de **mil
+visitas** queimavam a cota do mes. A Vercel suspendeu o store, e store
+suspenso e **403 em toda imagem do site**, em qualquer dispositivo.
+
+Duas consequencias que nao devem ser desfeitas:
+
+- **Nunca volte a gravar PNG no encoder.** WebP tem transparencia igual e pesa
+  de 10 a 20 vezes menos numa foto (medido: 2.379 KB -> 153 KB).
+- **O armazenamento e o Cloudflare R2, nao o Vercel Blob.** O R2 nao cobra
+  egress, entao esse modo de falha nao existe la. O app continua na Vercel:
+  so o armazenamento mudou.
+
+O padrao antigo `**.public.blob.vercel-storage.com` segue liberado no
+`next.config.ts` de proposito — ha enderecos antigos gravados no banco.
+
+**Pendente:** o endereco publico e o `pub-….r2.dev`, que a Cloudflare avisa ser
+limitado por taxa e sem cache, impróprio para producao. O certo e um dominio
+proprio, mas isso exige mover a zona DNS de glowmake10.com da Vercel para a
+Cloudflare — operacao separada, numa loja que vende.
+
 ---
 
 ## Como aplicar mudança de schema em produção
