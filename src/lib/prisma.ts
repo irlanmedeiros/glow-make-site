@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { PrismaNeon } from '@prisma/adapter-neon';
 
 /* Aqui havia um `loadEnvConfig(process.cwd())`, para o Prisma enxergar o
    `.env.local` quando rodado fora do pipeline do Next. Foi removido por dois
@@ -22,9 +23,27 @@ import { PrismaClient } from '@prisma/client';
 // cada reload abriria uma nova pool de conexões até o Postgres recusar.
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
+/* Conexao pelo driver serverless do Neon, e nao pelo TCP padrao do Prisma.
+   Motivo: no Cloudflare Workers nao existe socket TCP comum, entao o driver
+   normal simplesmente nao conecta.
+
+   Tem que ser o Pool (WebSocket), NUNCA o modo HTTP do Neon. O modo HTTP nao
+   suporta transacao interativa, e a baixa de estoque depende exatamente
+   disso: UPDATE condicional, leitura do saldo e movimentacao dentro da mesma
+   transacao (docs/DECISOES.md #1). Com HTTP, duas compras simultaneas
+   voltariam a vender a mesma ultima unidade.
+
+   O mesmo codigo serve para Node e para Workers, sem o pacote `ws`: o
+   Workers tem WebSocket global, e o Node tambem desde a versao 22 (a Vercel
+   roda a 24). Se um dia o runtime for anterior a isso, o Neon vai reclamar
+   de `webSocketConstructor` ausente — e a correcao e instalar `ws` e
+   atribuir, nao voltar para o driver TCP. */
+const adapter = new PrismaNeon({ connectionString: process.env.DATABASE_URL });
+
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
+    adapter,
     log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error'],
 
     /* O padrao do Prisma e 5s por transacao interativa, e isso nao aguenta

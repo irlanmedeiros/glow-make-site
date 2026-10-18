@@ -1,0 +1,17 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "glow-make-site",
+  "main": ".open-next/worker.js",
+
+  // nodejs_compat e obrigatorio: o app usa node:crypto na sessao assinada
+  // (src/lib/auth.ts) e o driver do Neon depende de APIs do Node.
+  "compatibility_date": "2026-10-17",
+  "compatibility_flags": ["nodejs_compat"],
+
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+
+  "observability": { "enabled": true }
+}

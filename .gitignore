@@ -15,3 +15,6 @@ tsconfig.tsbuildinfo
 
 # O projeto e npm. Com yarn.lock presente a Vercel instala com Yarn.
 yarn.lock
+
+.open-next
+.wrangler
