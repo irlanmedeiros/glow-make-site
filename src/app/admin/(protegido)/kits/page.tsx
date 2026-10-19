@@ -9,6 +9,9 @@ import CampoImagem from '@/components/admin/CampoImagem';
 
 export const dynamic = 'force-dynamic';
 
+/** Liga as caixas de seleção, que ficam nos cartões, ao formulário do fim. */
+const FORM_EXCLUIR = 'excluir-produtos-selecionados';
+
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 
 /* 20 por página: o cartão de produto é alto (foto, pílulas, formulário que
@@ -287,10 +290,12 @@ export default async function Kits({ searchParams }: Props) {
         </p>
       </Painel>
 
-      {/* A seleção em massa envolve a lista inteira: as caixas ficam no cartão
-          de cada produto e o botão de excluir, no fim. Um formulário só, para
-          a seleção não se perder ao rolar. */}
-      <form action={excluirKitsEmMassa}>
+      {/* A seleção em massa envolve a lista inteira, mas o formulário dela NÃO
+          envolve: cada produto traz dentro o próprio formulário de edição, e
+          formulário dentro de formulário é HTML inválido — o navegador joga
+          fora o de dentro, e "Salvar alterações" deixava de salvar. As caixas
+          de seleção ficam ligadas ao formulário do fim pelo atributo `form`,
+          que existe exatamente para isto. */}
       {produtos.map((p) => {
         const saldo = p.entradas - p.saidas;
         return (
@@ -308,7 +313,7 @@ export default async function Kits({ searchParams }: Props) {
                   em vez de caixa que falha depois de marcada. */}
               {p.tipo !== 'BOX' && p._count.itensPedido === 0 && (
                 <label className="kits-marca" title={`Selecionar ${p.nome}`}>
-                  <input type="checkbox" name="ids" value={p.id} />
+                  <input type="checkbox" name="ids" value={p.id} form={FORM_EXCLUIR} />
                   <span className="sr-only">Selecionar {p.nome}</span>
                 </label>
               )}
@@ -384,19 +389,20 @@ export default async function Kits({ searchParams }: Props) {
           no servidor — marcar na tela não é o que autoriza. */}
       {produtos.length > 0 && (
         <Painel titulo="Excluir selecionados" descricao="A Glow Box e produtos já vendidos não aparecem para seleção">
-          <label className="aceite">
-            <input type="checkbox" name="confirmo" value="sim" />
-            <span>
-              Confirmo que quero <b>excluir definitivamente</b> os produtos marcados acima. Isso não
-              tem desfazer.
-            </span>
-          </label>
-          <button className="btn btn-danger" style={{ marginTop: 12 }}>
-            Excluir os selecionados
-          </button>
+          <form action={excluirKitsEmMassa} id={FORM_EXCLUIR}>
+            <label className="aceite">
+              <input type="checkbox" name="confirmo" value="sim" />
+              <span>
+                Confirmo que quero <b>excluir definitivamente</b> os produtos marcados acima. Isso
+                não tem desfazer.
+              </span>
+            </label>
+            <button className="btn btn-danger" style={{ marginTop: 12 }}>
+              Excluir os selecionados
+            </button>
+          </form>
         </Painel>
       )}
-      </form>
 
       {paginas > 1 && (
         <nav className="kits-paginas" aria-label="Páginas de produtos">
