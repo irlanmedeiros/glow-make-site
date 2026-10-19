@@ -147,6 +147,12 @@ describe('motoboy — João Pessoa e região', () => {
     expect(temMotoboy(null)).toBe(false);
   });
 
+  it('cidade da Paraíba fora da região metropolitana não tem motoboy', () => {
+    for (const longe of ['Campina Grande', 'Patos', 'Sousa', 'Cajazeiras', 'Sapé', 'Conde']) {
+      expect(temMotoboy({ cep: '58400000', cidade: longe, uf: 'PB' })).toBe(false);
+    }
+  });
+
   it('cidade homônima em outro estado não entra', () => {
     // Santa Rita existe em vários estados; o motoboy é o da Paraíba.
     expect(temMotoboy({ cep: '13650000', cidade: 'Santa Rita', uf: 'SP' })).toBe(false);

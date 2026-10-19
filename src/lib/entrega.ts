@@ -11,3 +11,24 @@ export const SERVICO_MOTOBOY = 'Motoboy — entrega no mesmo dia';
 export function ehMotoboy(servico: string | null | undefined): boolean {
   return (servico ?? '').startsWith('Motoboy');
 }
+
+/**
+ * A cotacao que chegou e mesmo do CEP que esta na tela?
+ *
+ * A pessoa digita um CEP, corrige para outro, e as duas cotacoes voltam fora
+ * de ordem — a primeira chegando por ultimo repoe as opcoes do CEP ERRADO. Na
+ * regiao da loja isso punha o motoboy na tela de quem mora longe. O destino
+ * volta na resposta justamente para poder conferir aqui.
+ *
+ * Resposta sem destino (CEP nao encontrado, ViaCEP fora do ar) e aceita: ela
+ * nao afirma cidade nenhuma, e nao traz opcao de entrega junto.
+ */
+export function cotacaoEhDoCep(
+  resposta: { destino?: { cep?: string } | null } | null | undefined,
+  cep: string
+): boolean {
+  const pedido = (cep ?? '').replace(/\D/g, '');
+  if (pedido.length !== 8) return false;
+  const veio = (resposta?.destino?.cep ?? '').replace(/\D/g, '');
+  return !veio || veio === pedido;
+}

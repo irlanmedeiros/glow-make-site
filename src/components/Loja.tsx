@@ -10,7 +10,7 @@ import {
   useState,
 } from 'react';
 import { erroDoCarrinho } from '@/lib/produto';
-import { ehMotoboy } from '@/lib/entrega';
+import { cotacaoEhDoCep, ehMotoboy } from '@/lib/entrega';
 import { linkPedidoWhatsapp } from '@/lib/whatsapp';
 import type { ConfigPublica, KitPublico } from './tipos';
 import { Busca, Carrinho, Check, Menu, Seta, Whatsapp } from './Icones';
@@ -1047,6 +1047,10 @@ function Checkout({ modo, aoLimpar }: { modo: Modo | null; aoLimpar: () => void 
   const [end, setEnd] = useState({ endereco: '', bairro: '', cidade: '', uf: '' });
 
   const [fretes, setFretes] = useState<OpcaoFrete[]>([]);
+  /* Qual CEP a tela está esperando responder. Sem isto, a cotação de um CEP
+     que a pessoa já trocou pode chegar por último e repor as opções do CEP
+     antigo — era assim que o motoboy aparecia para quem mora longe. */
+  const cepPedido = useRef('');
   const [freteEscolhido, setFreteEscolhido] = useState('');
   const [avisoFrete, setAvisoFrete] = useState('');
   const [cotando, setCotando] = useState(false);
@@ -1167,15 +1171,21 @@ function Checkout({ modo, aoLimpar }: { modo: Modo | null; aoLimpar: () => void 
     setCep(valor);
     const limpo = valor.replace(/\D/g, '');
     if (limpo.length !== 8) {
+      // CEP incompleto não tem cotação: o que estava na tela era de outro CEP.
+      cepPedido.current = '';
       setFretes([]);
+      setFreteEscolhido('');
       setAvisoFrete('');
       return;
     }
 
+    cepPedido.current = limpo;
     setBuscandoCep(true);
     try {
       const r = await fetch(`https://viacep.com.br/ws/${limpo}/json/`);
       const d = await r.json();
+      // Endereço de um CEP que a pessoa já trocou não preenche nada.
+      if (cepPedido.current !== limpo) return;
       if (!d.erro) {
         setEnd({
           endereco: d.logradouro ?? '',
@@ -1186,8 +1196,9 @@ function Checkout({ modo, aoLimpar }: { modo: Modo | null; aoLimpar: () => void 
       }
     } catch {
       /* sem ViaCEP a pessoa preenche à mão */
+    } finally {
+      if (cepPedido.current === limpo) setBuscandoCep(false);
     }
-    setBuscandoCep(false);
 
     setCotando(true);
     try {
@@ -1200,14 +1211,18 @@ function Checkout({ modo, aoLimpar }: { modo: Modo | null; aoLimpar: () => void 
         }),
       });
       const d = await r.json();
+      // Resposta atrasada de um CEP que não é mais o da tela: descarta.
+      if (cepPedido.current !== limpo || !cotacaoEhDoCep(d, limpo)) return;
       setFretes(d.opcoes ?? []);
       setFreteEscolhido(d.opcoes?.[0]?.servico ?? '');
       setAvisoFrete(d.aviso ?? '');
     } catch {
+      if (cepPedido.current !== limpo) return;
       setFretes([]);
       setAvisoFrete('Não consegui calcular o frete agora. Seguimos e confirmamos com você.');
+    } finally {
+      if (cepPedido.current === limpo) setCotando(false);
     }
-    setCotando(false);
   }
 
   /* Guarda o lead assim que houver um e-mail válido. É o que permite falar
