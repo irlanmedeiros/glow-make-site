@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { fotoDoProduto, fotoIndisponivel, MARCA_FOTO_INDISPONIVEL } from '@/lib/imagem';
 import { r2Configurado } from '@/lib/r2';
 import { real, num } from '@/lib/format';
 import { MINIMO_CARRINHO_INDIVIDUAIS, ROTULO_TIPO, TIPOS_EDITAVEIS, type TipoProduto, tipoValido, CATEGORIAS } from '@/lib/produto';
@@ -91,6 +92,16 @@ function Formulario({
           </small>
           <small>Use vírgula: 129,90</small>
         </div>
+        {novo && (
+          <div className="field">
+            <label>Estoque inicial</label>
+            <input type="number" name="estoqueInicial" min={0} defaultValue={0} />
+            <small>
+              Quantas unidades já existem. Com zero, o produto nasce <b>Esgotado</b> no site até
+              você lançar a entrada em Estoque.
+            </small>
+          </div>
+        )}
         <div className="field">
           <label>Alerta de estoque baixo</label>
           <input type="number" name="estoqueBaixo" min={0} defaultValue={k.estoqueBaixo ?? 10} />
@@ -176,6 +187,16 @@ export default async function Kits({ searchParams }: Props) {
   // mais; cair na última é melhor do que mostrar lista vazia sem explicação.
   const atual = Math.min(pagina, paginas);
 
+  /* Fotos que ficaram no Vercel Blob depois que a store foi bloqueada: o
+     endereco continua gravado, mas nao carrega mais em lugar nenhum. A conta
+     e da loja inteira, nao so desta pagina, senao um filtro esconderia o
+     problema. */
+  const semFoto = await prisma.kit.findMany({
+    where: { imagem: { contains: MARCA_FOTO_INDISPONIVEL } },
+    select: { nome: true },
+    orderBy: { nome: 'asc' },
+  });
+
   const produtos = await prisma.kit.findMany({
     where,
     // Kit primeiro, sempre: é o que a loja vende como carro-chefe. O enum
@@ -206,6 +227,17 @@ export default async function Kits({ searchParams }: Props) {
         descricao="Nome, preço, itens e foto de cada produto do catálogo"
       />
       <Aviso ok={ok} erro={erro} />
+
+      {semFoto.length > 0 && (
+        <div className="note alerta" style={{ marginBottom: 20 }}>
+          <b>
+            {semFoto.length} produto(s) estão sem foto no site: {semFoto.map((p) => p.nome).join(', ')}.
+          </b>{' '}
+          As fotos antigas ficaram no armazenamento anterior, que saiu do ar, e não dá para
+          recuperá-las daqui. Abra cada produto e envie a foto de novo — enquanto isso, o site
+          mostra uma imagem neutra no lugar, em vez de card vazio.
+        </div>
+      )}
 
       {/* Criar fica em cima: e a acao mais comum de quem monta o catalogo, e
           no fim de uma lista longa ninguem acha. */}
@@ -283,7 +315,7 @@ export default async function Kits({ searchParams }: Props) {
 
               <div className="linha-prod" style={{ flex: 1, minWidth: 220 }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={p.imagem} alt="" />
+                <img src={fotoDoProduto(p.imagem)} alt="" />
                 <div>
                   <b>{p.nome}</b>
                   <span>
@@ -292,6 +324,8 @@ export default async function Kits({ searchParams }: Props) {
                 </div>
               </div>
 
+              {fotoIndisponivel(p.imagem) && <Pill cor="low">Foto indisponível</Pill>}
+              {saldo <= 0 && <Pill cor="out">Esgotado</Pill>}
               <Pill cor={p.ativo ? 'ok' : 'out'}>{p.ativo ? 'No site' : 'Oculto'}</Pill>
               {p.tipo !== 'KIT' && <Pill cor="info">{ROTULO_TIPO[p.tipo]}</Pill>}
 

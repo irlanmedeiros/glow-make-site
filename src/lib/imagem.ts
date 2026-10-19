@@ -29,6 +29,47 @@ export const LADO_MAXIMO: Record<Pasta, number> = {
 /** Imagem de produto sem foto: neutra, em vez de foto de banco de outra marca. */
 export const IMAGEM_PADRAO_PRODUTO = '/assets/kits/sem-foto.svg';
 
+/**
+ * Fotos que ficaram para tras no Vercel Blob.
+ *
+ * As fotos moravam la antes da mudanca para o R2 (docs/DECISOES.md). A store
+ * foi bloqueada depois, e desde entao TODO endereco de la responde 403 "Your
+ * store is blocked" — a vitrine ficou com card vazio, sem nem o espaco neutro,
+ * porque o navegador nao tem o que desenhar quando a imagem nao carrega.
+ *
+ * Enquanto a foto nova nao e enviada, o site mostra a imagem neutra e o admin
+ * aponta quem precisa ser reenviado. O endereco antigo continua gravado de
+ * proposito: apagar em massa jogaria fora a unica pista de onde a foto estava,
+ * caso a store volte.
+ */
+/**
+ * Rede de seguranca no navegador: foto que nao carrega vira a imagem neutra.
+ *
+ * O servidor ja troca os enderecos que sabemos estarem fora do ar, mas um
+ * arquivo pode sumir do R2 depois, e card vazio nao explica nada para quem
+ * esta comprando. Troca uma vez so — se a propria imagem neutra falhar, nao
+ * entra em laco.
+ */
+export function aoFalharFoto(e: { currentTarget: HTMLImageElement }): void {
+  const img = e.currentTarget;
+  if (img.dataset.fotoNeutra) return;
+  img.dataset.fotoNeutra = '1';
+  img.src = IMAGEM_PADRAO_PRODUTO;
+}
+
+/** Pedaco do endereco antigo, para o admin achar no banco quem precisa de foto nova. */
+export const MARCA_FOTO_INDISPONIVEL = 'blob.vercel-storage.com';
+
+export function fotoIndisponivel(endereco: string | null | undefined): boolean {
+  return /\.blob\.vercel-storage\.com\//i.test(endereco ?? '');
+}
+
+/** O que a vitrine deve mostrar: a foto, ou a imagem neutra quando nao da. */
+export function fotoDoProduto(endereco: string | null | undefined): string {
+  const e = (endereco ?? '').trim();
+  return !e || fotoIndisponivel(e) ? IMAGEM_PADRAO_PRODUTO : e;
+}
+
 const EXTENSAO: Record<string, string> = {
   'image/jpeg': 'jpg',
   'image/png': 'png',

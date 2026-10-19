@@ -15,6 +15,7 @@ import { linkPedidoWhatsapp } from '@/lib/whatsapp';
 import type { ConfigPublica, KitPublico } from './tipos';
 import { Busca, Carrinho, Check, Menu, Seta, Whatsapp } from './Icones';
 import { evento } from './Consentimento';
+import { aoFalharFoto } from '@/lib/imagem';
 import {
   TIPOS_PELE, TONS_PELE, SUBTONS, CATEGORIAS, ITENS, CORES, DECLARACAO,
 } from '@/lib/perfil';
@@ -719,7 +720,7 @@ export function Grade({ produtos }: { produtos: KitPublico[] }) {
           <article className="card" key={k.id}>
             <div className="card-img">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={k.imagem} alt={k.nome} loading="lazy" />
+              <img src={k.imagem} alt={k.nome} loading="lazy" onError={aoFalharFoto} />
               <span className={`stock-tag ${tag.cls}`}>{tag.texto}</span>
             </div>
             <div className="card-body">
@@ -867,7 +868,7 @@ function Gaveta({ aberta }: { aberta: boolean }) {
               return (
                 <div className="ci" key={i.id}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={k.imagem} alt="" />
+                  <img src={k.imagem} alt="" onError={aoFalharFoto} />
                   <div className="ci-in">
                     <b>{k.nome}</b>
                     <span className="p">{real(k.preco * i.qtd)}</span>

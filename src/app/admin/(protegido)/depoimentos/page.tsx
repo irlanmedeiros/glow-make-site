@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { fotoIndisponivel } from '@/lib/imagem';
 import { r2Configurado } from '@/lib/r2';
 import { salvarDepoimento, excluirDepoimento, ocultarDepoimentosDeExemplo } from '../../actions';
 import { ehDepoimentoDeExemplo, iniciais } from '@/lib/conteudo';
@@ -123,7 +124,7 @@ export default async function Depoimentos({ searchParams }: Props) {
       )}
 
       {depoimentos.map((d) => {
-        const exemplo = ehDepoimentoDeExemplo(d.avatar);
+        const exemplo = ehDepoimentoDeExemplo(d.avatar) || fotoIndisponivel(d.avatar);
         return (
         <Painel key={d.id}>
           <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>

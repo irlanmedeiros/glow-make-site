@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { fotoIndisponivel } from '@/lib/imagem';
 import { r2Configurado } from '@/lib/r2';
 import { salvarBanner, excluirBanner } from '../../actions';
 import { Aviso, Cabecalho, Painel, Pill, mensagens } from '@/components/admin/Ui';
@@ -102,11 +103,20 @@ export default async function Banners({ searchParams }: Props) {
         <Painel key={b.id}>
           <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={b.imagem}
-              alt=""
-              style={{ width: 180, aspectRatio: '20/9', objectFit: 'cover', borderRadius: 12 }}
-            />
+            {fotoIndisponivel(b.imagem) ? (
+              <div
+                className="campo-imagem-previa banner vazia"
+                style={{ width: 180, aspectRatio: '20/9', borderRadius: 12 }}
+              >
+                Foto indisponível
+              </div>
+            ) : (
+              <img
+                src={b.imagem}
+                alt=""
+                style={{ width: 180, aspectRatio: '20/9', objectFit: 'cover', borderRadius: 12 }}
+              />
+            )}
             <div style={{ flex: 1, minWidth: 200 }}>
               <b style={{ fontFamily: 'var(--serif)', fontSize: 17 }}>{b.titulo}</b>
               <p style={{ fontSize: 13.5, color: 'var(--muted)' }}>{b.subtitulo}</p>
@@ -115,6 +125,9 @@ export default async function Banners({ searchParams }: Props) {
                 <span className="chip">{b.tag}</span>
               </div>
             </div>
+            {/* Banner e a imagem: sem ela o slide seria uma faixa em branco
+                no alto da home, entao a home deixa esse de fora. */}
+            {fotoIndisponivel(b.imagem) && <Pill cor="low">Fora do ar até ter foto</Pill>}
             <Pill cor={b.ativo ? 'ok' : 'out'}>{b.ativo ? 'No ar' : 'Oculto'}</Pill>
             <form action={excluirBanner}>
               <input type="hidden" name="id" value={b.id} />

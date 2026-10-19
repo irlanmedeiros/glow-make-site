@@ -5,6 +5,7 @@ import {
   LADO_MAXIMO,
   TIPOS_IMAGEM,
   dimensoesReduzidas,
+  fotoIndisponivel,
   nomeDoArquivo,
   type Pasta,
 } from '@/lib/imagem';
@@ -75,7 +76,13 @@ export default function CampoImagem({
 
   return (
     <div className="campo-imagem">
-      {url ? (
+      {/* Previa de endereco que nao carrega mais mostrava um quadro quebrado,
+          e a pessoa nao tinha como saber que o problema era a foto antiga. */}
+      {fotoIndisponivel(url) ? (
+        <div className={`campo-imagem-previa ${formato} vazia`}>
+          Foto antiga indisponível — envie outra
+        </div>
+      ) : url ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img className={`campo-imagem-previa ${formato}`} src={url} alt="Prévia" />
       ) : (

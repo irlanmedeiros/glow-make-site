@@ -3,6 +3,9 @@ import {
   caminhoPermitido,
   dimensoesReduzidas,
   enderecoDeImagemValido,
+  fotoDoProduto,
+  fotoIndisponivel,
+  IMAGEM_PADRAO_PRODUTO,
   nomeDoArquivo,
 } from './imagem';
 
@@ -56,5 +59,41 @@ describe('enderecoDeImagemValido', () => {
     expect(enderecoDeImagemValido('http://inseguro.com/a.jpg')).toBe(false);
     expect(enderecoDeImagemValido('/assets/../.env')).toBe(false);
     expect(enderecoDeImagemValido('https://x.com/a.jpg" onerror="x')).toBe(false);
+  });
+});
+
+/**
+ * A store do Vercel Blob, onde as fotos moravam antes do R2, foi bloqueada:
+ * todo endereco de la responde 403. Card vazio na vitrine nao explica nada
+ * para quem esta comprando — melhor a imagem neutra.
+ */
+describe('foto indisponivel', () => {
+  const morta =
+    'https://wc94vidobsk43nja.public.blob.vercel-storage.com/produtos/779beaba-77de-4595.png';
+  const viva =
+    'https://pub-84b9e6fdb29f4baebd808f979660e715.r2.dev/produtos/kit-puro-leite-ab12cd34.webp';
+
+  it('reconhece o endereco do armazenamento que saiu do ar', () => {
+    expect(fotoIndisponivel(morta)).toBe(true);
+    expect(fotoIndisponivel(morta.replace('https', 'http'))).toBe(true);
+  });
+
+  it('nao confunde com o armazenamento atual nem com arquivo do proprio site', () => {
+    expect(fotoIndisponivel(viva)).toBe(false);
+    expect(fotoIndisponivel('/assets/kits/kit-1.jpg')).toBe(false);
+    expect(fotoIndisponivel('')).toBe(false);
+    expect(fotoIndisponivel(null)).toBe(false);
+  });
+
+  it('a vitrine mostra a imagem neutra no lugar da foto que nao carrega', () => {
+    expect(fotoDoProduto(morta)).toBe(IMAGEM_PADRAO_PRODUTO);
+    expect(fotoDoProduto('')).toBe(IMAGEM_PADRAO_PRODUTO);
+    expect(fotoDoProduto('   ')).toBe(IMAGEM_PADRAO_PRODUTO);
+    expect(fotoDoProduto(undefined)).toBe(IMAGEM_PADRAO_PRODUTO);
+  });
+
+  it('foto boa passa intacta', () => {
+    expect(fotoDoProduto(viva)).toBe(viva);
+    expect(fotoDoProduto('/assets/kits/kit-1.jpg')).toBe('/assets/kits/kit-1.jpg');
   });
 });

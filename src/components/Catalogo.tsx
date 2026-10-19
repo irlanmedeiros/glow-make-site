@@ -12,6 +12,7 @@ import {
   type Resultado,
 } from '@/app/catalogo/actions';
 import { Busca } from './Icones';
+import { aoFalharFoto } from '@/lib/imagem';
 
 export type ProdutoCatalogo = {
   id: string;
@@ -410,7 +411,7 @@ function AbaVender({
             {lista.map((p) => (
               <button key={p.id} className="pdv-item" onClick={() => adicionar(p)}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={p.imagem} alt="" loading="lazy" />
+                <img src={p.imagem} alt="" loading="lazy" onError={aoFalharFoto} />
                 <span className="pdv-item-nome">{p.nome}</span>
                 <span className="pdv-item-preco">{real(p.preco)}</span>
                 <span className="pdv-item-saldo">{p.saldo} un.</span>
@@ -804,7 +805,7 @@ function AbaEstoque({
               >
                 <div className="cat-foto">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={p.imagem} alt="" loading="lazy" />
+                  <img src={p.imagem} alt="" loading="lazy" onError={aoFalharFoto} />
                   <span className={`pill ${s.cls}`}>{s.texto}</span>
                 </div>
                 <div className="cat-info">
@@ -889,7 +890,7 @@ function FichaProduto({
         <div className="cat-ficha-corpo">
           <div className="cat-ficha-prod">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={produto.imagem} alt="" />
+            <img src={produto.imagem} alt="" onError={aoFalharFoto} />
             <div>
               <b>{produto.nome}</b>
               <span className="cat-sku">{produto.sku}</span>

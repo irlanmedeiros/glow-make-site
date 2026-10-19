@@ -4,6 +4,7 @@ import { ROTULO_TIPO } from '@/lib/produto';
 import { real, dataHora, num, ROTULO_PEDIDO, corPedido } from '@/lib/format';
 import { asaasConfigurado } from '@/lib/asaas';
 import { Cabecalho, Painel, Pill, Vazio } from '@/components/admin/Ui';
+import { fotoDoProduto } from '@/lib/imagem';
 
 export const dynamic = 'force-dynamic';
 
@@ -134,7 +135,7 @@ export default async function PainelAdmin() {
                     <td>
                       <div className="linha-prod">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={p.imagem} alt="" />
+                        <img src={fotoDoProduto(p.imagem)} alt="" />
                         <div>
                           <b>{p.nome}</b>
                           <span>{ROTULO_TIPO[p.tipo]}</span>

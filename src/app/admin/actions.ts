@@ -226,11 +226,34 @@ export async function salvarKit(fd: FormData) {
     ativo,
   };
 
+  /* Estoque inicial so no cadastro. Sem isso o produto nasce com saldo zero e
+     aparece "Esgotado" no site: a pessoa cadastra, olha a loja e acha que o
+     site quebrou. Entrada vira Movimentacao como qualquer outra, para o
+     historico continuar explicando de onde veio cada unidade. */
+  const estoqueInicial = inteiro(fd, 'estoqueInicial');
+  const entradas = !id && Number.isInteger(estoqueInicial) && estoqueInicial > 0 ? estoqueInicial : 0;
+
   try {
     if (id) {
       await prisma.kit.update({ where: { id }, data: dados });
     } else {
-      await prisma.kit.create({ data: { ...dados, slug: slugificar(nome) || sku.toLowerCase() } });
+      await prisma.$transaction(async (tx) => {
+        const criado = await tx.kit.create({
+          data: { ...dados, entradas, slug: slugificar(nome) || sku.toLowerCase() },
+        });
+        if (entradas > 0) {
+          await tx.movimentacao.create({
+            data: {
+              sku: criado.sku,
+              nome: criado.nome,
+              tipo: 'ENTRADA',
+              qtd: entradas,
+              origem: 'Estoque inicial do cadastro',
+              saldoApos: entradas,
+            },
+          });
+        }
+      });
     }
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
@@ -240,7 +263,14 @@ export async function salvarKit(fd: FormData) {
   }
 
   revalidatePath('/');
-  voltar('/admin/kits', id ? 'Produto atualizado.' : 'Produto criado.');
+  voltar(
+    '/admin/kits',
+    id
+      ? 'Produto atualizado.'
+      : entradas > 0
+        ? `Produto criado com ${entradas} unidade(s) em estoque.`
+        : 'Produto criado. Ele aparece como esgotado no site até a entrada de estoque ser lançada.'
+  );
 }
 
 export async function alternarKit(fd: FormData) {

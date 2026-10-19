@@ -6,6 +6,7 @@ import { CATEGORIAS, TIPOS_NA_VITRINE, categoriaValida, rotuloCategoria } from '
 import { avisosPublicaveis } from '@/lib/conteudo';
 import { assinaturaAtiva } from '@/lib/recursos';
 import type { ConfigPublica, KitPublico } from '@/components/tipos';
+import { fotoDoProduto } from '@/lib/imagem';
 
 export const dynamic = 'force-dynamic';
 
@@ -73,7 +74,7 @@ export default async function Produtos({ searchParams }: Props) {
     descricao: k.descricao,
     itens: k.itens,
     preco: num(k.preco),
-    imagem: k.imagem,
+    imagem: fotoDoProduto(k.imagem),
     saldo: k.entradas - k.saidas,
     estoqueBaixo: k.estoqueBaixo,
   });

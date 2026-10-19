@@ -237,6 +237,15 @@ Duas consequencias que nao devem ser desfeitas:
 O padrao antigo `**.public.blob.vercel-storage.com` segue liberado no
 `next.config.ts` de proposito — ha enderecos antigos gravados no banco.
 
+Esses enderecos antigos **nao carregam mais** (403 "Your store is blocked"), e
+a foto so volta quando a dona reenviar. Ate la, `fotoDoProduto` em
+`src/lib/imagem.ts` troca o endereco morto pela imagem neutra na vitrine, no
+balcao e no admin: card vazio nao diz nada a quem esta comprando. O endereco
+continua **gravado** de proposito — e a unica pista de onde a foto estava, se
+a store for desbloqueada algum dia. Quem precisa de foto nova aparece listado
+em Admin > Kits e produtos, e o campo de foto diz "Foto antiga indisponivel"
+em vez de mostrar quadro quebrado.
+
 **Pendente:** o endereco publico e o `pub-….r2.dev`, que a Cloudflare avisa ser
 limitado por taxa e sem cache, impróprio para producao. O certo e um dominio
 proprio, mas isso exige mover a zona DNS de glowmake10.com da Vercel para a

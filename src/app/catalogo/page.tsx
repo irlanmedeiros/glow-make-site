@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { num } from '@/lib/format';
 import { caixaAberto, resumoDoCaixa } from '@/lib/pdv';
 import Catalogo, { type ProdutoCatalogo, type CaixaAtual } from '@/components/Catalogo';
+import { fotoDoProduto } from '@/lib/imagem';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,7 +26,7 @@ export default async function PaginaCatalogo() {
     sku: p.sku,
     nome: p.nome,
     preco: num(p.preco),
-    imagem: p.imagem,
+    imagem: fotoDoProduto(p.imagem),
     tipo: p.tipo,
     saldo: p.entradas - p.saidas,
     vendidos: p.saidas,

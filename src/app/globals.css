@@ -954,7 +954,7 @@ a.combinar-btn.btn-ghost:hover{background:#F2FCF6;border-color:#25D366}
 .campo-imagem-previa{width:100%;max-width:280px;aspect-ratio:1/1;border-radius:14px;border:1px solid var(--line);background:var(--rose-50);object-fit:cover}
 .campo-imagem-previa.banner{max-width:100%;aspect-ratio:20/9;object-fit:contain}
 .campo-imagem-previa.avatar{max-width:120px;border-radius:50%}
-.campo-imagem-previa.vazia{display:grid;place-items:center;color:var(--muted);font-size:13px}
+.campo-imagem-previa.vazia{display:grid;place-items:center;text-align:center;padding:0 10px;color:var(--muted);font-size:13px;line-height:1.35}
 .campo-imagem-acoes{display:flex;gap:8px;flex-wrap:wrap}
 .campo-imagem-acoes .btn{min-height:44px}
 .campo-imagem-barra{height:6px;border-radius:999px;background:var(--rose-100);overflow:hidden}

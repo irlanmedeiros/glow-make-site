@@ -25,6 +25,7 @@ import {
   Whatsapp,
   Tiktok,
 } from '@/components/Icones';
+import { fotoDoProduto, fotoIndisponivel } from '@/lib/imagem';
 import type {
   BannerPublico,
   ConfigPublica,
@@ -83,7 +84,7 @@ export default async function Home() {
     descricao: k.descricao,
     itens: k.itens,
     preco: num(k.preco),
-    imagem: k.imagem,
+    imagem: fotoDoProduto(k.imagem),
     saldo: k.entradas - k.saidas,
     estoqueBaixo: k.estoqueBaixo,
   });
@@ -93,7 +94,11 @@ export default async function Home() {
   // continuariam legiveis no codigo da pagina, com preco e estoque.
   const box = assinatura && boxDb ? paraPublico(boxDb) : null;
 
-  const banners: BannerPublico[] = bannersDb.map((b) => ({
+  // Banner e a imagem: um com foto indisponivel seria um slide em branco no
+  // alto da home. Fora do carrossel ate a dona reenviar.
+  const banners: BannerPublico[] = bannersDb
+    .filter((b) => !fotoIndisponivel(b.imagem))
+    .map((b) => ({
     id: b.id,
     tag: b.tag,
     titulo: b.titulo,
@@ -113,7 +118,8 @@ export default async function Home() {
     cidade: d.cidade,
     tempo: d.tempo,
     texto: d.texto,
-    avatar: d.avatar,
+    // Sem avatar a secao ja mostra as iniciais; foto indisponivel vira o mesmo.
+    avatar: fotoIndisponivel(d.avatar) ? '' : d.avatar,
     nota: d.nota,
   }));
 
@@ -197,7 +203,7 @@ export default async function Home() {
                 </div>
                 <div className="sub-img">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={box?.imagem ?? '/assets/kits/glowbox.jpg'} alt="Glow Box mensal" />
+                  <img src={fotoDoProduto(box?.imagem) } alt="Glow Box mensal" />
                   <div className="sub-float">
                     Edição de agosto
                     <b>Fecha dia 10</b>
