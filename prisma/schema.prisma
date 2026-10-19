@@ -478,6 +478,13 @@ model VendaLoja {
   // liga a venda daqui com a transacao de la na hora de conferir o extrato.
   codigoMaquineta String?
 
+  // Venda que aconteceu antes e so foi digitada depois (balcao sem internet,
+  // cartao passado direto na maquininha). Entra no faturamento do dia em que
+  // aconteceu e FICA FORA do caixa do dia em que foi digitada: o dinheiro de
+  // ontem nao esta na gaveta de hoje, e somar os dois e como o fechamento
+  // deixa de bater (DECISOES #8).
+  registradaDepois Boolean @default(false)
+
   // Resultado da conferencia com o extrato da PagBank (Admin > Conferencia).
   // A taxa so existe aqui: o painel mostrava R$ 100 de venda e a maquininha
   // deposita menos, e essa diferenca nao aparecia em lugar nenhum.

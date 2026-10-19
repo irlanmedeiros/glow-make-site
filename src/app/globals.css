@@ -955,6 +955,8 @@ a.combinar-btn.btn-ghost:hover{background:#F2FCF6;border-color:#25D366}
 .campo-imagem-previa.banner{max-width:100%;aspect-ratio:20/9;object-fit:contain}
 .campo-imagem-previa.avatar{max-width:120px;border-radius:50%}
 .campo-imagem-previa.vazia{display:grid;place-items:center;text-align:center;padding:0 10px;color:var(--muted);font-size:13px;line-height:1.35}
+.pdv-atrasada{margin:4px 0 14px;border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.pdv-atrasada summary{cursor:pointer;font-size:14px;font-weight:600;color:var(--rose-dark);min-height:32px;display:flex;align-items:center}
 .campo-imagem-acoes{display:flex;gap:8px;flex-wrap:wrap}
 .campo-imagem-acoes .btn{min-height:44px}
 .campo-imagem-barra{height:6px;border-radius:999px;background:var(--rose-100);overflow:hidden}

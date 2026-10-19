@@ -171,6 +171,39 @@ export function ehCartao(forma: FormaPagamento): boolean {
   return forma === 'DEBITO' || forma === 'CREDITO';
 }
 
+/** Ate onde se aceita registrar venda atrasada. Mais que isso e digitacao errada. */
+export const DIAS_PARA_REGISTRAR_DEPOIS = 90;
+
+export type QuandoDaVenda =
+  | { ok: true; quando: Date; registradaDepois: boolean }
+  | { ok: false; erro: string };
+
+/**
+ * Le o "esta venda aconteceu em" do balcao.
+ *
+ * Vazio = agora, que e o caso normal. Com data, a venda guarda a data em que
+ * aconteceu; se for de outro dia, ela nao entra no caixa aberto hoje.
+ */
+export function quandoDaVenda(bruto: unknown, agora = new Date()): QuandoDaVenda {
+  const texto = String(bruto ?? '').trim();
+  if (!texto) return { ok: true, quando: agora, registradaDepois: false };
+
+  const quando = new Date(texto);
+  if (Number.isNaN(quando.getTime())) return { ok: false, erro: 'Data da venda inválida.' };
+  // Um minuto de folga para o relogio do celular adiantado.
+  if (quando.getTime() > agora.getTime() + 60_000) {
+    return { ok: false, erro: 'A data da venda não pode estar no futuro.' };
+  }
+  const limite = new Date(agora.getTime() - DIAS_PARA_REGISTRAR_DEPOIS * 24 * 60 * 60 * 1000);
+  if (quando < limite) {
+    return { ok: false, erro: `Só dá para registrar venda dos últimos ${DIAS_PARA_REGISTRAR_DEPOIS} dias.` };
+  }
+
+  const inicioDeHoje = new Date(agora);
+  inicioDeHoje.setHours(0, 0, 0, 0);
+  return { ok: true, quando, registradaDepois: quando < inicioDeHoje };
+}
+
 export async function registrarVenda(params: {
   itens: ItemVenda[];
   vendedora: string;
@@ -179,6 +212,8 @@ export async function registrarVenda(params: {
   observacao?: string;
   /** NSU do comprovante, so faz sentido em cartao. */
   codigoMaquineta?: string;
+  /** "Esta venda aconteceu em": vazio e agora. */
+  quando?: string;
   /** PIX com QR na tela. Sem isto, PIX segue como rótulo, cobrado por fora. */
   gerarQrPix?: boolean;
 }): Promise<ResultadoVenda> {
@@ -210,13 +245,18 @@ export async function registrarVenda(params: {
   }
   const total = subtotal.sub(desconto);
 
-  const caixa = await caixaAberto();
+  const momento = quandoDaVenda(params.quando);
+  if (!momento.ok) return { ok: false, erro: momento.erro };
+
+  const caixa = momento.registradaDepois ? null : await caixaAberto();
   const vendedora = params.vendedora.trim().slice(0, 60) || 'Não informado';
 
   /* Só o PIX espera. Nas outras formas o dinheiro já está na mão quando a
      vendedora toca em finalizar, então a venda nasce confirmada — que é
      exatamente como o balcão funcionava antes desta mudança. */
-  const esperaPix = params.formaPagamento === 'PIX' && params.gerarQrPix === true;
+  // Venda de outro dia ja foi paga: nao faz sentido abrir QR para cobrar.
+  const esperaPix =
+    params.formaPagamento === 'PIX' && params.gerarQrPix === true && !momento.registradaDepois;
 
   try {
     const venda = await prisma.$transaction(async (tx) => {
@@ -229,6 +269,8 @@ export async function registrarVenda(params: {
       return tx.vendaLoja.create({
         data: {
           vendedora,
+          criadoEm: momento.quando,
+          registradaDepois: momento.registradaDepois,
           formaPagamento: params.formaPagamento,
           // Em dinheiro ou PIX nao existe comprovante de maquininha: guardar
           // um numero digitado ali so sujaria a conferencia do extrato.

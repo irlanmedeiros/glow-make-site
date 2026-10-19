@@ -269,6 +269,42 @@ describe('registrarVenda — PDV do balcão', () => {
     expect(venda.codigoMaquineta).toBeNull();
   });
 
+  it('venda de outro dia guarda a data dela e fica fora do caixa de hoje', async () => {
+    const ontem = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    ontem.setHours(19, 30, 0, 0);
+    const texto = `${ontem.getFullYear()}-${String(ontem.getMonth() + 1).padStart(2, '0')}-${String(ontem.getDate()).padStart(2, '0')}T19:30`;
+
+    const r = await registrarVenda({
+      itens: [{ kitId, qtd: 1 }],
+      vendedora: 'TESTE-INT Ana',
+      formaPagamento: 'DINHEIRO',
+      desconto: 0,
+      quando: texto,
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+
+    const venda = await prisma.vendaLoja.findUniqueOrThrow({ where: { id: r.id } });
+    expect(venda.registradaDepois).toBe(true);
+    expect(venda.caixaId).toBe(null);
+    expect(venda.criadoEm.getDate()).toBe(ontem.getDate());
+    // O estoque sai na hora: a peca ja deixou a loja.
+    expect(await saldoDe()).toBe(9);
+  });
+
+  it('data no futuro nao registra venda nem mexe no estoque', async () => {
+    const antes = await saldoDe();
+    const r = await registrarVenda({
+      itens: [{ kitId, qtd: 1 }],
+      vendedora: 'TESTE-INT Ana',
+      formaPagamento: 'DINHEIRO',
+      desconto: 0,
+      quando: '2099-01-01T10:00',
+    });
+    expect(r.ok).toBe(false);
+    expect(await saldoDe()).toBe(antes);
+  });
+
   it('aplica desconto sobre o subtotal', async () => {
     const r = await registrarVenda({
       itens: [{ kitId, qtd: 2 }],

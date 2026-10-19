@@ -82,6 +82,13 @@ function situacao(p: ProdutoCatalogo) {
    Tela da loja: vender no balcão e acompanhar o estoque
    ============================================================ */
 
+/** Agora no formato do input de data e hora, para travar o futuro. */
+function agora(): string {
+  const d = new Date();
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 16);
+}
+
 export default function Catalogo({
   inicial,
   caixa,
@@ -234,6 +241,8 @@ function AbaVender({
   const [vendedora, setVendedora] = useState('');
   const [forma, setForma] = useState('DINHEIRO');
   const [codigoMaquineta, setCodigoMaquineta] = useState('');
+  // "Esta venda aconteceu em": vazio e o caso normal, venda de agora.
+  const [quando, setQuando] = useState('');
   const [desconto, setDesconto] = useState('');
   const [aviso, setAviso] = useState('');
   const campoCodigo = useRef<HTMLInputElement>(null);
@@ -260,6 +269,7 @@ function AbaVender({
       setCarrinho([]);
       setDesconto('');
       setCodigoMaquineta('');
+      setQuando('');
       aoVender();
       campoCodigo.current?.focus();
       if (resultado.pix && resultado.id) {
@@ -497,7 +507,7 @@ function AbaVender({
             </div>
           </div>
 
-          {forma === 'PIX' && (
+          {forma === 'PIX' && !quando && (
             <label className="pdv-qr-opcao">
               <input
                 type="checkbox"
@@ -534,6 +544,26 @@ function AbaVender({
               <small>Sai no comprovante da maquininha. Serve para conferir o extrato depois — dá para preencher mais tarde, no painel.</small>
             </div>
           )}
+
+          <details className="pdv-atrasada">
+            <summary>Venda de outro dia</summary>
+            <div className="field" style={{ marginTop: 10 }}>
+              <label htmlFor="quando">Esta venda aconteceu em</label>
+              <input
+                id="quando"
+                type="datetime-local"
+                name="quando"
+                value={quando}
+                max={agora()}
+                onChange={(e) => setQuando(e.target.value)}
+              />
+              <small>
+                Deixe em branco para venda de agora. Venda de outro dia entra no faturamento
+                daquele dia e <b>fica fora do caixa de hoje</b> — o dinheiro dela não está na
+                gaveta. O estoque baixa na hora, como em qualquer venda.
+              </small>
+            </div>
+          </details>
 
           <div className="field">
             <label htmlFor="vend">Quem está vendendo</label>

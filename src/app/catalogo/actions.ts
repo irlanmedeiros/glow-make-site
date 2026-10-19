@@ -63,6 +63,7 @@ export async function fecharVenda(
     itens,
     vendedora: String(fd.get('vendedora') ?? ''),
     codigoMaquineta: String(fd.get('codigoMaquineta') ?? ''),
+    quando: String(fd.get('quando') ?? ''),
     formaPagamento: String(fd.get('formaPagamento') ?? 'DINHEIRO') as FormaPagamento,
     desconto,
     observacao: String(fd.get('observacao') ?? ''),

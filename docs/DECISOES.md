@@ -139,6 +139,12 @@ estoque duas vezes.
 
 `esperadoNaGaveta = trocoInicial + vendas em DINHEIRO`.
 
+Pela mesma razao, **venda registrada depois** (o campo "venda de outro dia" no
+balcao) nao entra no caixa aberto hoje: ela guarda a data em que aconteceu,
+conta no faturamento daquele dia e fica com `caixaId` nulo. O dinheiro de
+ontem nao esta na gaveta de hoje. O estoque, esse sim, baixa na hora — a peca
+ja saiu da loja. Venda de outro dia tambem nao abre QR de PIX: ela ja foi paga.
+
 Somar tudo é o erro clássico que faz o fechamento nunca bater e ninguém
 entender por quê. PIX e cartão não passam pela gaveta.
 

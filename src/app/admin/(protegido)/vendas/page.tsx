@@ -228,6 +228,15 @@ export default async function VendasLoja({ searchParams }: Props) {
                     <td className="num"><b>{real(v.total)}</b></td>
                     <td style={{ color: 'var(--muted)', fontSize: 13, whiteSpace: 'nowrap' }}>
                       {dataHora(v.criadoEm)}
+                      {/* Venda digitada depois: o valor conta no faturamento
+                          deste dia, mas nao no fechamento de caixa de quando
+                          foi digitada. Sem dizer isso, a conta parece errada. */}
+                      {v.registradaDepois && (
+                        <>
+                          <br />
+                          <span style={{ fontSize: 12 }}>registrada depois · fora do caixa</span>
+                        </>
+                      )}
                     </td>
                     <td>
                       {v.cancelada ? (
