@@ -150,7 +150,11 @@ section{padding:78px 0}
 .stat span{font-size:13.5px;color:var(--muted)}
 
 .strip{background:linear-gradient(90deg,var(--magenta),var(--roxo));color:#fff;padding:15px 0;overflow:hidden}
-.strip-track{display:flex;gap:44px;width:max-content;animation:slide 26s linear infinite}
+.strip-track{display:flex;width:max-content;animation:slide 26s linear infinite}
+/* O espacamento vive em cada metade, com folga no fim: assim a distancia entre
+   a ultima frase de uma metade e a primeira da outra e igual a de dentro, e a
+   volta ao inicio nao tem emenda visivel. */
+.strip-metade{display:flex;gap:44px;padding-right:44px;flex:0 0 auto}
 .strip:hover .strip-track{animation-play-state:paused}
 .strip span{font-family:var(--serif);font-size:20px;letter-spacing:.5px;white-space:nowrap;opacity:.95}
 .strip i{opacity:.5;font-style:normal}

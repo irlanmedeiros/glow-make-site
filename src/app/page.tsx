@@ -59,6 +59,17 @@ const PASSOS = [
 ];
 
 const PALAVRAS = ['Pronto para presentear', 'Embalagem inclusa', 'Amor em cada detalhe'];
+
+/**
+ * A faixa rolante anda metade da propria largura e volta ao inicio — e so
+ * parece continua se essa metade for MAIS LARGA que a tela. Com tres frases
+ * ela dava uns 800px: num notebook de 1920px a copia acabava antes da borda e
+ * sobrava branco depois de "Amor em cada detalhe". Por isso as frases se
+ * repetem ate passar de qualquer tela, e a duracao acompanha o tamanho, para
+ * a velocidade continuar a mesma de antes.
+ */
+const FRASES_POR_METADE = 24;
+const SEGUNDOS_POR_FRASE = 8.7;
 // Estas falam da assinatura e so entram na faixa quando ela esta no ar.
 const PALAVRAS_ASSINATURA = ['Sem fidelidade', 'Curadoria mensal'];
 
@@ -75,6 +86,7 @@ export default async function Home() {
   // Assinatura escondida ate a dona ligar em Configuracoes (src/lib/recursos.ts).
   const assinatura = (configDb as { assinaturaAtiva?: boolean } | null)?.assinaturaAtiva ?? false;
   const palavras = assinatura ? [...PALAVRAS, ...PALAVRAS_ASSINATURA] : PALAVRAS;
+  const faixa = Array.from({ length: Math.ceil(FRASES_POR_METADE / palavras.length) }, () => palavras).flat();
 
   const paraPublico = (k: (typeof kitsDb)[number]): KitPublico => ({
     id: k.id,
@@ -216,12 +228,22 @@ export default async function Home() {
       )}
 
       <div className="strip">
-        <div className="strip-track">
-          {[...palavras, ...palavras].map((p, i) => (
-            <span key={`${p}-${i}`}>
-              {p}
-              <i> ·</i>
-            </span>
+        <div
+          className="strip-track"
+          style={{ animationDuration: `${(faixa.length * SEGUNDOS_POR_FRASE).toFixed(0)}s` }}
+        >
+          {/* Duas metades iguais: a animacao anda exatamente uma delas, entao
+              a emenda cai no mesmo ponto e nao aparece. A segunda e copia
+              visual — o leitor de tela le a lista uma vez so. */}
+          {[0, 1].map((metade) => (
+            <div className="strip-metade" key={metade} aria-hidden={metade === 1 || undefined}>
+              {faixa.map((p, i) => (
+                <span key={`${p}-${i}`}>
+                  {p}
+                  <i> ·</i>
+                </span>
+              ))}
+            </div>
           ))}
         </div>
       </div>
