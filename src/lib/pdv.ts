@@ -395,13 +395,15 @@ export async function resumoDoCaixa(caixaId: string): Promise<ResumoCaixa> {
 }
 
 /** Busca produto pelo código de barras bipado, ou pelo SKU digitado. */
+/**
+ * Leitor do balcao. Nao filtra por `ativo`: oculto no site e um produto que
+ * continua na prateleira, e o balcao vende o que esta na loja. Quem decide o
+ * que aparece para a cliente e a vitrine, nao esta busca.
+ */
 export async function buscarPorCodigo(codigo: string) {
   const limpo = codigo.trim();
   if (!limpo) return null;
   return prisma.kit.findFirst({
-    where: {
-      ativo: true,
-      OR: [{ codigoBarras: limpo }, { sku: limpo.toUpperCase() }],
-    },
+    where: { OR: [{ codigoBarras: limpo }, { sku: limpo.toUpperCase() }] },
   });
 }

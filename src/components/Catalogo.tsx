@@ -13,6 +13,7 @@ import {
 } from '@/app/catalogo/actions';
 import { Busca } from './Icones';
 import { aoFalharFoto } from '@/lib/imagem';
+import { produtosParaVender } from '@/lib/balcao';
 
 export type ProdutoCatalogo = {
   id: string;
@@ -369,14 +370,14 @@ function AbaVender({
   const total = Math.max(0, subtotal - descontoNum);
   const ehCartao = forma === 'DEBITO' || forma === 'CREDITO';
 
-  const lista = produtos.filter(
-    (p) =>
-      p.ativo &&
-      p.saldo > 0 &&
-      (!busca ||
-        p.nome.toLowerCase().includes(busca.toLowerCase()) ||
-        p.sku.toLowerCase().includes(busca.toLowerCase()))
-  );
+  /* O balcão vende o que ESTÁ NA LOJA, não o que está publicado no site.
+     Produto oculto no site continua tendo caixa na prateleira, e antes ele
+     não aparecia aqui: a vendedora tinha que abrir outra página, copiar o
+     código e voltar, com a cliente esperando. O chip "Fora do site" avisa
+     quando é o caso. Sem saldo continua fora: vender o que não tem trava na
+     baixa de estoque de qualquer jeito. */
+  const termo = busca.trim();
+  const lista = produtosParaVender(produtos, termo);
 
   return (
     <>
@@ -409,7 +410,7 @@ function AbaVender({
             <Busca />
             <input
               type="search"
-              placeholder="Ou busque pelo nome..."
+              placeholder="Ou busque pelo nome, SKU ou código..."
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
             />
@@ -424,12 +425,20 @@ function AbaVender({
                 <img src={p.imagem} alt="" loading="lazy" onError={aoFalharFoto} />
                 <span className="pdv-item-nome">{p.nome}</span>
                 <span className="pdv-item-preco">{real(p.preco)}</span>
-                <span className="pdv-item-saldo">{p.saldo} un.</span>
+                <span className="pdv-item-saldo">
+                  {p.saldo} un.
+                  {/* Está na prateleira, mas não aparece para a cliente no
+                      site. Dizer isso aqui evita vender com a informação
+                      errada na boca ("vi no site que tinha"). */}
+                  {!p.ativo && <b className="pdv-item-oculto">só na loja</b>}
+                </span>
               </button>
             ))}
             {!lista.length && (
               <div className="vazio" style={{ gridColumn: '1/-1' }}>
-                Nenhum produto disponível para venda.
+                {termo
+                  ? `Nada encontrado para "${busca.trim()}".`
+                  : 'Nenhum produto com estoque para vender.'}
               </div>
             )}
           </div>
