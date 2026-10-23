@@ -10,16 +10,20 @@ export default function Importar() {
         titulo="Importar planilha"
         descricao="Suba um Excel com os produtos e o catálogo do site se atualiza de uma vez"
       >
+        <a className="btn btn-primary btn-sm" href="/api/admin/produtos-planilha">
+          Baixar os produtos de hoje
+        </a>
         <a className="btn btn-ghost btn-sm" href="/api/modelo-planilha">
-          Baixar planilha modelo
+          Planilha modelo (em branco)
         </a>
       </Cabecalho>
 
       <Painel titulo="Como funciona">
         <ol style={{ paddingLeft: 20, fontSize: 14.5, lineHeight: 1.9, color: 'var(--muted)' }}>
           <li>
-            Baixe a <b>planilha modelo</b> — ela já vem com os cabeçalhos certos e uma aba
-            explicando cada coluna.
+            Baixe <b>os produtos de hoje</b> para editar o que já existe — vem tudo, o que está no
+            site e o que está oculto, com a coluna <code>ativo</code> dizendo qual é qual. Para
+            começar do zero, use a <b>planilha modelo</b>.
           </li>
           <li>Preencha com os seus produtos e salve.</li>
           <li>

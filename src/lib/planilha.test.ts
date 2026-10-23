@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import ExcelJS from 'exceljs';
-import { lerNumero, lerPlanilha, gerarModelo } from './planilha';
+import { lerNumero, lerPlanilha, gerarModelo, gerarExportacao, type ProdutoParaExportar } from './planilha';
 
 /**
  * A importação de planilha reescreve o catálogo inteiro. Uma vírgula lida
@@ -289,5 +289,71 @@ describe('coluna tipo', () => {
   it('a caixa da assinatura não se cadastra por planilha', async () => {
     const r = await lerPlanilha(csv('sku;nome;preco;tipo\nGM-BOX;Glow Box;99,90;assinatura'), 'p.csv');
     expect(r.linhas[0].erros.join(' ')).toMatch(/assinatura não se cadastra/);
+  });
+});
+
+/**
+ * A exportacao so serve se a importacao conseguir ler de volta o que ela
+ * escreveu: o lojista baixa, edita no Excel e sobe. Se os cabecalhos saissem
+ * diferentes, ele perderia o catalogo na reimportacao.
+ */
+describe('gerarExportacao', () => {
+  const produto = (extra: Partial<ProdutoParaExportar> = {}): ProdutoParaExportar => ({
+    sku: 'GM-A', nome: 'Kit A', descricao: 'bonito', itens: ['Batom', 'Gloss'],
+    preco: 129.9, imagem: '/assets/kits/kit-1.jpg', saldo: 7, estoqueBaixo: 3, ordem: 2,
+    ativo: true, codigoBarras: '7891234567890', tipo: 'KIT', categoria: 'BATOM', ...extra,
+  });
+
+  async function exportarELer(produtos: ProdutoParaExportar[]) {
+    const buf = await gerarExportacao(produtos);
+    const copia = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;
+    return lerPlanilha(copia, 'produtos.xlsx');
+  }
+
+  it('a planilha exportada volta inteira pela importacao, sem erro', async () => {
+    const r = await exportarELer([produto(), produto({ sku: 'GM-B', nome: 'Batom B', tipo: 'INDIVIDUAL', preco: 19.9 })]);
+    expect(r.aviso).toBeUndefined();
+    expect(r.linhas.map((l) => l.sku)).toEqual(['GM-A', 'GM-B']);
+    expect(r.linhas.every((l) => l.erros.length === 0)).toBe(true);
+    expect(r.linhas[0].preco).toBe(129.9);
+    expect(r.linhas[0].itens).toEqual(['Batom', 'Gloss']);
+    expect(r.linhas[0].estoque).toBe(7);
+    expect(r.linhas[0].tipo).toBe('KIT');
+    expect(r.linhas[1].tipo).toBe('INDIVIDUAL');
+  });
+
+  it('leva os ocultos junto, e a coluna ativo diz qual e qual', async () => {
+    const r = await exportarELer([produto({ sku: 'GM-ON' }), produto({ sku: 'GM-OFF', ativo: false })]);
+    expect(r.linhas.map((l) => [l.sku, l.ativo])).toEqual([
+      ['GM-ON', true],
+      ['GM-OFF', false],
+    ]);
+  });
+
+  it('a categoria da vitrine nao e confundida com o tipo do produto', async () => {
+    // A coluna informativa chama "categoria no site" justamente por isso.
+    const r = await exportarELer([produto({ categoria: 'SKINCARE', tipo: 'INDIVIDUAL' })]);
+    expect(r.linhas[0].tipo).toBe('INDIVIDUAL');
+    expect(r.colunasReconhecidas).not.toContain('categoria');
+  });
+
+  it('produto sem codigo de barras e sem itens nao vira linha quebrada', async () => {
+    const r = await exportarELer([produto({ codigoBarras: null, itens: [], categoria: null })]);
+    expect(r.linhas[0].erros).toEqual([]);
+    expect(r.linhas[0].codigoBarras).toBe('');
+    expect(r.linhas[0].itens).toEqual([]);
+  });
+
+  it('traz uma aba de resumo com a contagem de quem esta no site e quem esta oculto', async () => {
+    const buf = await gerarExportacao([produto(), produto({ sku: 'GM-OFF', ativo: false }), produto({ sku: 'GM-Z', saldo: 0 })]);
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer);
+    const resumo = wb.getWorksheet('Resumo');
+    const linhas: string[] = [];
+    resumo?.eachRow((row) => linhas.push(row.values ? String(row.values) : ''));
+    const texto = linhas.join(' | ');
+    expect(texto).toMatch(/No site.*2/);
+    expect(texto).toMatch(/Ocultos.*1/);
+    expect(texto).toMatch(/Esgotados.*1/);
   });
 });

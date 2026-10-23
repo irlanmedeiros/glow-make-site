@@ -228,7 +228,13 @@ export default async function Kits({ searchParams }: Props) {
       <Cabecalho
         titulo="Kits e produtos"
         descricao="Nome, preço, itens e foto de cada produto do catálogo"
-      />
+      >
+        {/* Baixar a lista inteira — no site e oculto, juntos — sem depender
+            de ninguém mandar. A mesma planilha volta pela importação. */}
+        <a className="btn btn-ghost btn-sm" href="/api/admin/produtos-planilha">
+          Baixar planilha dos produtos
+        </a>
+      </Cabecalho>
       <Aviso ok={ok} erro={erro} />
 
       {semFoto.length > 0 && (

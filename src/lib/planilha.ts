@@ -41,7 +41,7 @@ const COLUNAS: Record<string, string[]> = {
   ordem: ['ordem', 'posicao'],
   ativo: ['ativo', 'publicado', 'visivel', 'no site'],
   codigoBarras: ['codigo de barras', 'ean', 'codigo barras', 'barras'],
-  tipo: ['tipo', 'tipo de produto', 'categoria'],
+  tipo: ['tipo', 'tipo de produto', 'kit ou individual'],
 };
 
 export function normalizar(s: string): string {
@@ -271,6 +271,108 @@ export async function gerarModelo(): Promise<Buffer> {
     ['codigo de barras', 'não', 'EAN da embalagem. É o que o leitor do balcão lê para achar o produto na hora da venda.'],
     ['tipo', 'não', 'kit ou individual. Em branco mantém como está (produto novo nasce kit).'],
   ].forEach(([c, o, d]) => ajuda.addRow({ c, o, d }));
+
+  const buf = await wb.xlsx.writeBuffer();
+  return Buffer.from(buf);
+}
+
+export type ProdutoParaExportar = {
+  sku: string;
+  nome: string;
+  descricao: string;
+  itens: string[];
+  preco: number;
+  imagem: string;
+  saldo: number;
+  estoqueBaixo: number;
+  ordem: number;
+  ativo: boolean;
+  codigoBarras: string | null;
+  tipo: TipoProduto;
+  categoria: string | null;
+};
+
+const ROTULO_TIPO_PLANILHA: Record<TipoProduto, string> = {
+  KIT: 'kit',
+  INDIVIDUAL: 'individual',
+  BOX: 'assinatura',
+};
+
+/**
+ * Planilha com os produtos que existem hoje — os que estao no site e os
+ * ocultos, juntos, com a coluna `ativo` dizendo qual e qual.
+ *
+ * Os cabecalhos sao os MESMOS da planilha modelo de proposito: o lojista
+ * exporta, edita no Excel e importa de volta sem preparar nada. Por isso
+ * `estoque` traz o saldo atual — reimportar sem mexer nao mexe no estoque.
+ *
+ * A coluna informativa chama "categoria no site", e nao "categoria", porque
+ * a importacao le cabecalhos por nome: um titulo "categoria" seria entendido
+ * como outra coisa.
+ */
+export async function gerarExportacao(produtos: ProdutoParaExportar[]): Promise<Buffer> {
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Produtos');
+
+  ws.columns = [
+    { header: 'sku', key: 'sku', width: 14 },
+    { header: 'nome', key: 'nome', width: 30 },
+    { header: 'descricao', key: 'descricao', width: 42 },
+    { header: 'preco', key: 'preco', width: 12 },
+    { header: 'estoque', key: 'estoque', width: 10 },
+    { header: 'itens', key: 'itens', width: 52 },
+    { header: 'imagem', key: 'imagem', width: 36 },
+    { header: 'estoque minimo', key: 'estoqueBaixo', width: 15 },
+    { header: 'ordem', key: 'ordem', width: 8 },
+    { header: 'ativo', key: 'ativo', width: 8 },
+    { header: 'codigo de barras', key: 'codigoBarras', width: 18 },
+    { header: 'tipo', key: 'tipo', width: 14 },
+    { header: 'categoria no site', key: 'categoria', width: 18 },
+  ];
+  ws.getRow(1).font = { bold: true };
+  ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE4EC' } };
+  // Cabecalho fixo e filtro: sao 13 colunas, e a primeira coisa que ele quer
+  // fazer e separar o que esta no site do que esta oculto.
+  ws.views = [{ state: 'frozen', ySplit: 1 }];
+  ws.autoFilter = { from: 'A1', to: { row: 1, column: ws.columns.length } };
+
+  for (const p of produtos) {
+    ws.addRow({
+      sku: p.sku,
+      nome: p.nome,
+      descricao: p.descricao,
+      preco: p.preco.toFixed(2).replace('.', ','),
+      estoque: p.saldo,
+      itens: p.itens.join('; '),
+      imagem: p.imagem,
+      estoqueBaixo: p.estoqueBaixo,
+      ordem: p.ordem,
+      ativo: p.ativo ? 'sim' : 'nao',
+      codigoBarras: p.codigoBarras ?? '',
+      tipo: ROTULO_TIPO_PLANILHA[p.tipo],
+      categoria: p.categoria ?? '',
+    });
+  }
+
+  const resumo = wb.addWorksheet('Resumo');
+  resumo.columns = [
+    { header: 'O que', key: 'c', width: 34 },
+    { header: 'Quantos', key: 'q', width: 10 },
+  ];
+  resumo.getRow(1).font = { bold: true };
+  const noSite = produtos.filter((p) => p.ativo);
+  const ocultos = produtos.filter((p) => !p.ativo);
+  const esgotados = produtos.filter((p) => p.saldo <= 0);
+  [
+    ['Produtos no total', produtos.length],
+    ['No site (ativo = sim)', noSite.length],
+    ['Ocultos, so na loja (ativo = nao)', ocultos.length],
+    ['Esgotados (estoque zerado)', esgotados.length],
+    ['Pecas em estoque', produtos.reduce((s, p) => s + Math.max(0, p.saldo), 0)],
+  ].forEach(([c, q]) => resumo.addRow({ c, q }));
+  resumo.addRow({});
+  resumo.addRow({ c: `Exportado em ${new Date().toLocaleString('pt-BR')}` });
+  resumo.addRow({ c: 'Para atualizar o catalogo: edite esta planilha e suba em Admin > Importar planilha.' });
 
   const buf = await wb.xlsx.writeBuffer();
   return Buffer.from(buf);
